@@ -190,9 +190,9 @@ ModelManifest.xml
 
 SADXModLoader/git_version.h
 *.opendb
-/SADXModLoader.VC.db
 *.db
 *.db-shm
 *.db-wal
 *.ide
 /.vs
+/SADXModManager/.vs
