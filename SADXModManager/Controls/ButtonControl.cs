@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Windows.Forms;
 
+// Controls for DInput configuration
+
 namespace SADXModManager.Controls
 {
 	public partial class ButtonControl : UserControl
