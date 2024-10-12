@@ -1,24 +1,24 @@
-﻿using Microsoft.Win32;
-using ModManagerCommon;
-using ModManagerCommon.Forms;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
-using System.Security.Cryptography;
+using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
+using Microsoft.Win32;
+using ModManagerCommon;
+using SADXModManager.Forms;
 
 namespace SADXModManager
 {
 	static class Program
 	{
+		public static Form primaryForm;
 		private const string pipeName = "sadx-mod-manager";
 		private const string protocol = "sadxmm:";
-		const string datadllorigpath = "system/CHRMODELS_orig.dll";
-		const string loaderdllpath = "mods/SADXModLoader.dll";
-		const string datadllpath = "system/CHRMODELS.dll";
 		private static readonly Mutex mutex = new Mutex(true, pipeName);
 		public static UriQueue UriQueue;
 
@@ -28,6 +28,20 @@ namespace SADXModManager
 		[STAThread]
 		static void Main(string[] args)
 		{
+			Init();
+			RealMain(args); // Needed to split for assembly resolving
+		}
+
+		static void Init()
+		{
+			AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+		}
+
+		static void RealMain(string[] args)
+		{
+			AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
+
+			// URL handler
 			if (args.Length > 0 && args[0] == "urlhandler")
 			{
 				using (var hkcr = Registry.ClassesRoot)
@@ -45,50 +59,76 @@ namespace SADXModManager
 				return;
 			}
 
+			// Check if already running
 			bool alreadyRunning;
 			try { alreadyRunning = !mutex.WaitOne(0, true); }
 			catch (AbandonedMutexException) { alreadyRunning = false; }
 
-			if (args.Length > 1 && args[0] == "doupdate")
-			{
-				if (alreadyRunning)
-					try { mutex.WaitOne(); }
-					catch (AbandonedMutexException) { }
-				Application.EnableVisualStyles();
-				Application.SetCompatibleTextRenderingDefault(false);
-				Application.Run(new LoaderManifestDialog(args[1]));
-				return;
-			}
-
-			if (args.Length > 1 && args[0] == "cleanupdate")
+			// Update EXE
+			if (args.Length > 1 && args[0] == "update")
 			{
 				if (alreadyRunning)
 					try { mutex.WaitOne(); }
 					catch (AbandonedMutexException) { }
 				alreadyRunning = false;
-				Thread.Sleep(1000);
-				try
+				Thread.Sleep(300);
+				DialogResult result = DialogResult.Cancel;
+				int attempt = 0;
+				do
 				{
-					File.Delete(args[1] + ".7z");
-					Directory.Delete(args[1], true);
-
-					if (File.Exists(datadllorigpath))
+					try
 					{
-						using (MD5 md5 = MD5.Create())
-						{
-							byte[] hash1 = md5.ComputeHash(File.ReadAllBytes(loaderdllpath));
-							byte[] hash2 = md5.ComputeHash(File.ReadAllBytes(datadllpath));
-
-							if (!hash1.SequenceEqual(hash2))
-							{
-								File.Copy(loaderdllpath, datadllpath, true);
-							}
-						}
+						string finalpath = args[1].Replace("\"", "");
+						// Copy Manager.exe
+						File.Copy(Application.ExecutablePath, Path.Combine(finalpath, "SADXModManager.exe"), true);
+						// Get path to sadxmanagerver.txt
+						string destAppDataPath = Path.GetFullPath(Directory.Exists(Path.Combine(finalpath, "SAManager")) ? Path.Combine(finalpath, "SAManager") : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SAManager"));
+						// Copy sadxmanagerver.txt
+						File.Copy(Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "sadxmanagerver.txt"), Path.Combine(destAppDataPath, "sadxmanagerver.txt"), true);
+						// Cleanup
+						Process.Start(Path.Combine(finalpath, "SADXModManager.exe"), "clean \"" + AppDomain.CurrentDomain.BaseDirectory + "\"");
+						Environment.Exit(0);
+					}
+					catch (Exception ex)
+					{
+						result = DialogResult.Retry;
+						attempt++;
+						if (attempt > 10)
+							result = MessageBox.Show(null, string.Format("Unable to update SADX Mod Manager: {0}. Try again?", ex.Message.ToString()), "SADX Mod Manager Update Error", MessageBoxButtons.RetryCancel, MessageBoxIcon.Error);
 					}
 				}
-				catch { }
+				while (result == DialogResult.Retry);
+				return;
 			}
 
+			// Clean update
+			if (args.Length > 1 && args[0] == "clean")
+			{
+				if (alreadyRunning)
+					try { mutex.WaitOne(); }
+					catch (AbandonedMutexException) { }
+				alreadyRunning = false;
+				DialogResult result = DialogResult.Cancel;
+				int attempt = 0;
+				do
+				{
+					try
+					{
+						Thread.Sleep(300);
+						string cleanpath = args[1].Replace("\"", "");
+						Directory.Delete(cleanpath.Replace("\"", ""), true);
+					}
+					catch (Exception ex)
+					{
+						attempt++;
+						result = DialogResult.Retry;
+						if (attempt > 10)
+							result = MessageBox.Show(null, string.Format("Unable to clean up the update folder: {0}. Try again?", ex.Message.ToString()), "SADX Mod Manager Update Error", MessageBoxButtons.RetryCancel, MessageBoxIcon.Error);
+					}
+				}
+				while (result == DialogResult.Retry);
+			}
+			
 			if (!alreadyRunning)
 			{
 				UriQueue = new UriQueue(pipeName);
@@ -120,8 +160,67 @@ namespace SADXModManager
 
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-			Application.Run(new MainForm());
+			// Detect if running for the first time
+			// Set the base folder
+			string exePath = AppDomain.CurrentDomain.BaseDirectory;
+			// Locate the manager data folder (portable mode or otherwise)
+			bool portable = Directory.Exists(Path.Combine(exePath, "SAManager"));
+			bool appdata = Directory.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SAManager"));
+			if (!portable && !appdata)
+				primaryForm = new InstallationWizard();
+			else
+				primaryForm = new MainForm();
+			Application.Run(primaryForm);
 			UriQueue.Close();
+		}
+
+		private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+		{
+			var executingAssembly = Assembly.GetExecutingAssembly();
+			var assemblyName = new AssemblyName(args.Name);
+
+			var path = assemblyName.Name + ".dll";
+			if (!assemblyName.CultureInfo.Equals(CultureInfo.InvariantCulture))
+			{
+				path = $"{assemblyName.CultureInfo}\\${path}";
+			}
+
+			using (var stream = executingAssembly.GetManifestResourceStream(path))
+			{
+				if (stream == null)
+					return null;
+
+				var assemblyRawBytes = new byte[stream.Length];
+				stream.Read(assemblyRawBytes, 0, assemblyRawBytes.Length);
+				return Assembly.Load(assemblyRawBytes);
+			}
+		}
+
+		static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+		{
+			if (primaryForm != null)
+			{
+				Exception ex = (Exception)e.ExceptionObject;
+				string errDesc = "SADX Mod Manager has crashed with the following error:\n" + ex.GetType().Name + ".\n\n" +
+					"If you wish to report a bug, please include the following in your report:";
+				ErrorDialog report = new ErrorDialog("SADX Mod Manager", errDesc, ex.ToString());
+				DialogResult dgresult = report.ShowDialog(primaryForm);
+				switch (dgresult)
+				{
+					case DialogResult.Abort:
+					case DialogResult.OK:
+						Environment.Exit(0);
+						break;
+				}
+			}
+			else
+			{
+				string logPath = System.IO.Path.Combine(Environment.CurrentDirectory, "SADXModManager.log");
+				if (!Directory.Exists(Path.GetDirectoryName(logPath)))
+					Directory.CreateDirectory(Path.GetDirectoryName(logPath));
+				File.WriteAllText(logPath, e.ExceptionObject.ToString());
+				MessageBox.Show("Unhandled Exception " + e.ExceptionObject.GetType().Name + "\nLog file has been saved to:\n" + logPath + ".", "SADX Mod Manager Fatal Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
 		}
 	}
 }

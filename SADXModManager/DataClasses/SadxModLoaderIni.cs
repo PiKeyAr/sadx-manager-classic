@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
-using IniFile;
 using ModManagerCommon;
+
+// SADXModLoader.ini in the mods folder (from old versions of the Mod Manager)
 
 namespace SADXModManager
 {

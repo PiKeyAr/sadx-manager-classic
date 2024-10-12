@@ -1,9 +1,8 @@
-﻿using IniFile;
-using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
+using IniFile;
+
+// SA Mod Manager profile in SAManager\SADX containing the list of mods, codes etc. and game settings
 
 namespace SADXModManager
 {
@@ -436,114 +435,17 @@ namespace SADXModManager
 		public List<string> EnabledMods { get; set; } = new List<string>();       // SADXLoaderInfo.Mods
 
 		/// <summary>
+		/// Enabled Game Patches for SADX.
+		/// </summary>
+		[IniName("Patch")]
+		[IniCollection(IniCollectionMode.NoSquareBrackets, StartIndex = 1)]
+		public List<string> EnabledGamePatches { get; set; }
+
+		/// <summary>
 		/// Enabled Codes for SADX.
 		/// </summary>
 		[IniName("Code")]
 		[IniCollection(IniCollectionMode.NoSquareBrackets, StartIndex = 1)]
 		public List<string> EnabledCodes { get; set; } = new List<string>();      // SADXLoaderInfo.EnabledCodes
-
-
-		/// <summary>
-		/// Deserializes an SADX GameSettings JSON File and returns a populated class.
-		/// </summary>
-		/// <param name="path"></param>
-		/// <returns></returns>
-		public static GameSettings Deserialize(string path)
-		{
-			try
-			{
-				if (File.Exists(path))
-				{
-					JsonSerializer js = new JsonSerializer() { Culture = System.Globalization.CultureInfo.InvariantCulture };
-					TextReader tr = File.OpenText(path);
-					JsonTextReader jtr = new JsonTextReader(tr);
-					GameSettings settings = js.Deserialize<GameSettings>(jtr);
-
-					return settings;
-				}
-				else
-					return new GameSettings();
-			}
-			catch (Exception ex)
-			{
-				//new MessageWindow(Lang.GetString("MessageWindow.DefaultTitle.Error"), Lang.GetString("MessageWindow.Errors.ProfileLoad") + "\n\n" + ex.Message, MessageWindow.WindowType.IconMessage, MessageWindow.Icons.Error).ShowDialog();
-			}
-
-			return new GameSettings();
-		}
-	}
-
-	public class ProfileData
-	{
-		public string Name { get; set; }
-		public string Filename { get; set; }
-	}
-
-	public class ProfilesJson
-	{
-		[DefaultValue(0)]
-		public int ProfileIndex;
-		public List<ProfileData> ProfilesList;
-
-		public ProfilesJson()
-		{
-			ProfilesList = new List<ProfileData>();
-			ProfilesList.Add(new ProfileData { Name = "Default", Filename = "Default.json" });
-		}
-	}
-
-	public class UpdateSettings
-	{
-		[DefaultValue(true)]
-		public bool EnableManagerBootCheck { get; set; } = true;    // LoaderInfo.UpdateCheck
-
-		[DefaultValue(true)]
-		public bool EnableModsBootCheck { get; set; } = true;       // LoaderInfo.ModUpdateCheck
-
-		[DefaultValue(true)]
-		public bool EnableLoaderBootCheck { get; set; } = true;
-
-		[DefaultValue(0)]
-		public long UpdateTimeOutCD { get; set; } = 0;
-
-		[DefaultValue(0)]
-		public int UpdateCheckCount { get; set; } = 0;
-	}
-
-	public class ManagerConfig
-	{
-		[DefaultValue(1)]
-		public int SettingsVersion;
-		[DefaultValue(1)]
-		public int CurrentSetGame;
-		[DefaultValue(0)]
-		public int Theme;
-		[DefaultValue(0)]
-		public int Language;
-		public string ModAuthor;
-		[DefaultValue(false)]
-		public bool EnableDeveloperMode;
-		[DefaultValue(true)]
-		public bool KeepManagerOpen;
-		
-		public UpdateSettings UpdateSettings;
-		public List<uint> gamesInstalled;
-
-		public ManagerConfig()
-		{
-			gamesInstalled = new List<uint>();
-			gamesInstalled.Add(1);
-			SettingsVersion = 1;
-			CurrentSetGame = 1;
-			Theme = 0;
-			Language = 0;
-			EnableDeveloperMode = false;
-			KeepManagerOpen = true;
-			ModAuthor = "";
-			UpdateSettings = new UpdateSettings();
-			UpdateSettings.EnableManagerBootCheck = true;
-			UpdateSettings.EnableModsBootCheck = true;
-			UpdateSettings.EnableLoaderBootCheck = true;
-		}
 	}
 }

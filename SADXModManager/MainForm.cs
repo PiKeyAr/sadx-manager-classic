@@ -12,52 +12,120 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using IniFile;
+using Newtonsoft.Json;
+using SharpDX.DirectInput;
 using ModManagerCommon;
 using ModManagerCommon.Forms;
 using SADXModManager.Forms;
-using SADXModManager.Properties;
 using SADXModManager.Controls;
-using SharpDX.DirectInput;
-using Newtonsoft.Json;
+using SADXModManager.DataClasses;
+using static SADXModManager.GraphicsSettings;
+using static SADXModManager.Variables;
+
+// TODO for first release:
+// First startup and SADX folder location
+
+// TODO for second release:
+// Improved 1-click install dialog
+// Mod dependencies
+// Reset to optimal/failsafe settings
+// SDL Configuration
+// Clean up
+// SA Manager switch
+// Game Health Check
+
+// TODO for third release:
+// Add mods from archive
+// Add mods from URL
+// AA and AF settings
 
 namespace SADXModManager
 {
 	public partial class MainForm : Form
 	{
 		#region Variables and classes
-		private GameConfigFile configFile;
+		// Paths
+		/// <summary>Path to sonicDX.ini</summary>
+		private string sonicDxIniPath;
+		/// <summary>Path to Codes.lst</summary>
+		public string codelstpath;
+		/// <summary>Path to Codes.xml</summary>
+		public string codexmlpath;
+		/// <summary>Path to Codes.dat</summary>
+		public string codedatpath;
+		/// <summary>Path to Patch.dat</summary>
+		public string patchdatpath;
+		/// <summary>Path to Patches.json</summary>
+		public string patchesJsonPath;
+
+		// Updates
+		/// <summary>WebClient instance</summary>
+		readonly WebClient webClient = new WebClient();
+
+		// Stuff used for BackgroundWorker
+		/// <summary>True if the Mod Loader update check is underway</summary>
+		bool CheckLoader;
+		/// <summary>True if the Mod Manager update check is underway</summary>
+		bool CheckManager;
+		/// <summary>True if the Steam Launcher update check is underway</summary>
+		bool CheckLauncher;
+		/// <summary>True if mods update check is underway</summary>
+		bool CheckMods;
+
+		// Controller
+		/// <summary>DirectInput object</summary>
 		DirectInput directInput;
+		/// <summary>Joystick device</summary>
 		Joystick inputDevice;
+		/// <summary>Joystick button control list</summary>
 		readonly List<ButtonControl> buttonControls = new List<ButtonControl>();
+		/// <summary>Serializable controller configuration for sonicDX.ini</summary>
 		readonly List<ControllerConfigInternal> controllerConfig = new List<ControllerConfigInternal>();
-		private const string sadxIni = "sonicDX.ini";
-		private const string d3d8to9InstalledDLLName = "d3d8.dll";
-		private const string d3d8to9StoredDLLName = "SAManager/extlib/D3D8M/d3d8m.dll";
+		/// <summary>Thread to poll DInput controller status</summary>
+		System.Threading.Thread controllerThread;
+		/// <summary>List of controller button IDs</summary>
+		static readonly int[] buttonIDs = { 16, 17, 3, 2, 1, 10, 9, 8 };
+		/// <summary>Current action set for the DInput controller</summary>
+		int currentAction;
+
+		// Other
+		/// <summary>4:3 aspect ratio</summary>
+		const decimal ratio = 4 / 3m;
+		/// <summary>Class used for mod update checks</summary>
+		readonly ModUpdater modUpdater = new ModUpdater();
+		/// <summary>Background check for updates</summary>
+		BackgroundWorker updateChecker;
+		/// <summary>JSON serializer</summary>
+		static readonly JsonSerializer jsonSerializer = new JsonSerializer() { Culture = System.Globalization.CultureInfo.InvariantCulture, Formatting = Formatting.Indented, NullValueHandling = NullValueHandling.Ignore, };
+		/// <summary>Drag and drop identifier</summary>
+		static readonly string moddropname = "Mod" + Process.GetCurrentProcess().Id;
+		/// <summary>Class to sort ListView by column</summary>
+		readonly ListViewColumnSorter lvwColumnSorter;
+
+		// Serialized structs
+		/// <summary>Deserialized sonicDX.ini</summary>
+		private SonicDxIni sonicDxIni;
+		/// <summary>Deserialized Patches.json</summary>
+		GamePatchesJson patchesJson;
+
+		/// <summary>Mods list</summary>
+		Dictionary<string, SADXModInfo> mods;
+		/// <summary>Codes list from Codes.xml</summary>
+		CodeList mainCodes;
+		/// <summary>Active codes list</summary>
+		List<Code> codes;
+
+		// Toggles
+		/// <summary>True if the Mod Loader is installed</summary>
+		bool installed;
+		/// <summary>When this is true, UI event handlers are suppressed</summary>
+		bool suppressEvent;
+		/// <summary>True if the warning about mod manifests has been displayed at least once</summary>
+		private bool displayedManifestWarning;
+		/// <summary>True if an update check has completed successfully</summary>
 		private bool checkedForUpdates;
 
-		const string updatePath = "mods/.updates";
-		const string datadllpath = "system/CHRMODELS.dll";
-		const string datadllorigpath = "system/CHRMODELS_orig.dll";
-		const string loaderinipath = "mods/SADXModLoader.ini";
-		const string loaderdllpath = "mods/SADXModLoader.dll";
-		SADXLoaderInfo loaderini;
-		Dictionary<string, SADXModInfo> mods;
-		const string codelstpath = "mods/Codes.lst";
-		const string codexmlpath = "mods/Codes.xml";
-		const string codedatpath = "mods/Codes.dat";
-		const string patchdatpath = "mods/Patches.dat";
-		CodeList mainCodes;
-		List<Code> codes;
-		bool installed;
-		bool suppressEvent;
-
-		readonly ModUpdater modUpdater = new ModUpdater();
-		BackgroundWorker updateChecker;
-		private bool manualModUpdate;
-
-		private Dictionary<int, string> TestSpawnCutsceneList;
-		private Dictionary<ushort, string> TestSpawnGameModeList;
-
+		/// <summary>Actions for the DInput controller</summary>
 		static readonly string[] actionNames =
 		{
 			"Rotate camera right",
@@ -70,14 +138,9 @@ namespace SADXModManager
 			"Z Button"
 		};
 
-		static readonly int[] buttonIDs = { 16, 17, 3, 2, 1, 10, 9, 8 };
-
-		static readonly string moddropname = "Mod" + Process.GetCurrentProcess().Id;
-
-		const decimal ratio = 4 / 3m;
-
+		/// <summary>Resolution profiles for the combo box</summary>
 		static readonly Size[] resolutionPresets =
-	{
+		{
 			new Size(640, 480), // 640x480
 			new Size(800, 600), // 800x600
 			new Size(1024, 768), // 1024x768
@@ -91,103 +154,49 @@ namespace SADXModManager
 			new Size(1920, 1080), // 1080p
 			new Size(3840, 2160), // 4K
 		};
-
-		private bool displayedManifestWarning;
-
-		int currentAction;
-		System.Threading.Thread controllerThread;
-
-		class ControllerConfig
-		{
-			[IniName("buttons")]
-			public int ButtonCount { get; set; }
-			[IniName("pad")]
-			[IniCollection(IniCollectionMode.NoSquareBrackets)]
-			public int[] ButtonSettings { get; set; }
-		}
-
-		class ControllerConfigInternal
-		{
-			public string Name { get; set; }
-			public int[] Buttons { get; set; }
-		}
-
-		enum FrameRate
-		{
-			Invalid,
-			High,
-			Normal,
-			Low
-		}
-
-		class GameConfigFile
-		{
-			[IniName("sonicDX")]
-			public GameConfig GameConfig { get; set; }
-			[IniCollection(IniCollectionMode.IndexOnly)]
-			public Dictionary<string, ControllerConfig> Controllers { get; set; }
-		}
-
-		class GameConfig
-		{
-			[IniName("framerate")]
-			public int FrameRate { get; set; }
-			[IniAlwaysInclude]
-			[IniName("fogemulation")]
-			public int FogEmulation { get; set; }
-			[IniAlwaysInclude]
-			[IniName("sound3d")]
-			public int Sound3D { get; set; }
-			[IniAlwaysInclude]
-			[IniName("screensize")]
-			public int ScreenSize { get; set; }
-			[IniAlwaysInclude]
-			[IniName("cliplevel")]
-			public int ClipLevel { get; set; }
-			[IniAlwaysInclude]
-			[IniName("sevoice")]
-			public int SEVoice { get; set; }
-			[IniAlwaysInclude]
-			[IniName("bgm")]
-			public int BGM { get; set; }
-			[IniAlwaysInclude]
-			[IniName("screen")]
-			public int FullScreen { get; set; }
-			[IniAlwaysInclude]
-			[IniName("mousemode")]
-			public int MouseMode { get; set; }
-			[IniAlwaysInclude]
-			[IniName("bgmv")]
-			public int BGMVolume { get; set; }
-			[IniAlwaysInclude]
-			[IniName("voicev")]
-			public int VoiceVolume { get; set; }
-			[IniName("language")]
-			public int Language { get; set; }
-			[IniName("padconfig")]
-			public string PadConfig { get; set; }
-			//[IniName("cmd")]
-			//[IniCollection(IniCollectionMode.NoSquareBrackets)]
-			//public List<int> MouseSettings { get; set; }
-			[IniName("cmd0")]
-			public ushort MouseStart { get; set; }
-			[IniName("cmd1")]
-			public ushort MouseAttack { get; set; }
-			[IniName("cmd2")]
-			public ushort MouseJump { get; set; }
-			[IniName("cmd3")]
-			public ushort MouseAction { get; set; }
-			[IniName("cmd4")]
-			public ushort MouseFlute { get; set; }
-		}
 		#endregion
 
 		#region Startup
+		/// <summary>Sets up various paths dynamically and loads the configuration.</summary>
+		private void InitConfigAndPaths()
+		{
+			// Set the base folder
+			managerExePath = AppDomain.CurrentDomain.BaseDirectory;
+			// Locate the manager data folder (portable mode or otherwise)
+			managerAppDataPath = Path.GetFullPath(Directory.Exists(Path.Combine(managerExePath, "SAManager")) ? Path.Combine(managerExePath, "SAManager") : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SAManager"));
+			// Temp folder
+			updatesTempPath = Path.Combine(managerAppDataPath, "Updates");
+			// d3d8to9 path
+			d3d8to9StoredDLLName = Path.Combine(managerAppDataPath, "extlib", "D3D8M", "d3d8m.dll");
+			// Load SAManager settings JSON file
+			managerConfigJsonPath = Path.Combine(managerAppDataPath, "ManagerClassic.json");
+			managerConfig = JsonDeserialize<ClassicManagerJson>(managerConfigJsonPath);
+			if (managerConfig == null)
+				managerConfig = new ClassicManagerJson();
+			if (managerConfig.IgnoredModUpdates == null)
+				managerConfig.IgnoredModUpdates = new List<string>();
+			// Load the SADX profiles JSON file
+			profilesListJsonPath = Path.Combine(managerAppDataPath, "SADX", "Profiles.json");
+			profilesJson = JsonDeserialize<ProfilesJson>(profilesListJsonPath);
+			// Create a new profile list if one doesn't exist
+			if (profilesJson == null)
+			{
+				profilesJson = new ProfilesJson();
+				profilesJson.ProfilesList.Add(new ProfileData { Name = "Default", Filename = "Default.json" });
+			}
+		}
+
 		public MainForm()
 		{
+			Application.ThreadException += Application_ThreadException;
 			this.Font = SystemFonts.MessageBoxFont;
 			InitializeComponent();
-
+			Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
+			// ListView stuff
+			lvwColumnSorter = new ListViewColumnSorter();
+			listViewMods.ListViewItemSorter = lvwColumnSorter;
+			listViewPatches.ListViewItemSorter = lvwColumnSorter;
+			listViewCodes.ListViewItemSorter = lvwColumnSorter;
 			// WORKAROUND: Windows 7's system fonts don't have
 			// U+2912 or U+2913. Use Cambria instead.
 			// TODO: Check the actual font to see if it has the glyphs.
@@ -200,8 +209,8 @@ namespace SADXModManager
 				if (os.Version.Major <= 5)
 				{
 					boldFont = new Font("Lucida Sans Unicode", this.Font.Size * 1.25f, FontStyle.Regular);
-					modTopButton.Text = "⇈";
-					modBottomButton.Text = "⇊";
+					buttonModTop.Text = "⇈";
+					buttonModBottom.Text = "⇊";
 				}
 				else
 				{
@@ -218,28 +227,94 @@ namespace SADXModManager
 				boldFont = new Font(this.Font.FontFamily, this.Font.Size * 1.25f, FontStyle.Bold);
 			}
 
-			modTopButton.Font = boldFont;
-			modUpButton.Font = boldFont;
-			modDownButton.Font = boldFont;
-			modBottomButton.Font = boldFont;
+			buttonModTop.Font = boldFont;
+			buttonModUp.Font = boldFont;
+			buttonModDown.Font = boldFont;
+			buttonModBottom.Font = boldFont;
 		}
 
+		/// <summary>Enables double buffering for form controls.</summary>
 		private static void SetDoubleBuffered(Control control, bool enable)
 		{
 			PropertyInfo doubleBufferPropertyInfo = control.GetType().GetProperty("DoubleBuffered", BindingFlags.Instance | BindingFlags.NonPublic);
 			doubleBufferPropertyInfo?.SetValue(control, enable, null);
 		}
 
+		/// <summary>Locates the currently selected profile's JSON file, deserializes it and updates paths and game patches</summary>
+		/// <param name="loadProfile">Indicates whether the user has selected a profile to load.</param>
+		private void LoadCurrentProfile(bool loadProfile)
+		{
+			if (loadProfile)
+				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", profilesJson.ProfilesList[profilesJson.ProfileIndex].Filename);
+			else
+				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", "Default.json");
+			gameSettings = JsonDeserialize<GameSettings>(currentProfileJsonPath);
+			// Override in single profile mode
+			if (checkBoxSingleProfile.Checked)
+				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", "Default.json");
+			// Create a new profile if it doesn't exist
+			if (gameSettings == null)
+				gameSettings = new GameSettings();
+			// Set paths for stuff inside game folder
+			sonicDxIniPath = Path.Combine(gameSettings.GamePath, "sonicDX.ini");
+			d3d8to9InstalledDLLName = Path.Combine(gameSettings.GamePath, "d3d8.dll");
+			datadllpath = Path.Combine(gameSettings.GamePath, "system", "CHRMODELS.dll");
+			datadllorigpath = Path.Combine(gameSettings.GamePath, "system", "CHRMODELS_orig.dll");
+			loaderdllpath = Path.Combine(gameSettings.GamePath, "mods", "SADXModLoader.dll");
+			codelstpath = Path.Combine(gameSettings.GamePath, "mods", "Codes.lst");
+			codexmlpath = Path.Combine(gameSettings.GamePath, "mods", "Codes.xml");
+			codedatpath = Path.Combine(gameSettings.GamePath, "mods", "Codes.dat");
+			patchdatpath = Path.Combine(gameSettings.GamePath, "mods", "Patches.dat");
+			patchesJsonPath = Path.Combine(gameSettings.GamePath, "mods", "Patches.json");
+			toolStripStatusLabelGameFolder.Text = "Game Folder: " + gameSettings.GamePath + " (click to change)";
+			InitPatches();
+		}
+
 		private void MainForm_Load(object sender, EventArgs e)
 		{
 			// Try to use TLS 1.2
 			try { ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072; } catch { }
+			// Set debugger thing
 			if (!Debugger.IsAttached)
 				Environment.CurrentDirectory = Application.StartupPath;
-			SetDoubleBuffered(modListView, true);
-			loaderini = File.Exists(loaderinipath) ? IniSerializer.Deserialize<SADXLoaderInfo>(loaderinipath) : new SADXLoaderInfo();
-			Load_WindowUserSettings();
-
+			// Set UI to double buffered
+			SetDoubleBuffered(listViewMods, true);
+			// Set up paths and load configuration
+			InitConfigAndPaths();
+			// Load the current profile
+			LoadCurrentProfile(!checkBoxSingleProfile.Checked);
+			// Load window settings
+			if (managerConfig.LastMonitorResolution == new Point(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height))
+			{
+				Location = managerConfig.WindowPosition;
+				Size = managerConfig.WindowSize;
+				if (managerConfig.Maximized)
+					WindowState = FormWindowState.Maximized;
+			}
+			// Load the profile list and update UI
+			textBoxProfileName.BeginUpdate();
+			textBoxProfileName.Items.Clear();
+			foreach (var item in profilesJson.ProfilesList)
+				textBoxProfileName.Items.Add(item.Name.Replace(".json", ""));
+			textBoxProfileName.SelectedIndex = profilesJson.ProfileIndex;
+			textBoxProfileName.EndUpdate();
+			// Load sonicDX.ini
+			sonicDxIni = File.Exists(sonicDxIniPath) ? IniSerializer.Deserialize<SonicDxIni>(sonicDxIniPath) : new SonicDxIni();
+			if (sonicDxIni.GameConfig == null)
+			{
+				sonicDxIni.GameConfig = new GameConfig
+				{
+					FrameRate = (int)FrameRate.High,
+					Sound3D = 1,
+					SEVoice = 1,
+					BGM = 1,
+					BGMVolume = 100,
+					VoiceVolume = 100
+				};
+			}
+			if (sonicDxIni.Controllers == null)
+				sonicDxIni.Controllers = new Dictionary<string, ControllerConfig>();
+			// Load codes list
 			try
 			{
 				if (File.Exists(codelstpath))
@@ -251,43 +326,98 @@ namespace SADXModManager
 			}
 			catch (Exception ex)
 			{
-				MessageBox.Show(this, $"Error loading code list: {ex.Message}", "SADX Mod Loader", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				MessageBox.Show(this, $"Error loading code list: {ex.Message}", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 				mainCodes = new CodeList();
 			}
-
+			// Update monitor list
 			for (int i = 0; i < Screen.AllScreens.Length; i++)
 			{
 				Screen s = Screen.AllScreens[i];
-				screenNumComboBox.Items.Add($"{ i + 1 } { s.DeviceName } ({ s.Bounds.Location.X },{ s.Bounds.Y })"
-					+ $" { s.Bounds.Width }x{ s.Bounds.Height } { s.BitsPerPixel } bpp { (s.Primary ? "Primary" : "") }");
+				comboBoxScreenNumber.Items.Add($"{i + 1} {s.DeviceName} ({s.Bounds.Location.X},{s.Bounds.Y})"
+					+ $" {s.Bounds.Width}x{s.Bounds.Height} {s.BitsPerPixel} bpp {(s.Primary ? "Primary" : "")}");
 			}
-
+			// Initialize UI
 			comboBoxTestSpawnTime.SelectedIndex = 0;
 			InitTestSpawnCutsceneList();
 			InitTestSpawnGameModeList();
 			LoadSettings();
-			modListView.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent); // Mod name
-			modListView.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.None); // Author
-			modListView.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.HeaderSize); // Version
-			modListView.Columns[3].Width = -2; // Category
-			buttonUpdateD3D8to9.Visible = CheckD3D8to9Update();
+			listViewMods.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent); // Mod name
+			listViewMods.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.None); // Author
+			listViewMods.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.HeaderSize); // Version
+			listViewMods.Columns[3].Width = -2; // Category
+			CheckD3D8to9Update();
+		}
+
+		/// <summary>Sets UI items according to the game settings in the currently loaded profile</summary>
+		private void LoadSettings()
+		{
+			suppressEvent = true;
+			// Load mods
+			LoadModList();
+			// Load Graphics settings
+			// Load Display settings
+			int screenNum = Math.Min(Screen.AllScreens.Length, gameSettings.Graphics.SelectedScreen);
+			comboBoxScreenNumber.SelectedIndex = screenNum;
+			comboBoxScreenMode.SelectedIndex = gameSettings.Graphics.ScreenMode;
+			checkBoxVsync.Checked = gameSettings.Graphics.EnableVsync;
+			checkBoxForceAspectRatio.Checked = gameSettings.Graphics.Enable43ResolutionRatio;
+			numericUpDownHorizontalResolution.Enabled = !gameSettings.Graphics.Enable43ResolutionRatio;
+			numericUpDownHorizontalResolution.Value = Math.Max(numericUpDownHorizontalResolution.Minimum, Math.Min(numericUpDownHorizontalResolution.Maximum, gameSettings.Graphics.HorizontalResolution));
+			numericUpDownVerticalResolution.Value = Math.Max(numericUpDownVerticalResolution.Minimum, Math.Min(numericUpDownVerticalResolution.Maximum, gameSettings.Graphics.VerticalResolution));
+			Rectangle rect = Screen.PrimaryScreen.Bounds;
+			foreach (Screen screen in Screen.AllScreens)
+				rect = Rectangle.Union(rect, screen.Bounds);
+			checkBoxWindowMaintainAspect.Enabled = gameSettings.Graphics.EnableKeepResolutionRatio;
+			numericUpDownWindowWidth.Enabled = gameSettings.Graphics.ScreenMode == (int)(DisplayMode)DisplayMode.CustomWindow && !gameSettings.Graphics.EnableKeepResolutionRatio;
+			numericUpDownWindowWidth.Maximum = rect.Width;
+			numericUpDownWindowWidth.Value = Math.Max(numericUpDownWindowWidth.Minimum, Math.Min(rect.Width, gameSettings.Graphics.CustomWindowWidth));
+			numericUpDownWindowHeight.Enabled = gameSettings.Graphics.ScreenMode == (int)(DisplayMode)DisplayMode.CustomWindow;
+			numericUpDownWindowHeight.Maximum = rect.Height;
+			numericUpDownWindowHeight.Value = Math.Max(numericUpDownWindowHeight.Minimum, Math.Min(rect.Height, gameSettings.Graphics.CustomWindowHeight));
+			checkBoxWindowResizable.Checked = gameSettings.Graphics.EnableResizableWindow;
+			// Load Visuals settings
+			// Framerate
+			if (sonicDxIni.GameConfig.FrameRate == (int)FrameRate.Invalid || sonicDxIni.GameConfig.FrameRate > (int)FrameRate.Low)
+			{
+				MessageBox.Show("Invalid framerate setting detected.\nDefaulting to \"High\".", "Invalid setting", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				comboBoxFramerate.SelectedIndex = (int)FrameRate.High - 1;
+			}
+			else
+			{
+				comboBoxFramerate.SelectedIndex = sonicDxIni.GameConfig.FrameRate - 1;
+			}
+			comboBoxClipLevel.SelectedIndex = sonicDxIni.GameConfig.ClipLevel;
+			comboBoxFogEmulation.SelectedIndex = sonicDxIni.GameConfig.FogEmulation;
 			checkBoxEnableD3D9.Enabled = File.Exists(d3d8to9StoredDLLName);
 			checkBoxEnableD3D9.Checked = File.Exists(d3d8to9InstalledDLLName);
-			profileNameBox.BeginUpdate();
-			foreach (var item in Directory.EnumerateFiles("mods", "*.ini"))
-				if (!item.EndsWith("SADXModLoader.ini", StringComparison.OrdinalIgnoreCase) && !item.EndsWith("desktop.ini", StringComparison.OrdinalIgnoreCase))
-					profileNameBox.Items.Add(Path.GetFileNameWithoutExtension(item));
-			profileNameBox.EndUpdate();
-			// Load controller settings
+			checkBoxBorderImage.Checked = !gameSettings.Graphics.DisableBorderImage;
+			checkBoxForceMipmapping.Checked = gameSettings.Graphics.EnableForcedMipmapping;
+			checkBoxForceTextureFilter.Checked = gameSettings.Graphics.EnableForcedTextureFilter;
+			// Load Graphics/Other settings
+			comboBoxBackgroundFill.SelectedIndex = gameSettings.Graphics.FillModeBackground;
+			comboBoxFmvFill.SelectedIndex = gameSettings.Graphics.FillModeFMV;
+			checkBoxScaleHud.Checked = gameSettings.Graphics.EnableUIScaling;
+			checkBoxShowMouse.Checked = gameSettings.Graphics.ShowMouseInFullscreen;
+			// Load Input settings
+			radioButtonDInput.Checked = !gameSettings.Controller.EnabledInputMod;
+			radioButtonSDL.Checked = gameSettings.Controller.EnabledInputMod;
+			radioButtonMouseDisable.Visible = radioButtonMouseDisable.Enabled = false; // Not implemented
+																					   // Load Mouse settings
+			if (sonicDxIni.GameConfig.MouseMode == 0)
+				radioButtonMouseHold.Checked = true;
+			else
+				radioButtonMouseDragAccelerate.Checked = true;
+			comboBoxMouseAction.SelectedIndex = 0;
+			// Load DInput controller settings
 			directInput = new DirectInput();
 			var list = directInput.GetDevices(DeviceClass.GameControl, DeviceEnumerationFlags.AttachedOnly);
 			if (list.Count > 0)
 			{
 				inputDevice = new Joystick(directInput, list.First().InstanceGuid);
-				tableLayoutPanel1.RowCount = actionNames.Length;
+				tableLayoutPanelDInput.RowCount = actionNames.Length;
 				for (int i = 0; i < actionNames.Length; i++)
 				{
-					tableLayoutPanel1.Controls.Add(new Label
+					tableLayoutPanelDInput.Controls.Add(new Label
 					{
 						AutoSize = true,
 						Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Top,
@@ -295,119 +425,122 @@ namespace SADXModManager
 						TextAlign = ContentAlignment.MiddleLeft
 					}, 0, i);
 					ButtonControl buttonControl = new ButtonControl { Enabled = false };
-					tableLayoutPanel1.Controls.Add(buttonControl, 1, i);
+					tableLayoutPanelDInput.Controls.Add(buttonControl, 1, i);
 					buttonControls.Add(buttonControl);
 					buttonControl.SetButtonClicked += buttonControl_SetButtonClicked;
 					buttonControl.ClearButtonClicked += buttonControl_ClearButtonClicked;
-					if (i == tableLayoutPanel1.RowStyles.Count)
-						tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+					if (i == tableLayoutPanelDInput.RowStyles.Count)
+						tableLayoutPanelDInput.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+				}
+				foreach (KeyValuePair<string, ControllerConfig> item in sonicDxIni.Controllers)
+				{
+					int[] cfg = Enumerable.Repeat(-1, buttonIDs.Length).ToArray();
+					for (int i = 0; i < item.Value.ButtonSettings.Length; i++)
+					{
+						if (Array.IndexOf(buttonIDs, item.Value.ButtonSettings[i]) != -1)
+						{
+							cfg[Array.IndexOf(buttonIDs, item.Value.ButtonSettings[i])] = i;
+						}
+					}
+					controllerConfig.Add(new ControllerConfigInternal { Name = item.Key, Buttons = cfg });
+					comboBoxControllerProfile.Items.Add(item.Key);
+				}
+				if (inputDevice != null)
+				{
+					for (int i = 0; i < controllerConfig.Count; i++)
+					{
+						if (controllerConfig[i].Name == sonicDxIni.GameConfig.PadConfig)
+						{
+							comboBoxControllerProfile.SelectedIndex = i;
+							break;
+						}
+					}
 				}
 			}
 			else
+				groupBoxControllerDInput.Visible = false;
+			// Hide SDL controls for now
+			ListControls();
+			// Load Sound settings
+			checkBoxEnableMusic.Checked = (sonicDxIni.GameConfig.BGM != 0);
+			checkBoxEnableSound.Checked = (sonicDxIni.GameConfig.SEVoice != 0);
+			checkBoxEnable3DSound.Checked = (sonicDxIni.GameConfig.Sound3D != 0);
+			checkBoxUseBassMusic.Checked = gameSettings.Sound.EnableBassMusic;
+			checkBoxUseBassSE.Checked = gameSettings.Sound.EnableBassSFX;
+			trackBarMusicVol.Value = sonicDxIni.GameConfig.BGMVolume;
+			trackBarVoiceVol.Value = sonicDxIni.GameConfig.VoiceVolume;
+			trackBarSEVol.Value = gameSettings.Sound.SEVolume;
+			labelVoiceVol.Text = trackBarVoiceVol.Value.ToString();
+			labelMusicVol.Text = trackBarMusicVol.Value.ToString();
+			labelSEVol.Text = trackBarSEVol.Value.ToString();
+			// Load Debug settings
+			checkBoxEnableDebugConsole.Checked = gameSettings.DebugSettings.EnableDebugConsole;
+			checkBoxEnableDebugScreen.Checked = gameSettings.DebugSettings.EnableDebugScreen;
+			checkBoxEnableDebugFile.Checked = gameSettings.DebugSettings.EnableDebugFile;
+			checkBoxEnableDebugCrashHandler.Checked = gameSettings.DebugSettings.EnableDebugCrashLog;
+			// Load Test Spawn settings
+			checkBoxTestSpawnLevel.Checked = gameSettings.TestSpawn.UseLevel;
+			comboBoxTestSpawnLevel.SelectedIndex = gameSettings.TestSpawn.LevelIndex;
+			numericUpDownTestSpawnAct.Value = gameSettings.TestSpawn.ActIndex;
+			checkBoxTestSpawnCharacter.Checked = gameSettings.TestSpawn.UseCharacter;
+			comboBoxTestSpawnCharacter.SelectedIndex = gameSettings.TestSpawn.CharacterIndex;
+			if (checkBoxTestSpawnLevel.Checked)
+				checkBoxTestSpawnPosition.Checked = gameSettings.TestSpawn.UsePosition;
+			else
+				checkBoxTestSpawnPosition.Enabled = false;
+			numericUpDownTestSpawnX.Value = (int)gameSettings.TestSpawn.XPosition;
+			numericUpDownTestSpawnY.Value = (int)gameSettings.TestSpawn.YPosition;
+			numericUpDownTestSpawnZ.Value = (int)gameSettings.TestSpawn.ZPosition;
+			checkBoxTestSpawnAngleDeg.Checked = true;
+			numericUpDownTestSpawnAngle.Value = gameSettings.TestSpawn.Rotation;
+			checkBoxTestSpawnAngleDeg.Checked = managerConfig.AngleDeg;
+			checkBoxTestSpawnAngleHex.Checked = managerConfig.AngleHex;
+			checkBoxTestSpawnEvent.Checked = gameSettings.TestSpawn.UseEvent;
+			comboBoxTestSpawnEvent.SelectedIndex = GetTestspawnEventIndex(gameSettings.TestSpawn.EventIndex, false);
+			checkBoxTestSpawnGameMode.Checked = gameSettings.TestSpawn.UseGameMode;
+			comboBoxTestSpawnGameMode.SelectedIndex = GetTestspawnGamemodeIndex(gameSettings.TestSpawn.GameModeIndex, false);
+			checkBoxTestSpawnSave.Checked = gameSettings.TestSpawn.UseSave;
+			// Populate save list
+			if (!Directory.Exists(Path.Combine(gameSettings.GamePath, "savedata")))
+				Directory.CreateDirectory(Path.Combine(gameSettings.GamePath, "savedata"));
+			string[] saveList = Directory.GetFiles(Path.Combine(gameSettings.GamePath, "savedata"), "*.snc");
+			foreach (string file in saveList)
 			{
-				groupBoxController.Visible = false;
+				if (Path.GetFileNameWithoutExtension(file).ToUpperInvariant() != "SONICADVENTURE_DX_CHAOGARDEN" &&
+					Path.GetFileNameWithoutExtension(file).ToUpperInvariant() != "SONICADVENTURECHAOGARDEN")
+					comboBoxTestSpawnSave.Items.Add(Path.GetFileNameWithoutExtension(file));
 			}
-			// Load the config INI upon window load
-			LoadConfigIni();
-		}
-
-		private void LoadSettings()
-		{
-			LoadModList();
-
-			consoleCheckBox.Checked = loaderini.DebugConsole;
-			screenCheckBox.Checked = loaderini.DebugScreen;
-			fileCheckBox.Checked = loaderini.DebugFile;
-			crashLogCheckBox.Checked = loaderini.DebugCrashLog;
-			disableCDCheckCheckBox.Checked = loaderini.DisableCDCheck;
-			checkVsync.Checked = loaderini.EnableVsync;
-			horizontalResolution.Enabled = !loaderini.ForceAspectRatio;
-			horizontalResolution.Value = Math.Max(horizontalResolution.Minimum, Math.Min(horizontalResolution.Maximum, loaderini.HorizontalResolution));
-			verticalResolution.Value = Math.Max(verticalResolution.Minimum, Math.Min(verticalResolution.Maximum, loaderini.VerticalResolution));
-			checkUpdateStartup.Checked = loaderini.UpdateCheck;
-			checkUpdateModsStartup.Checked = loaderini.ModUpdateCheck;
-			comboUpdateFrequency.SelectedIndex = (int)loaderini.UpdateUnit;
-			numericUpdateFrequency.Value = loaderini.UpdateFrequency;
-			comboVoiceLanguage.SelectedIndex = (int)loaderini.VoiceLanguage;
-			comboTextLanguage.SelectedIndex = (int)loaderini.TextLanguage;
-			trackBarSEVol.Value = (int)loaderini.SEVolume;
-
-			suppressEvent = true;
-			forceAspectRatioCheckBox.Checked = loaderini.ForceAspectRatio;
-			checkScaleHud.Checked = loaderini.ScaleHud;
+			comboBoxTestSpawnSave.SelectedIndex = Math.Max(-1, gameSettings.TestSpawn.SaveIndex - 1);
+			// Load Options/Update settings
+			checkBoxCheckLoaderUpdatesStartup.Checked = managerConfig.UpdateCheck;
+			checkBoxCheckUpdateModsStartup.Checked = managerConfig.ModUpdateCheck;
+			checkBoxCheckManagerUpdateStartup.Checked = managerConfig.ManagerUpdateCheck;
+			comboBoxUpdateUnit.SelectedIndex = (int)managerConfig.UpdateUnit;
+			numericUpDownUpdateFrequency.Value = managerConfig.UpdateFrequency;
+			// Load Options/Misc settings
+			comboBoxVoiceLanguage.SelectedIndex = gameSettings.TestSpawn.GameVoiceLanguage;
+			comboBoxTextLanguage.SelectedIndex = gameSettings.TestSpawn.GameTextLanguage;
+			checkBoxPauseWhenInactive.Checked = gameSettings.Graphics.EnablePauseOnInactive;
+			// Load Options/Manager settings
+			checkBoxKeepManagerOpen.Checked = managerConfig.KeepManagerOpen;
+			checkBoxSingleProfile.Checked = managerConfig.SingleProfileMode;
 			suppressEvent = false;
-
-			comboBackgroundFill.SelectedIndex = loaderini.BackgroundFillMode;
-			comboFmvFill.SelectedIndex = loaderini.FmvFillMode;
-
-			windowedFullscreenCheckBox.Checked = loaderini.WindowedFullscreen;
-			forceMipmappingCheckBox.Checked = loaderini.AutoMipmap;
-			forceTextureFilterCheckBox.Checked = loaderini.TextureFilter;
-			pauseWhenInactiveCheckBox.Checked = loaderini.PauseWhenInactive;
-			stretchFullscreenCheckBox.Checked = loaderini.StretchFullscreen;
-
-			int screenNum = Math.Min(Screen.AllScreens.Length, loaderini.ScreenNum);
-
-			screenNumComboBox.SelectedIndex = screenNum;
-			customWindowSizeCheckBox.Checked = windowHeight.Enabled = maintainWindowAspectRatioCheckBox.Enabled = loaderini.CustomWindowSize;
-			windowWidth.Enabled = loaderini.CustomWindowSize && !loaderini.MaintainWindowAspectRatio;
-			Rectangle rect = Screen.PrimaryScreen.Bounds;
-
-			foreach (Screen screen in Screen.AllScreens)
-				rect = Rectangle.Union(rect, screen.Bounds);
-
-			windowWidth.Maximum = rect.Width;
-			windowWidth.Value = Math.Max(windowWidth.Minimum, Math.Min(rect.Width, loaderini.WindowWidth));
-			windowHeight.Maximum = rect.Height;
-			windowHeight.Value = Math.Max(windowHeight.Minimum, Math.Min(rect.Height, loaderini.WindowHeight));
-
-			suppressEvent = true;
-			maintainWindowAspectRatioCheckBox.Checked = loaderini.MaintainWindowAspectRatio;
-			suppressEvent = false;
-
-			checkWindowResize.Checked = loaderini.ResizableWindow;
-
-			checkPolyBuff.Checked = loaderini.DisablePolyBuff;
-			checkBassSE.Checked = loaderini.EnableBassSFX;
-			checkMaterialColor.Checked = loaderini.DisableMaterialColorFix;
-			checkInterpolation.Checked = loaderini.DisableInterpolationFix;
-
-			checkBoxTestSpawnLevel.Checked = loaderini.TestSpawnLevel != -1;
-			comboBoxTestSpawnLevel.SelectedIndex = loaderini.TestSpawnLevel;
-			numericUpDownTestSpawnAct.Value = loaderini.TestSpawnAct;
-			checkBoxTestSpawnCharacter.Checked = loaderini.TestSpawnCharacter != -1;
-			comboBoxTestSpawnCharacter.SelectedIndex = loaderini.TestSpawnCharacter;
-			checkBoxTestSpawnPosition.Checked = loaderini.TestSpawnPositionEnabled;
-			numericUpDownTestSpawnX.Value = loaderini.TestSpawnX;
-			numericUpDownTestSpawnY.Value = loaderini.TestSpawnY;
-			numericUpDownTestSpawnZ.Value = loaderini.TestSpawnZ;
-			numericUpDownTestSpawnAngle.Value = loaderini.TestSpawnRotation;
-			checkBoxTestSpawnAngleHex.Checked = loaderini.TestSpawnRotationHex;
-			checkBoxTestSpawnEvent.Checked = loaderini.TestSpawnEvent != -1;
-			comboBoxTestSpawnEvent.SelectedIndex = loaderini.TestSpawnEvent;
-			checkBoxTestSpawnGameMode.Checked = loaderini.TestSpawnGameMode != -1;
-			comboBoxTestSpawnGameMode.SelectedIndex = loaderini.TestSpawnGameMode;
-			checkBoxTestSpawnSave.Checked = loaderini.TestSpawnSaveID != -1;
-			numericUpDownTestSpawnSaveID.Value = Math.Max(1, loaderini.TestSpawnSaveID);
 		}
 
 		private void MainForm_Shown(object sender, EventArgs e)
 		{
-			if (CheckForUpdates())
-				return;
-
 			if (!File.Exists(datadllpath))
 			{
 				MessageBox.Show(this, "CHRMODELS.dll could not be found.\n\n" +
 					"Cannot determine state of installation. Make sure you are running the Mod Manager from the game's main folder (where sonic.exe is).\n\n" +
 					"If you are using the Steam version of the game, you need to convert it to the 2004 version before you can use the Mod Loader.",
 					Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-				installButton.Hide();
+				buttonInstallLoader.Hide();
 			}
 			else if (File.Exists(datadllorigpath))
 			{
 				installed = true;
-				installButton.Text = "Uninstall loader";
+				buttonInstallLoader.Text = "Disable Loader";
 				using (MD5 md5 = MD5.Create())
 				{
 					byte[] hash1 = md5.ComputeHash(File.ReadAllBytes(loaderdllpath));
@@ -434,25 +567,61 @@ namespace SADXModManager
 
 			Program.UriQueue.UriEnqueued += UriQueueOnUriEnqueued;
 
-			CheckForModUpdates();
+			AutoUpdate(true, false, checkBoxCheckLoaderUpdatesStartup.Checked, checkBoxCheckManagerUpdateStartup.Checked, checkBoxCheckManagerUpdateStartup.Checked, checkBoxCheckUpdateModsStartup.Checked);
 
 			// If we've checked for updates, save the modified
 			// last update times without requiring the user to
 			// click the save button.
 			if (checkedForUpdates)
 			{
-				IniSerializer.Serialize(loaderini, loaderinipath);
+				JsonSerialize(managerConfig, managerConfigJsonPath);
 			}
+		}
+
+		private void AutoUpdate(bool startup, bool force, bool loader, bool manager, bool launcher, bool cmods)
+		{
+			// Automatic
+			if (!force && !startup && !UpdateTimeElapsed(managerConfig.UpdateUnit, managerConfig.UpdateFrequency, DateTime.FromFileTimeUtc(managerConfig.ModUpdateTime)))
+				return;
+
+			// User initiated
+			CheckLoader = loader;
+			CheckManager = manager;
+			CheckLauncher = launcher;
+			CheckMods = cmods;
+
+			if (!CheckLoader && !CheckMods && !CheckManager && !CheckLauncher)
+				return;
+
+			InitializeWorker();
+
+			toolStripStatusLabel.Text = "Checking for updates...";
+			checkedForUpdates = true;
+			managerConfig.ModUpdateTime = DateTime.UtcNow.ToFileTimeUtc();
+			Dictionary<string, SADXModInfo> infoNew = new Dictionary<string, SADXModInfo>();
+			foreach (KeyValuePair<string, SADXModInfo> mod in mods)
+			{
+				if (!managerConfig.IgnoredModUpdates.Contains(mod.Key))
+					infoNew.Add(mod.Key, mod.Value);
+			}
+			updateChecker.RunWorkerAsync(infoNew.Select(x => new KeyValuePair<string, ModInfo>(x.Key, x.Value)).ToList());
+			buttonCheckForUpdatesNow.Enabled = false;
 		}
 
 		private void LoadModList()
 		{
-			modTopButton.Enabled = modUpButton.Enabled = modDownButton.Enabled = modBottomButton.Enabled = configureModButton.Enabled = false;
-			modDescription.Text = "Description: No mod selected.";
-			modListView.Items.Clear();
+			buttonModTop.Enabled = buttonModUp.Enabled = buttonModDown.Enabled = buttonModBottom.Enabled = buttonModConfigure.Enabled = false;
+			labelModDescription.Text = "Description: No mod selected.";
+			listViewMods.Items.Clear();
 			mods = new Dictionary<string, SADXModInfo>();
 			codes = new List<Code>(mainCodes.Codes);
-			string modDir = Path.Combine(Environment.CurrentDirectory, "mods");
+			string modDir = Path.Combine(gameSettings.GamePath, "mods");
+			if (!Directory.Exists(modDir))
+			{
+				MessageBox.Show(this, "Mods directory not found.", "SADX Mod Manager Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				Close();
+				return;
+			}
 
 			if (File.Exists(Path.Combine(modDir, "mod.ini")))
 			{
@@ -469,15 +638,15 @@ namespace SADXModManager
 				mods.Add((Path.GetDirectoryName(filename) ?? string.Empty).Substring(modDir.Length + 1), mod);
 			}
 
-			modListView.BeginUpdate();
+			listViewMods.BeginUpdate();
 
-			foreach (string mod in new List<string>(loaderini.Mods))
+			foreach (string mod in new List<string>(gameSettings.EnabledMods))
 			{
 				if (mods.ContainsKey(mod))
 				{
 					SADXModInfo inf = mods[mod];
 					suppressEvent = true;
-					modListView.Items.Add(new ListViewItem(new[] { inf.Name, inf.Author, inf.Version, inf.Category }) { Checked = true, Tag = mod });
+					listViewMods.Items.Add(new ListViewItem(new[] { inf.Name, inf.Author, inf.Version, inf.Category }) { Checked = true, Tag = mod, ForeColor = managerConfig.IgnoredModUpdates.Contains(mod) ? SystemColors.GrayText : SystemColors.WindowText });
 					suppressEvent = false;
 					if (!string.IsNullOrEmpty(inf.Codes))
 						codes.AddRange(CodeList.Load(Path.Combine(Path.Combine(modDir, mod), inf.Codes)).Codes);
@@ -486,148 +655,175 @@ namespace SADXModManager
 				{
 					MessageBox.Show(this, "Mod \"" + mod + "\" could not be found.\n\nThis mod will be removed from the list.",
 						Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-					loaderini.Mods.Remove(mod);
+					gameSettings.EnabledMods.Remove(mod);
 				}
 			}
 
 			foreach (KeyValuePair<string, SADXModInfo> inf in mods.OrderBy(x => x.Value.Name))
 			{
-				if (!loaderini.Mods.Contains(inf.Key))
-					modListView.Items.Add(new ListViewItem(new[] { inf.Value.Name, inf.Value.Author, inf.Value.Version, inf.Value.Category }) { Tag = inf.Key });
+
+				if (!gameSettings.EnabledMods.Contains(inf.Key))
+					listViewMods.Items.Add(new ListViewItem(new[] { inf.Value.Name, inf.Value.Author, inf.Value.Version, inf.Value.Category }) { Tag = inf.Key });
 			}
 
-			modListView.EndUpdate();
+			listViewMods.EndUpdate();
 
-			loaderini.EnabledCodes = new List<string>(loaderini.EnabledCodes.Where(a => codes.Any(c => c.Name == a)));
-			foreach (Code item in codes.Where(a => a.Required && !loaderini.EnabledCodes.Contains(a.Name)))
-				loaderini.EnabledCodes.Add(item.Name);
+			gameSettings.EnabledCodes = new List<string>(gameSettings.EnabledCodes.Where(a => codes.Any(c => c.Name == a)));
+			foreach (Code item in codes.Where(a => a.Required && !gameSettings.EnabledCodes.Contains(a.Name)))
+				gameSettings.EnabledCodes.Add(item.Name);
 
-			codesCheckedListBox.BeginUpdate();
-			codesCheckedListBox.Items.Clear();
+			RefreshCodes();
+			toolStripStatusLabel.Text = string.Format("Loaded {0} mods, {1} enabled.", mods.Count, gameSettings.EnabledMods.Count);
+		}
+
+		private void RefreshCodes()
+		{
+			listViewCodes.BeginUpdate();
+			listViewCodes.Items.Clear();
 
 			foreach (Code item in codes)
-				codesCheckedListBox.Items.Add(item.Name, loaderini.EnabledCodes.Contains(item.Name));
+			{
+				ListViewItem lvitem = new ListViewItem(new[] { item.Name, item.Author, item.Category });
+				lvitem.Checked = gameSettings.EnabledCodes.Contains(item.Name);
+				listViewCodes.Items.Add(lvitem);
+			}
+			listViewCodes.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent); // Code name
+			listViewCodes.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent); // Author
+			listViewCodes.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.ColumnContent); // Category
 
-			codesCheckedListBox.EndUpdate();
+			listViewCodes.EndUpdate();
 		}
+
+		private void listViewCodes_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			string desc = "None";
+			if (listViewCodes.SelectedIndices.Count == 1)
+			{
+				Code code = codes.Find(a => a.Name == listViewCodes.SelectedItems[0].Text);
+				if (code.Description != null && code.Description != "")
+					desc = code.Description;
+			}
+			labelCodeDescription.Text = "Description: " + desc;
+		}
+
 		#endregion
 
 		#region Mod management and configuration
 		private void modListView_SelectedIndexChanged(object sender, EventArgs e)
 		{
-			int count = modListView.SelectedIndices.Count;
+			int count = listViewMods.SelectedIndices.Count;
 			if (count == 0)
 			{
-				modTopButton.Enabled = modUpButton.Enabled = modDownButton.Enabled = modBottomButton.Enabled = configureModButton.Enabled = false;
-				modDescription.Text = "Description: No mod selected.";
+				buttonModTop.Enabled = buttonModUp.Enabled = buttonModDown.Enabled = buttonModBottom.Enabled = buttonModConfigure.Enabled = false;
+				labelModDescription.Text = "Description: No mod selected.";
 			}
 			else if (count == 1)
 			{
-				modDescription.Text = "Description: " + mods[(string)modListView.SelectedItems[0].Tag].Description;
-				modTopButton.Enabled = modListView.SelectedIndices[0] != 0;
-				modUpButton.Enabled = modListView.SelectedIndices[0] > 0;
-				modDownButton.Enabled = modListView.SelectedIndices[0] < modListView.Items.Count - 1;
-				modBottomButton.Enabled = modListView.SelectedIndices[0] != modListView.Items.Count - 1;
-				configureModButton.Enabled = File.Exists(Path.Combine("mods", (string)modListView.SelectedItems[0].Tag, "configschema.xml"));
+				labelModDescription.Text = "Description: " + mods[(string)listViewMods.SelectedItems[0].Tag].Description;
+				buttonModTop.Enabled = listViewMods.SelectedIndices[0] != 0;
+				buttonModUp.Enabled = listViewMods.SelectedIndices[0] > 0;
+				buttonModDown.Enabled = listViewMods.SelectedIndices[0] < listViewMods.Items.Count - 1;
+				buttonModBottom.Enabled = listViewMods.SelectedIndices[0] != listViewMods.Items.Count - 1;
+				buttonModConfigure.Enabled = File.Exists(Path.Combine("mods", (string)listViewMods.SelectedItems[0].Tag, "configschema.xml"));
 			}
 			else if (count > 1)
 			{
-				modDescription.Text = "Description: Multiple mods selected.";
-				modTopButton.Enabled = modUpButton.Enabled = modDownButton.Enabled = modBottomButton.Enabled = true;
-				configureModButton.Enabled = false;
+				labelModDescription.Text = "Description: Multiple mods selected.";
+				buttonModTop.Enabled = buttonModUp.Enabled = buttonModDown.Enabled = buttonModBottom.Enabled = true;
+				buttonModConfigure.Enabled = false;
 			}
 		}
 
 		private void modTopButton_Click(object sender, EventArgs e)
 		{
-			if (modListView.SelectedItems.Count < 1)
+			if (listViewMods.SelectedItems.Count < 1)
 				return;
 
-			modListView.BeginUpdate();
+			listViewMods.BeginUpdate();
 
-			for (int i = 0; i < modListView.SelectedItems.Count; i++)
+			for (int i = 0; i < listViewMods.SelectedItems.Count; i++)
 			{
-				int index = modListView.SelectedItems[i].Index;
+				int index = listViewMods.SelectedItems[i].Index;
 
 				if (index > 0)
 				{
-					ListViewItem item = modListView.SelectedItems[i];
-					modListView.Items.Remove(item);
-					modListView.Items.Insert(i, item);
+					ListViewItem item = listViewMods.SelectedItems[i];
+					listViewMods.Items.Remove(item);
+					listViewMods.Items.Insert(i, item);
 				}
 			}
 
-			modListView.SelectedItems[0].EnsureVisible();
-			modListView.EndUpdate();
+			listViewMods.SelectedItems[0].EnsureVisible();
+			listViewMods.EndUpdate();
 		}
 
 		private void modUpButton_Click(object sender, EventArgs e)
 		{
-			if (modListView.SelectedItems.Count < 1)
+			if (listViewMods.SelectedItems.Count < 1)
 				return;
 
-			modListView.BeginUpdate();
+			listViewMods.BeginUpdate();
 
-			for (int i = 0; i < modListView.SelectedItems.Count; i++)
+			for (int i = 0; i < listViewMods.SelectedItems.Count; i++)
 			{
-				int index = modListView.SelectedItems[i].Index;
+				int index = listViewMods.SelectedItems[i].Index;
 
-				if (index-- > 0 && !modListView.Items[index].Selected)
+				if (index-- > 0 && !listViewMods.Items[index].Selected)
 				{
-					ListViewItem item = modListView.SelectedItems[i];
-					modListView.Items.Remove(item);
-					modListView.Items.Insert(index, item);
+					ListViewItem item = listViewMods.SelectedItems[i];
+					listViewMods.Items.Remove(item);
+					listViewMods.Items.Insert(index, item);
 				}
 			}
 
-			modListView.SelectedItems[0].EnsureVisible();
-			modListView.EndUpdate();
+			listViewMods.SelectedItems[0].EnsureVisible();
+			listViewMods.EndUpdate();
 		}
 
 		private void modDownButton_Click(object sender, EventArgs e)
 		{
-			if (modListView.SelectedItems.Count < 1)
+			if (listViewMods.SelectedItems.Count < 1)
 				return;
 
-			modListView.BeginUpdate();
+			listViewMods.BeginUpdate();
 
-			for (int i = modListView.SelectedItems.Count - 1; i >= 0; i--)
+			for (int i = listViewMods.SelectedItems.Count - 1; i >= 0; i--)
 			{
-				int index = modListView.SelectedItems[i].Index + 1;
+				int index = listViewMods.SelectedItems[i].Index + 1;
 
-				if (index != modListView.Items.Count && !modListView.Items[index].Selected)
+				if (index != listViewMods.Items.Count && !listViewMods.Items[index].Selected)
 				{
-					ListViewItem item = modListView.SelectedItems[i];
-					modListView.Items.Remove(item);
-					modListView.Items.Insert(index, item);
+					ListViewItem item = listViewMods.SelectedItems[i];
+					listViewMods.Items.Remove(item);
+					listViewMods.Items.Insert(index, item);
 				}
 			}
 
-			modListView.SelectedItems[modListView.SelectedItems.Count - 1].EnsureVisible();
-			modListView.EndUpdate();
+			listViewMods.SelectedItems[listViewMods.SelectedItems.Count - 1].EnsureVisible();
+			listViewMods.EndUpdate();
 		}
 
 		private void modBottomButton_Click(object sender, EventArgs e)
 		{
-			if (modListView.SelectedItems.Count < 1)
+			if (listViewMods.SelectedItems.Count < 1)
 				return;
 
-			modListView.BeginUpdate();
+			listViewMods.BeginUpdate();
 
-			for (int i = modListView.SelectedItems.Count - 1; i >= 0; i--)
+			for (int i = listViewMods.SelectedItems.Count - 1; i >= 0; i--)
 			{
-				int index = modListView.SelectedItems[i].Index;
+				int index = listViewMods.SelectedItems[i].Index;
 
-				if (index != modListView.Items.Count - 1)
+				if (index != listViewMods.Items.Count - 1)
 				{
-					ListViewItem item = modListView.SelectedItems[i];
-					modListView.Items.Remove(item);
-					modListView.Items.Insert(modListView.Items.Count, item);
+					ListViewItem item = listViewMods.SelectedItems[i];
+					listViewMods.Items.Remove(item);
+					listViewMods.Items.Insert(listViewMods.Items.Count, item);
 				}
 			}
 
-			modListView.SelectedItems[modListView.SelectedItems.Count - 1].EnsureVisible();
-			modListView.EndUpdate();
+			listViewMods.SelectedItems[listViewMods.SelectedItems.Count - 1].EnsureVisible();
+			listViewMods.EndUpdate();
 		}
 
 		private void buttonRefreshModList_Click(object sender, EventArgs e)
@@ -637,11 +833,16 @@ namespace SADXModManager
 
 		private void buttonNewMod_Click(object sender, EventArgs e)
 		{
-			using (var ModDialog = new NewModDialog())
+			// Remove after adding mods is implemented
+			using (var ModDialog = new NewModDialog(managerConfig.ModAuthor))
 			{
 				if (ModDialog.ShowDialog() == DialogResult.OK)
+				{
+					managerConfig.ModAuthor = ModDialog.ModAuthor;
 					LoadModList();
+				}
 			}
+			//contextMenuStripAddMod.Show(buttonModAdd, buttonModAdd.Width, 0);
 		}
 
 		private void codesCheckedListBox_ItemCheck(object sender, ItemCheckEventArgs e)
@@ -651,28 +852,28 @@ namespace SADXModManager
 				e.NewValue = CheckState.Checked;
 			if (e.NewValue == CheckState.Unchecked)
 			{
-				if (loaderini.EnabledCodes.Contains(code.Name))
-					loaderini.EnabledCodes.Remove(code.Name);
+				if (gameSettings.EnabledCodes.Contains(code.Name))
+					gameSettings.EnabledCodes.Remove(code.Name);
 			}
 			else
 			{
-				if (!loaderini.EnabledCodes.Contains(code.Name))
-					loaderini.EnabledCodes.Add(code.Name);
+				if (!gameSettings.EnabledCodes.Contains(code.Name))
+					gameSettings.EnabledCodes.Add(code.Name);
 			}
 		}
 
-		private void modListView_ItemCheck(object sender, ItemCheckEventArgs e)
+		private void listViewMods_ItemCheck(object sender, ItemCheckEventArgs e)
 		{
 			if (suppressEvent) return;
 			codes = new List<Code>(mainCodes.Codes);
 			string modDir = Path.Combine(Environment.CurrentDirectory, "mods");
 			List<string> modlist = new List<string>();
-			foreach (ListViewItem item in modListView.CheckedItems)
+			foreach (ListViewItem item in listViewMods.CheckedItems)
 				modlist.Add((string)item.Tag);
 			if (e.NewValue == CheckState.Unchecked)
-				modlist.Remove((string)modListView.Items[e.Index].Tag);
+				modlist.Remove((string)listViewMods.Items[e.Index].Tag);
 			else
-				modlist.Add((string)modListView.Items[e.Index].Tag);
+				modlist.Add((string)listViewMods.Items[e.Index].Tag);
 			foreach (string mod in modlist)
 				if (mods.ContainsKey(mod))
 				{
@@ -680,14 +881,24 @@ namespace SADXModManager
 					if (!string.IsNullOrEmpty(inf.Codes))
 						codes.AddRange(CodeList.Load(Path.Combine(Path.Combine(modDir, mod), inf.Codes)).Codes);
 				}
-			loaderini.EnabledCodes = new List<string>(loaderini.EnabledCodes.Where(a => codes.Any(c => c.Name == a)));
-			foreach (Code item in codes.Where(a => a.Required && !loaderini.EnabledCodes.Contains(a.Name)))
-				loaderini.EnabledCodes.Add(item.Name);
-			codesCheckedListBox.BeginUpdate();
-			codesCheckedListBox.Items.Clear();
-			foreach (Code item in codes)
-				codesCheckedListBox.Items.Add(item.Name, loaderini.EnabledCodes.Contains(item.Name));
-			codesCheckedListBox.EndUpdate();
+			gameSettings.EnabledCodes = new List<string>(gameSettings.EnabledCodes.Where(a => codes.Any(c => c.Name == a)));
+			foreach (Code item in codes.Where(a => a.Required && !gameSettings.EnabledCodes.Contains(a.Name)))
+				gameSettings.EnabledCodes.Add(item.Name);
+			RefreshCodes();
+		}
+
+		private void listViewMods_ItemChecked(object sender, ItemCheckedEventArgs e)
+		{
+			if (suppressEvent)
+				return;
+			// Refresh the list of currently active mods in the JSON (memory)
+			foreach (ListViewItem item in listViewMods.Items)
+			{
+				if (gameSettings.EnabledMods.Contains((string)item.Tag) && !item.Checked)
+					gameSettings.EnabledMods.Remove((string)item.Tag);
+				else if (!gameSettings.EnabledMods.Contains((string)item.Tag) && item.Checked)
+					gameSettings.EnabledMods.Add((string)item.Tag);
+			}
 		}
 
 		private void modListView_MouseClick(object sender, MouseEventArgs e)
@@ -697,15 +908,17 @@ namespace SADXModManager
 				return;
 			}
 
-			if (modListView.FocusedItem.Bounds.Contains(e.Location))
+			if (listViewMods.FocusedItem.Bounds.Contains(e.Location))
 			{
-				modContextMenu.Show(Cursor.Position);
+				disableUpdatesToolStripMenuItem.Checked = managerConfig.IgnoredModUpdates.Contains((string)listViewMods.SelectedItems[0].Tag);
+				configureToolStripMenuItem.Enabled = listViewMods.SelectedItems.Count == 1 && File.Exists(Path.Combine("mods", (string)listViewMods.SelectedItems[0].Tag, "configschema.xml"));
+				contextMenuStripMod.Show(Cursor.Position);
 			}
 		}
 
 		private void openFolderToolStripMenuItem_Click(object sender, EventArgs e)
 		{
-			foreach (ListViewItem item in modListView.SelectedItems)
+			foreach (ListViewItem item in listViewMods.SelectedItems)
 			{
 				Process.Start(Path.Combine("mods", (string)item.Tag));
 			}
@@ -713,15 +926,18 @@ namespace SADXModManager
 
 		private void configureModButton_Click(object sender, EventArgs e)
 		{
-			using (ModConfigDialog dlg = new ModConfigDialog(Path.Combine("mods", (string)modListView.SelectedItems[0].Tag), modListView.SelectedItems[0].Text))
+			using (ModConfigDialog dlg = new ModConfigDialog(Path.Combine("mods", (string)listViewMods.SelectedItems[0].Tag), listViewMods.SelectedItems[0].Text))
+			{
+				dlg.StartPosition = FormStartPosition.CenterParent;
 				dlg.ShowDialog(this);
+			}
 		}
 		#endregion
 
 		#region Drag and drop
 		private void modListView_ItemDrag(object sender, ItemDragEventArgs e)
 		{
-			modListView.DoDragDrop(new DataObject(moddropname, modListView.SelectedItems.Cast<ListViewItem>().ToArray()), DragDropEffects.Move | DragDropEffects.Scroll);
+			listViewMods.DoDragDrop(new DataObject(moddropname, listViewMods.SelectedItems.Cast<ListViewItem>().ToArray()), DragDropEffects.Move | DragDropEffects.Scroll);
 		}
 
 		private void modListView_DragEnter(object sender, DragEventArgs e)
@@ -744,94 +960,160 @@ namespace SADXModManager
 		{
 			if (e.Data.GetDataPresent(moddropname))
 			{
-				Point clientPoint = modListView.PointToClient(new Point(e.X, e.Y));
+				Point clientPoint = listViewMods.PointToClient(new Point(e.X, e.Y));
 				ListViewItem[] items = (ListViewItem[])e.Data.GetData(moddropname);
-				int ind = modListView.GetItemAt(clientPoint.X, clientPoint.Y).Index;
+				int ind = listViewMods.GetItemAt(clientPoint.X, clientPoint.Y).Index;
 				foreach (ListViewItem item in items)
 					if (ind > item.Index)
 						ind++;
-				modListView.BeginUpdate();
+				listViewMods.BeginUpdate();
 				foreach (ListViewItem item in items)
-					modListView.Items.Insert(ind++, (ListViewItem)item.Clone());
+					listViewMods.Items.Insert(ind++, (ListViewItem)item.Clone());
 				foreach (ListViewItem item in items)
-					modListView.Items.Remove(item);
-				modListView.EndUpdate();
+					listViewMods.Items.Remove(item);
+				listViewMods.EndUpdate();
 			}
 		}
 		#endregion
 
 		#region Saving and Mod Loader installation
-		private void Save()
+		private void SaveSettings(bool saveProfile)
 		{
-			loaderini.Mods.Clear();
-
-			foreach (ListViewItem item in modListView.CheckedItems)
+			// Clear and readd mods
+			gameSettings.EnabledMods.Clear();
+			foreach (ListViewItem item in listViewMods.CheckedItems)
 			{
-				loaderini.Mods.Add((string)item.Tag);
+				gameSettings.EnabledMods.Add((string)item.Tag);
 			}
-
-			loaderini.DebugConsole = consoleCheckBox.Checked;
-			loaderini.DebugScreen = screenCheckBox.Checked;
-			loaderini.DebugFile = fileCheckBox.Checked;
-			loaderini.DebugCrashLog = crashLogCheckBox.Checked;
-			loaderini.DisableCDCheck = disableCDCheckCheckBox.Checked;
-			loaderini.HorizontalResolution = (int)horizontalResolution.Value;
-			loaderini.VerticalResolution = (int)verticalResolution.Value;
-			loaderini.ForceAspectRatio = forceAspectRatioCheckBox.Checked;
-			loaderini.ScaleHud = checkScaleHud.Checked;
-			loaderini.BackgroundFillMode = comboBackgroundFill.SelectedIndex;
-			loaderini.FmvFillMode = comboFmvFill.SelectedIndex;
-			loaderini.EnableVsync = checkVsync.Checked;
-			loaderini.WindowedFullscreen = windowedFullscreenCheckBox.Checked;
-			loaderini.AutoMipmap = forceMipmappingCheckBox.Checked;
-			loaderini.TextureFilter = forceTextureFilterCheckBox.Checked;
-			loaderini.PauseWhenInactive = pauseWhenInactiveCheckBox.Checked;
-			loaderini.StretchFullscreen = stretchFullscreenCheckBox.Checked;
-			loaderini.ScreenNum = screenNumComboBox.SelectedIndex;
-			loaderini.CustomWindowSize = customWindowSizeCheckBox.Checked;
-			loaderini.WindowWidth = (int)windowWidth.Value;
-			loaderini.WindowHeight = (int)windowHeight.Value;
-			loaderini.MaintainWindowAspectRatio = maintainWindowAspectRatioCheckBox.Checked;
-			loaderini.ResizableWindow = checkWindowResize.Checked;
-			loaderini.UpdateCheck = checkUpdateStartup.Checked;
-			loaderini.ModUpdateCheck = checkUpdateModsStartup.Checked;
-			loaderini.UpdateUnit = (UpdateUnit)comboUpdateFrequency.SelectedIndex;
-			loaderini.UpdateFrequency = (int)numericUpdateFrequency.Value;
-			loaderini.VoiceLanguage = (int)comboVoiceLanguage.SelectedIndex;
-			loaderini.TextLanguage = (int)comboTextLanguage.SelectedIndex;
-			loaderini.SEVolume = trackBarSEVol.Value;
-			loaderini.DisablePolyBuff = checkPolyBuff.Checked;
-			loaderini.EnableBassSFX = checkBassSE.Checked;
-			loaderini.DisableMaterialColorFix = checkMaterialColor.Checked;
-			loaderini.DisableInterpolationFix = checkInterpolation.Checked;
-
-			loaderini.TestSpawnLevel = checkBoxTestSpawnLevel.Checked ? comboBoxTestSpawnLevel.SelectedIndex : -1;
-			loaderini.TestSpawnAct = (int)numericUpDownTestSpawnAct.Value;
-			loaderini.TestSpawnCharacter = checkBoxTestSpawnCharacter.Checked ? comboBoxTestSpawnCharacter.SelectedIndex : -1;
-			loaderini.TestSpawnPositionEnabled = checkBoxTestSpawnPosition.Checked;
-			loaderini.TestSpawnX = (int)numericUpDownTestSpawnX.Value;
-			loaderini.TestSpawnY = (int)numericUpDownTestSpawnY.Value;
-			loaderini.TestSpawnZ = (int)numericUpDownTestSpawnZ.Value;
-			loaderini.TestSpawnRotation = (int)numericUpDownTestSpawnAngle.Value;
-			loaderini.TestSpawnRotationHex = checkBoxTestSpawnAngleHex.Checked;
-			loaderini.TestSpawnEvent = checkBoxTestSpawnEvent.Checked ? comboBoxTestSpawnEvent.SelectedIndex : -1;
-			loaderini.TestSpawnGameMode = checkBoxTestSpawnGameMode.Checked ? comboBoxTestSpawnGameMode.SelectedIndex : -1;
-			loaderini.TestSpawnSaveID = checkBoxTestSpawnSave.Checked ? (int)numericUpDownTestSpawnSaveID.Value : -1;
-			IniSerializer.Serialize(loaderini, loaderinipath);
-
+			// Save codes
 			List<Code> selectedCodes = new List<Code>();
-			List<Code> selectedPatches = new List<Code>();
-
-			foreach (Code item in codesCheckedListBox.CheckedIndices.OfType<int>().Select(a => codes[a]))
+			List<Code> selectedCodePatches = new List<Code>();
+			foreach (Code item in listViewCodes.CheckedIndices.OfType<int>().Select(a => codes[a]))
 			{
 				if (item.Patch)
-					selectedPatches.Add(item);
+					selectedCodePatches.Add(item);
 				else
 					selectedCodes.Add(item);
 			}
-
-			CodeList.WriteDatFile(patchdatpath, selectedPatches);
+			CodeList.WriteDatFile(patchdatpath, selectedCodePatches);
 			CodeList.WriteDatFile(codedatpath, selectedCodes);
+			// Save graphics settings - Display
+			gameSettings.Graphics.SelectedScreen = comboBoxScreenNumber.SelectedIndex;
+			gameSettings.Graphics.ScreenMode = comboBoxScreenMode.SelectedIndex;
+			gameSettings.Graphics.EnableVsync = checkBoxVsync.Checked;
+			gameSettings.Graphics.HorizontalResolution = (int)numericUpDownHorizontalResolution.Value;
+			gameSettings.Graphics.VerticalResolution = (int)numericUpDownVerticalResolution.Value;
+			gameSettings.Graphics.Enable43ResolutionRatio = checkBoxForceAspectRatio.Checked;
+			gameSettings.Graphics.CustomWindowWidth = (int)numericUpDownWindowWidth.Value;
+			gameSettings.Graphics.CustomWindowHeight = (int)numericUpDownWindowHeight.Value;
+			gameSettings.Graphics.EnableKeepResolutionRatio = checkBoxWindowMaintainAspect.Checked;
+			gameSettings.Graphics.EnableResizableWindow = checkBoxWindowResizable.Checked;
+			// Save graphics settings - Visuals
+			sonicDxIni.GameConfig.FullScreen = ((DisplayMode)(comboBoxScreenMode.SelectedIndex) == DisplayMode.Fullscreen ||
+				(DisplayMode)(comboBoxScreenMode.SelectedIndex) == DisplayMode.Borderless) ? 1 : 0;
+			sonicDxIni.GameConfig.ClipLevel = comboBoxClipLevel.SelectedIndex;
+			sonicDxIni.GameConfig.FogEmulation = comboBoxFogEmulation.SelectedIndex;
+			gameSettings.Graphics.EnableForcedMipmapping = checkBoxForceMipmapping.Checked;
+			gameSettings.Graphics.EnableForcedTextureFilter = checkBoxForceTextureFilter.Checked;
+			gameSettings.Graphics.DisableBorderImage = !checkBoxBorderImage.Checked;
+			// Direct3D 9 setting applied immediately
+			// Save graphics settings - Other
+			gameSettings.Graphics.FillModeBackground = comboBoxBackgroundFill.SelectedIndex;
+			gameSettings.Graphics.FillModeFMV = comboBoxFmvFill.SelectedIndex;
+			gameSettings.Graphics.EnableUIScaling = checkBoxScaleHud.Checked;
+			gameSettings.Graphics.ShowMouseInFullscreen = checkBoxShowMouse.Checked;
+			// Save input settings
+			gameSettings.Controller.EnabledInputMod = radioButtonSDL.Checked;
+			// Not implemented: Disable mouse
+			sonicDxIni.GameConfig.MouseMode = radioButtonMouseHold.Checked ? 0 : 1;
+			// Other mouse settings are applied immediately
+			// Save DirectInput settings
+			if (inputDevice != null)
+			{
+				sonicDxIni.GameConfig.PadConfig = comboBoxControllerProfile.SelectedIndex == -1 ? null : controllerConfig[comboBoxControllerProfile.SelectedIndex].Name;
+				sonicDxIni.Controllers.Clear();
+				foreach (ControllerConfigInternal item in controllerConfig)
+				{
+					ControllerConfig config = new ControllerConfig { ButtonCount = item.Buttons.Max() + 1 };
+					config.ButtonSettings = Enumerable.Repeat(-1, config.ButtonCount).ToArray();
+					for (int i = 0; i < buttonIDs.Length; i++)
+					{
+						if (item.Buttons[i] != -1)
+						{
+							config.ButtonSettings[item.Buttons[i]] = buttonIDs[i];
+						}
+					}
+					sonicDxIni.Controllers.Add(item.Name, config);
+				}
+			}
+			// Save sound settings
+			sonicDxIni.GameConfig.SEVoice = checkBoxEnableSound.Checked ? 1 : 0;
+			sonicDxIni.GameConfig.BGM = checkBoxEnableMusic.Checked ? 1 : 0;
+			sonicDxIni.GameConfig.Sound3D = checkBoxEnable3DSound.Checked ? 1 : 0;
+			gameSettings.Sound.EnableBassMusic = checkBoxUseBassMusic.Checked;
+			gameSettings.Sound.EnableBassSFX = checkBoxUseBassSE.Checked;
+			sonicDxIni.GameConfig.VoiceVolume = trackBarVoiceVol.Value;
+			sonicDxIni.GameConfig.BGMVolume = trackBarMusicVol.Value;
+			gameSettings.Sound.SEVolume = trackBarSEVol.Value;
+			// Patches saved immediately
+			// Save debug settings
+			gameSettings.DebugSettings.EnableDebugConsole = checkBoxEnableDebugConsole.Checked;
+			gameSettings.DebugSettings.EnableDebugScreen = checkBoxEnableDebugScreen.Checked;
+			gameSettings.DebugSettings.EnableDebugFile = checkBoxEnableDebugFile.Checked;
+			gameSettings.DebugSettings.EnableDebugCrashLog = checkBoxEnableDebugCrashHandler.Checked;
+			// Save Test Spawn settings
+			gameSettings.TestSpawn.UseLevel = checkBoxTestSpawnLevel.Checked;
+			gameSettings.TestSpawn.LevelIndex = comboBoxTestSpawnLevel.SelectedIndex;
+			gameSettings.TestSpawn.ActIndex = (int)numericUpDownTestSpawnAct.Value;
+			gameSettings.TestSpawn.UseCharacter = checkBoxTestSpawnCharacter.Checked;
+			gameSettings.TestSpawn.CharacterIndex = comboBoxTestSpawnCharacter.SelectedIndex;
+			gameSettings.TestSpawn.UsePosition = checkBoxTestSpawnPosition.Checked;
+			gameSettings.TestSpawn.XPosition = (float)numericUpDownTestSpawnX.Value;
+			gameSettings.TestSpawn.YPosition = (float)numericUpDownTestSpawnY.Value;
+			gameSettings.TestSpawn.ZPosition = (float)numericUpDownTestSpawnZ.Value;
+			if (checkBoxTestSpawnAngleDeg.Checked)
+				gameSettings.TestSpawn.Rotation = (int)numericUpDownTestSpawnAngle.Value;
+			else
+				gameSettings.TestSpawn.Rotation = (int)Math.Round((float)numericUpDownTestSpawnAngle.Value * (360.0f / 65535.0f));
+			gameSettings.TestSpawn.UseEvent = checkBoxTestSpawnEvent.Checked;
+			gameSettings.TestSpawn.EventIndex = GetTestspawnEventIndex(comboBoxTestSpawnEvent.SelectedIndex, true);
+			gameSettings.TestSpawn.UseGameMode = checkBoxTestSpawnGameMode.Checked;
+			gameSettings.TestSpawn.GameModeIndex = GetTestspawnGamemodeIndex(comboBoxTestSpawnGameMode.SelectedIndex, true);
+			gameSettings.TestSpawn.UseSave = checkBoxTestSpawnSave.Checked;
+			gameSettings.TestSpawn.SaveIndex = comboBoxTestSpawnSave.SelectedIndex + 1;
+			managerConfig.AngleDeg = checkBoxTestSpawnAngleDeg.Checked;
+			managerConfig.AngleHex = checkBoxTestSpawnAngleHex.Checked;
+			// Save Options settings
+			// Save Update settings
+			managerConfig.UpdateCheck = checkBoxCheckLoaderUpdatesStartup.Checked;
+			managerConfig.ModUpdateCheck = checkBoxCheckUpdateModsStartup.Checked;
+			managerConfig.ManagerUpdateCheck = checkBoxCheckManagerUpdateStartup.Checked;
+			managerConfig.UpdateFrequency = (int)numericUpDownUpdateFrequency.Value;
+			managerConfig.UpdateUnit = (UpdateUnit)comboBoxUpdateUnit.SelectedIndex;
+			// Save Misc settings
+			gameSettings.Graphics.EnablePauseOnInactive = checkBoxPauseWhenInactive.Checked;
+			gameSettings.TestSpawn.GameVoiceLanguage = comboBoxVoiceLanguage.SelectedIndex;
+			gameSettings.TestSpawn.GameTextLanguage = comboBoxTextLanguage.SelectedIndex;
+			// Save Manager Settings
+			managerConfig.KeepManagerOpen = checkBoxKeepManagerOpen.Checked;
+			managerConfig.SingleProfileMode = checkBoxSingleProfile.Checked;
+			// Save window settings
+			managerConfig.LastMonitorResolution = new Point(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height);
+			managerConfig.Maximized = WindowState == FormWindowState.Maximized;
+			if (WindowState != FormWindowState.Maximized)
+			{
+				managerConfig.WindowPosition = Location;
+				managerConfig.WindowSize = Size;
+			}
+			// Serialize JSONs and sonicDX.ini
+			if (!saveProfile && checkBoxSingleProfile.Checked)
+				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", "Default.json");
+			else
+				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", textBoxProfileName.Text + ".json");
+			IniSerializer.Serialize(sonicDxIni, sonicDxIniPath);
+			JsonSerialize(gameSettings, currentProfileJsonPath);
+			JsonSerialize(managerConfig, managerConfigJsonPath);
+			JsonSerialize(profilesJson, profilesListJsonPath);
 		}
 
 		private Dictionary<string, string> GetModReference()
@@ -868,13 +1150,13 @@ namespace SADXModManager
 
 			if (mod.Dependencies.Count > 0)
 			{
-				int mID = loaderini.Mods.IndexOf(lMod);
+				int mID = gameSettings.EnabledMods.IndexOf(lMod);
 				foreach (string sDependency in mod.Dependencies)
 				{
 					ModDependency dependency = new ModDependency(sDependency);
 					if (dependency.ID == "" && dependency.Folder == "")
 						return false;
-					
+
 					string depName = dependency.GetDependencyName();
 
 					bool modExists = false;
@@ -891,9 +1173,9 @@ namespace SADXModManager
 					if (modExists)
 					{
 						// If Dependency Mod Exists, check if mod is active.
-						if (loaderini.Mods.Contains(dependency.Folder))
+						if (gameSettings.EnabledMods.Contains(dependency.Folder))
 						{
-							int cID = loaderini.Mods.IndexOf(dependency.Folder);
+							int cID = gameSettings.EnabledMods.IndexOf(dependency.Folder);
 							if (mID < cID)
 							{
 								MessageBox.Show(depName + " needs to be placed above " + mod.Name, "Mod Order", MessageBoxButtons.OKCancel);
@@ -952,8 +1234,7 @@ namespace SADXModManager
 				Enabled = true;
 			}
 
-			Save();
-			SaveConfigIni();
+			SaveSettings(!checkBoxSingleProfile.Checked);
 			if (!installed)
 				switch (MessageBox.Show(this, "Looks like you're starting the game without the mod loader installed. Without the mod loader, the mods and codes you've selected won't be used, and some settings may not work.\n\nDo you want to install the mod loader now?", "SADX Mod Manager", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1))
 				{
@@ -967,22 +1248,22 @@ namespace SADXModManager
 
 			// Check Mod Dependencies
 			Dictionary<string, string> cMods = GetModReference();
-			foreach (string mod in loaderini.Mods)
+			foreach (string mod in gameSettings.EnabledMods)
 			{
 				if (CheckDependencies(mod, cMods))
 					return;
 			}
 
-			Process process = Process.Start(loaderini.Mods.Select((item) => mods[item].EXEFile)
+			Process process = Process.Start(gameSettings.EnabledMods.Select((item) => mods[item].EXEFile)
 												.FirstOrDefault((item) => !string.IsNullOrEmpty(item)) ?? "sonic.exe");
 			process?.WaitForInputIdle(10000);
-			Close();
+			if (!checkBoxKeepManagerOpen.Checked)
+				Close();
 		}
 
 		private void saveButton_Click(object sender, EventArgs e)
 		{
-			Save();
-			SaveConfigIni();
+			SaveSettings(!checkBoxSingleProfile.Checked);
 			LoadModList();
 		}
 
@@ -992,13 +1273,13 @@ namespace SADXModManager
 			{
 				File.Delete(datadllpath);
 				File.Move(datadllorigpath, datadllpath);
-				installButton.Text = "Install loader";
+				buttonInstallLoader.Text = "Enable Loader";
 			}
 			else
 			{
 				File.Move(datadllpath, datadllorigpath);
 				File.Copy(loaderdllpath, datadllpath);
-				installButton.Text = "Uninstall loader";
+				buttonInstallLoader.Text = "Disable Loader";
 			}
 			installed = !installed;
 		}
@@ -1132,19 +1413,19 @@ namespace SADXModManager
 				{
 					result = DialogResult.Cancel;
 
-					if (!Directory.Exists(updatePath))
+					if (!Directory.Exists(updatesTempPath))
 					{
-						Directory.CreateDirectory(updatePath);
+						Directory.CreateDirectory(updatesTempPath);
 					}
 				}
 				catch (Exception ex)
 				{
 					result = MessageBox.Show(this,
-					                         "Failed to create temporary update directory:\n" +
-					                         ex.Message +
-					                         "\n\nWould you like to retry?",
-					                         "Directory Creation Failed",
-					                         MessageBoxButtons.RetryCancel);
+											 "Failed to create temporary update directory:\n" +
+											 ex.Message +
+											 "\n\nWould you like to retry?",
+											 "Directory Creation Failed",
+											 MessageBoxButtons.RetryCancel);
 				}
 			} while (result == DialogResult.Retry);
 
@@ -1167,7 +1448,7 @@ namespace SADXModManager
 				new ModDownload(dummyInfo, dummyPath, url.AbsoluteUri, null, 0)
 			};
 
-			using (var progress = new ModDownloadDialog(updates, updatePath))
+			using (var progress = new ModDownloadDialog(updates, updatesTempPath))
 			{
 				progress.ShowDialog(this);
 			}
@@ -1177,16 +1458,16 @@ namespace SADXModManager
 				try
 				{
 					result = DialogResult.Cancel;
-					Directory.Delete(updatePath, true);
+					Directory.Delete(updatesTempPath, true);
 				}
 				catch (Exception ex)
 				{
 					result = MessageBox.Show(this,
-					                         "Failed to remove temporary update directory:\n" +
-					                         ex.Message +
-					                         "\n\nWould you like to retry? You can remove the directory manually later.",
-					                         "Directory Deletion Failed",
-					                         MessageBoxButtons.RetryCancel);
+											 "Failed to remove temporary update directory:\n" +
+											 ex.Message +
+											 "\n\nWould you like to retry? You can remove the directory manually later.",
+											 "Directory Deletion Failed",
+											 MessageBoxButtons.RetryCancel);
 				}
 			} while (result == DialogResult.Retry);
 
@@ -1206,73 +1487,35 @@ namespace SADXModManager
 			HandleUri(args.Uri);
 		}
 
-		private bool CheckForUpdates(bool force = false)
+		/// <summary>Loader and Manager update checker</summary>
+		/// <param name="button">The "Check for updates" button was pressed by the user</param>
+		private void CheckForLoaderAndManagerUpdates(bool button = false)
 		{
-			if (!force && !loaderini.UpdateCheck)
+			// Cancel the automatic update check in some cases
+			if (!button)
 			{
-				return false;
+				// Already checked for updates
+				if (!managerConfig.UpdateCheck)
+					return;
+				// Not long enough since the last check
+				if (!UpdateTimeElapsed(managerConfig.UpdateUnit, managerConfig.UpdateFrequency, DateTime.FromFileTimeUtc(managerConfig.UpdateTime)))
+					return;
 			}
+			// Build the list of download items
+			List<DownloadItem> downloadItems = new List<DownloadItem>();
+			// Loader update
 
-			if (!force && !UpdateTimeElapsed(loaderini.UpdateUnit, loaderini.UpdateFrequency, DateTime.FromFileTimeUtc(loaderini.UpdateTime)))
+			// If there are any downloads, open the update check dialog
+			if (downloadItems.Count > 0)
 			{
-				return false;
+				using (UpdatesAvailableDialog upd = new UpdatesAvailableDialog(downloadItems, updatesTempPath))
+				{
+					upd.ShowDialog();
+				}
 			}
-
+			// Set the variable to tell that the check has completed
 			checkedForUpdates = true;
-			loaderini.UpdateTime = DateTime.UtcNow.ToFileTimeUtc();
-
-			if (!File.Exists("sadxmlver.txt"))
-			{
-				return false;
-			}
-
-			using (var wc = new WebClient())
-			{
-				try
-				{
-					string msg = wc.DownloadString("http://mm.reimuhakurei.net/toolchangelog.php?tool=sadxml&rev=" + File.ReadAllText("sadxmlver.txt"));
-
-					if (msg.Length > 0)
-					{
-						using (var dlg = new UpdateMessageDialog("SADX", msg.Replace("\n", "\r\n")))
-						{
-							if (dlg.ShowDialog(this) == DialogResult.Yes)
-							{
-								DialogResult result = DialogResult.OK;
-								do
-								{
-									try
-									{
-										if (!Directory.Exists(updatePath))
-										{
-											Directory.CreateDirectory(updatePath);
-										}
-									}
-									catch (Exception ex)
-									{
-										result = MessageBox.Show(this, "Failed to create temporary update directory:\n" + ex.Message
-																	   + "\n\nWould you like to retry?", "Directory Creation Failed", MessageBoxButtons.RetryCancel);
-										if (result == DialogResult.Cancel) return false;
-									}
-								} while (result == DialogResult.Retry);
-
-								using (var dlg2 = new LoaderDownloadDialog("http://mm.reimuhakurei.net/sadxmods/SADXModLoader.7z", updatePath))
-									if (dlg2.ShowDialog(this) == DialogResult.OK)
-									{
-										Close();
-										return true;
-									}
-							}
-						}
-					}
-				}
-				catch
-				{
-					MessageBox.Show(this, "Unable to retrieve update information.", "SADX Mod Manager");
-				}
-			}
-
-			return false;
+			managerConfig.UpdateTime = DateTime.UtcNow.ToFileTimeUtc();
 		}
 
 		private void InitializeWorker()
@@ -1285,43 +1528,23 @@ namespace SADXModManager
 			updateChecker = new BackgroundWorker { WorkerSupportsCancellation = true };
 			updateChecker.DoWork += UpdateChecker_DoWork;
 			updateChecker.RunWorkerCompleted += UpdateChecker_RunWorkerCompleted;
-			updateChecker.RunWorkerCompleted += UpdateChecker_EnableControls;
 		}
 
-		private void UpdateChecker_EnableControls(object sender, RunWorkerCompletedEventArgs runWorkerCompletedEventArgs)
+		private void UpdateChecker_EnableControls()
 		{
-			buttonCheckForUpdates.Enabled = true;
+			buttonCheckForUpdatesNow.Enabled = true;
 			checkForUpdatesToolStripMenuItem.Enabled = true;
 			verifyToolStripMenuItem.Enabled = true;
 			forceUpdateToolStripMenuItem.Enabled = true;
 			uninstallToolStripMenuItem.Enabled = true;
-			developerToolStripMenuItem.Enabled = true;
-		}
-
-		private void CheckForModUpdates(bool force = false)
-		{
-			if (!force && !loaderini.ModUpdateCheck)
-			{
-				return;
-			}
-
-			InitializeWorker();
-
-			if (!force && !UpdateTimeElapsed(loaderini.UpdateUnit, loaderini.UpdateFrequency, DateTime.FromFileTimeUtc(loaderini.ModUpdateTime)))
-			{
-				return;
-			}
-
-			checkedForUpdates = true;
-			loaderini.ModUpdateTime = DateTime.UtcNow.ToFileTimeUtc();
-			updateChecker.RunWorkerAsync(mods.Select(x => new KeyValuePair<string, ModInfo>(x.Key, x.Value)).ToList());
-			buttonCheckForUpdates.Enabled = false;
+			generateManifestToolStripMenuItem.Enabled = true;
 		}
 
 		private void UpdateChecker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
 		{
 			if (modUpdater.ForceUpdate)
 			{
+				toolStripStatusLabel.Text = "Update check completed.";
 				updateChecker?.Dispose();
 				updateChecker = null;
 				modUpdater.ForceUpdate = false;
@@ -1330,11 +1553,15 @@ namespace SADXModManager
 
 			if (e.Cancelled)
 			{
+				toolStripStatusLabel.Text = "Update check cancelled.";
+				UpdateChecker_EnableControls();
 				return;
 			}
 
-			if (!(e.Result is Tuple<List<ModDownload>, List<string>> data))
+			if (!(e.Result is Tuple<List<DownloadItem>, List<string>> data))
 			{
+				toolStripStatusLabel.Text = "Mod update format doesn't match.";
+				UpdateChecker_EnableControls();
 				return;
 			}
 
@@ -1343,34 +1570,15 @@ namespace SADXModManager
 			{
 				MessageBox.Show(this, "The following errors occurred while checking for updates:\n\n" + string.Join("\n", errors),
 					"Update Errors", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				toolStripStatusLabel.Text = "Update check completed with errors.";
 			}
 
-			bool manual = manualModUpdate;
-			manualModUpdate = false;
+			List<DownloadItem> items = data.Item1;
 
-			List<ModDownload> updates = data.Item1;
-			if (updates.Count == 0)
+			if (items.Count == 0)
 			{
-				if (manual)
-				{
-					MessageBox.Show(this, "Mods are up to date.",
-						"No Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
-				}
-				return;
-			}
-
-			using (var dialog = new ModUpdatesDialog(updates))
-			{
-				if (dialog.ShowDialog(this) != DialogResult.OK)
-				{
-					return;
-				}
-
-				updates = dialog.SelectedMods;
-			}
-
-			if (updates.Count == 0)
-			{
+				toolStripStatusLabel.Text = "No updates found.";
+				UpdateChecker_EnableControls();
 				return;
 			}
 
@@ -1381,9 +1589,9 @@ namespace SADXModManager
 				try
 				{
 					result = DialogResult.Cancel;
-					if (!Directory.Exists(updatePath))
+					if (!Directory.Exists(updatesTempPath))
 					{
-						Directory.CreateDirectory(updatePath);
+						Directory.CreateDirectory(updatesTempPath);
 					}
 				}
 				catch (Exception ex)
@@ -1393,17 +1601,21 @@ namespace SADXModManager
 				}
 			} while (result == DialogResult.Retry);
 
-			using (var progress = new ModDownloadDialog(updates, updatePath))
+			using (var dialog = new UpdatesAvailableDialog(items, updatesTempPath))
 			{
-				progress.ShowDialog(this);
+				if (dialog.ShowDialog(this) == DialogResult.OK)
+					toolStripStatusLabel.Text = "Mods updated successfully.";
+				else
+					toolStripStatusLabel.Text = "Mod update cancelled.";
 			}
 
+			// Delete temporary folder
 			do
 			{
 				try
 				{
 					result = DialogResult.Cancel;
-					Directory.Delete(updatePath, true);
+					Directory.Delete(updatesTempPath, true);
 				}
 				catch (Exception ex)
 				{
@@ -1413,6 +1625,7 @@ namespace SADXModManager
 				}
 			} while (result == DialogResult.Retry);
 
+			UpdateChecker_EnableControls();
 			LoadModList();
 		}
 
@@ -1425,39 +1638,61 @@ namespace SADXModManager
 
 			Invoke(new Action(() =>
 			{
-				buttonCheckForUpdates.Enabled = false;
+				buttonCheckForUpdatesNow.Enabled = false;
 				checkForUpdatesToolStripMenuItem.Enabled = false;
 				verifyToolStripMenuItem.Enabled = false;
 				forceUpdateToolStripMenuItem.Enabled = false;
 				uninstallToolStripMenuItem.Enabled = false;
-				developerToolStripMenuItem.Enabled = false;
+				generateManifestToolStripMenuItem.Enabled = false;
 			}));
 
-			var updatableMods = e.Argument as List<KeyValuePair<string, ModInfo>>;
-			List<ModDownload> updates = null;
-			List<string> errors = null;
+			List<DownloadItem> items = new List<DownloadItem>();
+			List<string> errors = new List<string>();
 
-			var tokenSource = new CancellationTokenSource();
-			CancellationToken token = tokenSource.Token;
-
-			using (var task = new Task(() => modUpdater.GetModUpdates(updatableMods, out updates, out errors, token), token))
+			if (CheckMods)
 			{
-				task.Start();
+				var updatableMods = e.Argument as List<KeyValuePair<string, ModInfo>>;
+				List<ModDownload> updates = null;
 
-				while (!task.IsCompleted && !task.IsCanceled)
+				var tokenSource = new CancellationTokenSource();
+				CancellationToken token = tokenSource.Token;
+
+				using (var task = new Task(() => modUpdater.GetModUpdates(updatableMods, out updates, out errors, token), token))
 				{
-					Application.DoEvents();
+					task.Start();
 
-					if (worker.CancellationPending)
+					while (!task.IsCompleted && !task.IsCanceled)
 					{
-						tokenSource.Cancel();
-					}
-				}
+						Application.DoEvents();
 
-				task.Wait(token);
+						if (worker.CancellationPending)
+						{
+							tokenSource.Cancel();
+						}
+					}
+
+					task.Wait(token);
+				}
+				// Mod updates
+				if (updates != null && updates.Count > 0)
+					foreach (var upd in updates)
+						items.Add(new DownloadItem(upd));
 			}
 
-			e.Result = new Tuple<List<ModDownload>, List<string>>(updates, errors);
+			// Loader update
+			DownloadItem loaderItem = CheckLoaderUpdates();
+			if (loaderItem != null)
+				items.Add(loaderItem);
+			// Launcher update
+			DownloadItem launcherItem = CheckLauncherUpdates();
+			if (launcherItem != null)
+				items.Add(launcherItem);
+			// Manager update
+			DownloadItem managerItem = CheckManagerUpdates();
+			if (managerItem != null)
+				items.Add(managerItem);
+
+			e.Result = new Tuple<List<DownloadItem>, List<string>>(items, errors);
 		}
 
 		// TODO: merge with ^
@@ -1474,6 +1709,7 @@ namespace SADXModManager
 			}
 
 			var updates = new List<ModDownload>();
+			List<DownloadItem> items = new List<DownloadItem>();
 			var errors = new List<string>();
 
 			using (var client = new UpdaterWebClient())
@@ -1491,7 +1727,7 @@ namespace SADXModManager
 					{
 						if (string.IsNullOrEmpty(mod.GitHubAsset))
 						{
-							errors.Add($"[{ mod.Name }] GitHubRepo specified, but GitHubAsset is missing.");
+							errors.Add($"[{mod.Name}] GitHubRepo specified, but GitHubAsset is missing.");
 							continue;
 						}
 
@@ -1524,7 +1760,27 @@ namespace SADXModManager
 				}
 			}
 
-			e.Result = new Tuple<List<ModDownload>, List<string>>(updates, errors);
+			// Mod updates
+			if (updates != null && updates.Count > 0)
+				foreach (var upd in updates)
+					items.Add(new DownloadItem(upd));
+			// Loader update
+			DownloadItem loaderItem = CheckLoaderUpdates();
+			if (loaderItem != null)
+				items.Add(loaderItem);
+			// Launcher update
+			DownloadItem launcherItem = CheckLauncherUpdates();
+			if (launcherItem != null)
+				items.Add(launcherItem);
+			// Manager update
+			DownloadItem managerItem = CheckManagerUpdates();
+			if (managerItem != null)
+				items.Add(managerItem);
+
+			if (items.Count == 0)
+				items = null;
+
+			e.Result = new Tuple<List<DownloadItem>, List<string>>(items, errors);
 		}
 
 		private void uninstallToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1545,7 +1801,7 @@ namespace SADXModManager
 				return;
 			}
 
-			foreach (ListViewItem item in modListView.SelectedItems)
+			foreach (ListViewItem item in listViewMods.SelectedItems)
 			{
 				var dir = (string)item.Tag;
 				var modDir = Path.Combine("mods", dir);
@@ -1576,7 +1832,7 @@ namespace SADXModManager
 					{
 						if (result == DialogResult.Yes)
 						{
-							var retain = MessageBox.Show(this, $"The mod \"{ mods[dir].Name }\" (\"mods\\{ dir }\") does not have a manifest, so mod user data cannot be retained."
+							var retain = MessageBox.Show(this, $"The mod \"{mods[dir].Name}\" (\"mods\\{dir}\") does not have a manifest, so mod user data cannot be retained."
 								+ " Do you want to uninstall it anyway?", "Cannot Retain User Data", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
 							if (retain == DialogResult.No)
@@ -1590,7 +1846,7 @@ namespace SADXModManager
 				}
 				catch (Exception ex)
 				{
-					MessageBox.Show(this, $"Failed to uninstall mod \"{ mods[dir].Name }\" from \"{ dir }\": { ex.Message }", "Failed",
+					MessageBox.Show(this, $"Failed to uninstall mod \"{mods[dir].Name}\" from \"{dir}\": {ex.Message}", "Failed",
 						MessageBoxButtons.OK, MessageBoxIcon.Error);
 				}
 			}
@@ -1602,7 +1858,7 @@ namespace SADXModManager
 		{
 			if (!displayedManifestWarning)
 			{
-				DialogResult result = MessageBox.Show(this, Resources.GenerateManifestWarning,
+				DialogResult result = MessageBox.Show(this, generateManifestWarning,
 					"Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
 				if (result != DialogResult.Yes)
@@ -1613,7 +1869,7 @@ namespace SADXModManager
 				displayedManifestWarning = true;
 			}
 
-			foreach (ListViewItem item in modListView.SelectedItems)
+			foreach (ListViewItem item in listViewMods.SelectedItems)
 			{
 				var modPath = Path.Combine("mods", (string)item.Tag);
 				var manifestPath = Path.Combine(modPath, "mod.manifest");
@@ -1659,11 +1915,19 @@ namespace SADXModManager
 		private void UpdateSelectedMods()
 		{
 			InitializeWorker();
-			manualModUpdate = true;
-			updateChecker?.RunWorkerAsync(modListView.SelectedItems.Cast<ListViewItem>()
+			CheckManager = CheckLoader = CheckLauncher = false;
+			CheckMods = true;
+			List<KeyValuePair<string, ModInfo>> selected = listViewMods.SelectedItems.Cast<ListViewItem>()
 				.Select(x => (string)x.Tag)
 				.Select(x => new KeyValuePair<string, ModInfo>(x, mods[x]))
-				.ToList());
+				.ToList();
+			List<KeyValuePair<string, ModInfo>> infoNew = new List<KeyValuePair<string, ModInfo>>();
+			foreach (KeyValuePair<string, ModInfo> mod in selected)
+			{
+				if (!managerConfig.IgnoredModUpdates.Contains(mod.Key))
+					infoNew.Add(mod);
+			}
+			updateChecker?.RunWorkerAsync(infoNew);
 		}
 
 		private void checkForUpdatesToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1688,7 +1952,7 @@ namespace SADXModManager
 
 		private void verifyToolStripMenuItem_Click(object sender, EventArgs e)
 		{
-			List<Tuple<string, ModInfo>> items = modListView.SelectedItems.Cast<ListViewItem>()
+			List<Tuple<string, ModInfo>> items = listViewMods.SelectedItems.Cast<ListViewItem>()
 				.Select(x => (string)x.Tag)
 				.Where(x => File.Exists(Path.Combine("mods", x, "mod.manifest")))
 				.Select(x => new Tuple<string, ModInfo>(x, mods[x]))
@@ -1732,30 +1996,25 @@ namespace SADXModManager
 					updateChecker.DoWork -= UpdateChecker_DoWork;
 					updateChecker.DoWork += UpdateChecker_DoWorkForced;
 
+					CheckManager = CheckLoader = CheckLauncher = false;
 					updateChecker.RunWorkerAsync(failed);
 
 					modUpdater.ForceUpdate = true;
-					buttonCheckForUpdates.Enabled = false;
+					buttonCheckForUpdatesNow.Enabled = false;
 				}
 			}
 		}
 
 		private void comboUpdateFrequency_SelectedIndexChanged(object sender, EventArgs e)
 		{
-			numericUpdateFrequency.Enabled = comboUpdateFrequency.SelectedIndex > 0;
+			numericUpDownUpdateFrequency.Enabled = comboBoxUpdateUnit.SelectedIndex > 0;
 		}
 
 		private void buttonCheckForUpdates_Click(object sender, EventArgs e)
 		{
-			buttonCheckForUpdates.Enabled = false;
-
-			if (CheckForUpdates(true))
-			{
-				return;
-			}
-
-			manualModUpdate = true;
-			CheckForModUpdates(true);
+			buttonCheckForUpdatesNow.Enabled = false;
+			AutoUpdate(false, true, true, true, true, true);
+			UpdateChecker_EnableControls();
 		}
 
 		private void installURLHandlerButton_Click(object sender, EventArgs e)
@@ -1766,215 +2025,82 @@ namespace SADXModManager
 		#endregion
 
 		#region Game settings
-		private void LoadConfigIni()
-		{
-			InitPatches();
-			configFile = File.Exists(sadxIni) ? IniSerializer.Deserialize<GameConfigFile>(sadxIni) : new GameConfigFile();
-			if (configFile.GameConfig == null)
-			{
-				configFile.GameConfig = new GameConfig
-				{
-					FrameRate = (int)FrameRate.High,
-					Sound3D = 1,
-					SEVoice = 1,
-					BGM = 1,
-					BGMVolume = 100,
-					VoiceVolume = 100
-				};
-			}
-			if (configFile.Controllers == null)
-				configFile.Controllers = new Dictionary<string, ControllerConfig>();
-
-			// Video
-			// Display mode
-			if (configFile.GameConfig.FullScreen == 1)
-				radioFullscreen.Checked = true;
-			else
-				radioWindowMode.Checked = true;
-
-			// Framerate
-			if (configFile.GameConfig.FrameRate == (int)FrameRate.Invalid || configFile.GameConfig.FrameRate > (int)FrameRate.Low)
-			{
-				MessageBox.Show("Invalid framerate setting detected.\nDefaulting to \"High\".", "Invalid setting", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				comboFramerate.SelectedIndex = (int)FrameRate.High - 1;
-			}
-			else
-			{
-				comboFramerate.SelectedIndex = configFile.GameConfig.FrameRate - 1;
-			}
-
-			// Clip level
-			comboClip.SelectedIndex = configFile.GameConfig.ClipLevel;
-			// Fog mode
-			comboFog.SelectedIndex = configFile.GameConfig.FogEmulation;
-
-			// Sound
-			// Toggles
-			check3DSound.Checked = (configFile.GameConfig.Sound3D != 0);
-			checkSound.Checked = (configFile.GameConfig.SEVoice != 0);
-			checkMusic.Checked = (configFile.GameConfig.BGM != 0);
-
-			// Volume
-			trackBarVoiceVol.Value = configFile.GameConfig.VoiceVolume;
-			trackBarMusicVol.Value = configFile.GameConfig.BGMVolume;
-			labelVoiceVol.Text = trackBarVoiceVol.Value.ToString();
-			labelMusicVol.Text = trackBarMusicVol.Value.ToString();
-
-			// Input
-			// Mouse Mode
-			if (configFile.GameConfig.MouseMode == 0)
-				radioMouseModeHold.Checked = true;
-			else
-				radioMouseModeRelease.Checked = true;
-
-			// putting this here because it'll get
-			// overwritten if I put it in InitalizeComponent
-			comboMouseActions.SelectedIndex = 0;
-
-			foreach (KeyValuePair<string, ControllerConfig> item in configFile.Controllers)
-			{
-				int[] cfg = Enumerable.Repeat(-1, buttonIDs.Length).ToArray();
-				for (int i = 0; i < item.Value.ButtonSettings.Length; i++)
-				{
-					if (Array.IndexOf(buttonIDs, item.Value.ButtonSettings[i]) != -1)
-					{
-						cfg[Array.IndexOf(buttonIDs, item.Value.ButtonSettings[i])] = i;
-					}
-				}
-				controllerConfig.Add(new ControllerConfigInternal { Name = item.Key, Buttons = cfg });
-				controllerConfigSelect.Items.Add(item.Key);
-			}
-
-			if (inputDevice == null)
-			{
-				return;
-			}
-
-			for (int i = 0; i < controllerConfig.Count; i++)
-			{
-				if (controllerConfig[i].Name == configFile.GameConfig.PadConfig)
-				{
-					controllerConfigSelect.SelectedIndex = i;
-					break;
-				}
-			}
-		}
-
-		private void SaveConfigIni()
-		{
-			configFile.GameConfig.FullScreen = radioFullscreen.Checked ? 1 : 0;
-
-			configFile.GameConfig.FrameRate = comboFramerate.SelectedIndex + 1;
-			configFile.GameConfig.ClipLevel = comboClip.SelectedIndex;
-			configFile.GameConfig.FogEmulation = comboFog.SelectedIndex;
-
-			configFile.GameConfig.Sound3D = check3DSound.Checked ? 1 : 0;
-			configFile.GameConfig.SEVoice = checkSound.Checked ? 1 : 0;
-			configFile.GameConfig.BGM = checkMusic.Checked ? 1 : 0;
-
-			configFile.GameConfig.VoiceVolume = (int)trackBarVoiceVol.Value;
-			configFile.GameConfig.BGMVolume = (int)trackBarMusicVol.Value;
-
-			configFile.GameConfig.MouseMode = radioMouseModeHold.Checked ? 0 : 1;
-
-			if (inputDevice != null)
-			{
-				configFile.GameConfig.PadConfig = controllerConfigSelect.SelectedIndex == -1 ? null : controllerConfig[controllerConfigSelect.SelectedIndex].Name;
-
-				configFile.Controllers.Clear();
-				foreach (ControllerConfigInternal item in controllerConfig)
-				{
-					ControllerConfig config = new ControllerConfig { ButtonCount = item.Buttons.Max() + 1 };
-					config.ButtonSettings = Enumerable.Repeat(-1, config.ButtonCount).ToArray();
-					for (int i = 0; i < buttonIDs.Length; i++)
-					{
-						if (item.Buttons[i] != -1)
-						{
-							config.ButtonSettings[item.Buttons[i]] = buttonIDs[i];
-						}
-					}
-					configFile.Controllers.Add(item.Name, config);
-				}
-			}
-
-			IniSerializer.Serialize(configFile, sadxIni);
-		}
 
 		private void screenNumComboBox_SelectedIndexChanged(object sender, EventArgs e)
 		{
 			Size oldsize = resolutionPresets[6];
 			Rectangle rect = Screen.PrimaryScreen.Bounds;
-			if (screenNumComboBox.SelectedIndex > 0)
-				rect = Screen.AllScreens[screenNumComboBox.SelectedIndex - 1].Bounds;
+			if (comboBoxScreenNumber.SelectedIndex > 0)
+				rect = Screen.AllScreens[comboBoxScreenNumber.SelectedIndex - 1].Bounds;
 			else
 				foreach (Screen screen in Screen.AllScreens)
 					rect = Rectangle.Union(rect, screen.Bounds);
 			resolutionPresets[6] = rect.Size;
 			resolutionPresets[7] = new Size(rect.Width / 2, rect.Height / 2);
 			resolutionPresets[8] = new Size(rect.Width * 2, rect.Height * 2);
-			if (comboResolutionPreset.SelectedIndex > 4 && comboResolutionPreset.SelectedIndex < 8 && rect.Size != oldsize)
-				comboResolutionPreset.SelectedIndex = -1;
+			if (comboBoxResolutionPreset.SelectedIndex > 4 && comboBoxResolutionPreset.SelectedIndex < 8 && rect.Size != oldsize)
+				comboBoxResolutionPreset.SelectedIndex = -1;
 		}
 
 		private void forceAspectRatioCheckBox_CheckedChanged(object sender, EventArgs e)
 		{
-			if (forceAspectRatioCheckBox.Checked)
+			if (checkBoxForceAspectRatio.Checked)
 			{
-				horizontalResolution.Enabled = false;
-				horizontalResolution.Value = Math.Round(verticalResolution.Value * ratio);
-				comboResolutionPreset.SelectedIndex = -1;
+				numericUpDownHorizontalResolution.Enabled = false;
+				numericUpDownHorizontalResolution.Value = Math.Round(numericUpDownVerticalResolution.Value * ratio);
+				comboBoxResolutionPreset.SelectedIndex = -1;
 			}
 			else if (!suppressEvent)
-				horizontalResolution.Enabled = true;
+				numericUpDownHorizontalResolution.Enabled = true;
 		}
 
 		private void horizontalResolution_ValueChanged(object sender, EventArgs e)
 		{
 			if (!suppressEvent)
-				comboResolutionPreset.SelectedIndex = -1;
+				comboBoxResolutionPreset.SelectedIndex = -1;
 		}
 
 		private void verticalResolution_ValueChanged(object sender, EventArgs e)
 		{
-			if (forceAspectRatioCheckBox.Checked)
-				horizontalResolution.Value = Math.Round(verticalResolution.Value * ratio);
+			if (checkBoxForceAspectRatio.Checked)
+				numericUpDownHorizontalResolution.Value = Math.Round(numericUpDownVerticalResolution.Value * ratio);
 			if (!suppressEvent)
-				comboResolutionPreset.SelectedIndex = -1;
+				comboBoxResolutionPreset.SelectedIndex = -1;
 		}
 
 		private void comboResolutionPreset_SelectedIndexChanged(object sender, EventArgs e)
 		{
-			if (comboResolutionPreset.SelectedIndex == -1) return;
+			if (comboBoxResolutionPreset.SelectedIndex == -1) return;
 			suppressEvent = true;
-			verticalResolution.Value = resolutionPresets[comboResolutionPreset.SelectedIndex].Height;
-			if (!forceAspectRatioCheckBox.Checked)
-				horizontalResolution.Value = resolutionPresets[comboResolutionPreset.SelectedIndex].Width;
+			numericUpDownVerticalResolution.Value = resolutionPresets[comboBoxResolutionPreset.SelectedIndex].Height;
+			if (!checkBoxForceAspectRatio.Checked)
+				numericUpDownHorizontalResolution.Value = resolutionPresets[comboBoxResolutionPreset.SelectedIndex].Width;
 			suppressEvent = false;
 		}
 
 		private void customWindowSizeCheckBox_CheckedChanged(object sender, EventArgs e)
 		{
-			maintainWindowAspectRatioCheckBox.Enabled = customWindowSizeCheckBox.Checked;
-			windowHeight.Enabled = customWindowSizeCheckBox.Checked;
-			checkWindowResize.Enabled = !customWindowSizeCheckBox.Checked;
-			windowWidth.Enabled = customWindowSizeCheckBox.Checked && !maintainWindowAspectRatioCheckBox.Checked;
+			//maintainWindowAspectRatioCheckBox.Enabled = customWindowSizeCheckBox.Checked;
+			//windowHeight.Enabled = customWindowSizeCheckBox.Checked;
+			//checkWindowResize.Enabled = !customWindowSizeCheckBox.Checked;
+			//windowWidth.Enabled = customWindowSizeCheckBox.Checked && !maintainWindowAspectRatioCheckBox.Checked;
 		}
 
 		private void maintainWindowAspectRatioCheckBox_CheckedChanged(object sender, EventArgs e)
 		{
-			if (maintainWindowAspectRatioCheckBox.Checked)
+			if (checkBoxWindowMaintainAspect.Checked)
 			{
-				windowWidth.Enabled = false;
-				windowWidth.Value = Math.Round(windowHeight.Value * (horizontalResolution.Value / verticalResolution.Value));
+				numericUpDownWindowWidth.Enabled = false;
+				numericUpDownWindowWidth.Value = Math.Round(numericUpDownWindowHeight.Value * (numericUpDownHorizontalResolution.Value / numericUpDownVerticalResolution.Value));
 			}
 			else if (!suppressEvent)
-				windowWidth.Enabled = true;
+				numericUpDownWindowWidth.Enabled = true;
 		}
 
 		private void windowHeight_ValueChanged(object sender, EventArgs e)
 		{
-			if (maintainWindowAspectRatioCheckBox.Checked)
-				windowWidth.Value = Math.Round(windowHeight.Value * (horizontalResolution.Value / verticalResolution.Value));
+			if (checkBoxWindowMaintainAspect.Checked)
+				numericUpDownWindowWidth.Value = Math.Round(numericUpDownWindowHeight.Value * (numericUpDownHorizontalResolution.Value / numericUpDownVerticalResolution.Value));
 		}
 
 		private void trackBarVoiceVol_ValueChanged(object sender, EventArgs e)
@@ -1994,7 +2120,7 @@ namespace SADXModManager
 
 		private void checkBassSE_CheckedChanged(object sender, EventArgs e)
 		{
-			labelSEVol.Enabled = trackBarSEVol.Enabled = labelSEVolText.Enabled = checkBassSE.Checked;
+			labelSEVol.Enabled = trackBarSEVol.Enabled = labelSEVolume.Enabled = checkBoxUseBassSE.Checked;
 		}
 
 		#endregion
@@ -2009,9 +2135,11 @@ namespace SADXModManager
 
 		private void checkBoxTestSpawnLevel_CheckedChanged(object sender, EventArgs e)
 		{
-			comboBoxTestSpawnLevel.Enabled = numericUpDownTestSpawnAct.Enabled = labelTestSpawnAct.Enabled = checkBoxTestSpawnLevel.Checked;
+			comboBoxTestSpawnLevel.Enabled = checkBoxTestSpawnPosition.Enabled = numericUpDownTestSpawnAct.Enabled = labelTestSpawnAct.Enabled = checkBoxTestSpawnLevel.Checked;
 			if (comboBoxTestSpawnLevel.SelectedIndex == -1)
 				comboBoxTestSpawnLevel.SelectedIndex = 0;
+			if (!checkBoxTestSpawnPosition.Enabled)
+				checkBoxTestSpawnPosition.Checked = false;
 			ShowOrHideTestSpawnEventWarning();
 		}
 
@@ -2041,7 +2169,17 @@ namespace SADXModManager
 
 		private void checkBoxTestSpawnSave_CheckStateChanged(object sender, EventArgs e)
 		{
-			numericUpDownTestSpawnSaveID.Enabled = checkBoxTestSpawnSave.Checked;
+			comboBoxTestSpawnSave.Enabled = checkBoxTestSpawnSave.Checked;
+		}
+
+		private int GetTestSpawnRotation()
+		{
+			int result;
+			if (checkBoxTestSpawnAngleDeg.Checked)
+				result = (int)Math.Round((float)numericUpDownTestSpawnAngle.Value / (360.0f / 65535.0f));
+			else
+				result = (int)numericUpDownTestSpawnAngle.Value;
+			return (-1 * result + 0x4000);
 		}
 
 		private string GetTestSpawnCommandLine()
@@ -2055,7 +2193,7 @@ namespace SADXModManager
 				cmdline.Add("-p " + numericUpDownTestSpawnX.Value.ToString() + " " +
 					numericUpDownTestSpawnY.Value.ToString() + " " +
 					numericUpDownTestSpawnZ.Value.ToString() + " -r " +
-					numericUpDownTestSpawnAngle.Value.ToString());
+					GetTestSpawnRotation().ToString());
 			if (checkBoxTestSpawnEvent.Checked)
 			{
 				int ev = 0;
@@ -2076,254 +2214,66 @@ namespace SADXModManager
 
 			if (checkBoxTestSpawnGameMode.Checked)
 			{
-					uint gm = 0;
-					uint gm_result = 0;
-					foreach (var item in TestSpawnGameModeList)
+				uint gm = 0;
+				int gm_result = 0;
+				foreach (var item in TestSpawnGameModeList)
+				{
+					if (gm == comboBoxTestSpawnGameMode.SelectedIndex)
 					{
-						if (gm == comboBoxTestSpawnGameMode.SelectedIndex)
-						{
-							gm_result = item.Key;
-							break;
-						}
-						gm++;
+						gm_result = item.Key;
+						break;
 					}
-					cmdline.Add("-g " + gm_result.ToString());			
+					gm++;
+				}
+				cmdline.Add("-g " + gm_result.ToString());
 			}
 			if (checkBoxTestSpawnSave.Checked)
-				cmdline.Add("-s " + numericUpDownTestSpawnSaveID.Value.ToString());
+				cmdline.Add("-s " + comboBoxTestSpawnSave.Text);
 			return string.Join(" ", cmdline);
 		}
 
 		private void buttonTestSpawnPlay_Click(object sender, EventArgs e)
 		{
-			Process process = Process.Start(loaderini.Mods.Select((item) => mods[item].EXEFile)
+			//toolStripStatusLabel.Text = "sonic.exe " + GetTestSpawnCommandLine(); 
+			Process process = Process.Start(gameSettings.EnabledMods.Select((item) => mods[item].EXEFile)
 												.FirstOrDefault((item) => !string.IsNullOrEmpty(item)) ?? "sonic.exe", GetTestSpawnCommandLine());
+		}
+
+		public int GetTestspawnGamemodeIndex(int index, bool fromcombo)
+		{
+			foreach (var mode in TestSpawnGameModeList)
+			{
+				if (fromcombo && mode.Value == comboBoxTestSpawnGameMode.Text)
+					return mode.Key;
+				if (mode.Key == index)
+					return comboBoxTestSpawnGameMode.FindString(mode.Value);
+			}
+			return -1;
+		}
+
+		public int GetTestspawnEventIndex(int index, bool fromcombo)
+		{
+			foreach (var scene in TestSpawnCutsceneList)
+			{
+				if (fromcombo && scene.Value == comboBoxTestSpawnEvent.Text)
+					return scene.Key;
+				if (scene.Key == index)
+					return comboBoxTestSpawnEvent.FindString("EV" + scene.Key.ToString("X4"));
+			}
+			return -1;
 		}
 
 		private void InitTestSpawnCutsceneList()
 		{
-			TestSpawnCutsceneList = new Dictionary<int, string>();
-			TestSpawnCutsceneList.Add(1, "Sonic intro");
-			TestSpawnCutsceneList.Add(2, "Sonic defeats Chaos 0");
-			TestSpawnCutsceneList.Add(3, "Sonic sees Tails crash");
-			TestSpawnCutsceneList.Add(6, "Sonic and Tails poolside");
-			TestSpawnCutsceneList.Add(7, "Sonic faces off with the Egg Hornet");
-			TestSpawnCutsceneList.Add(8, "Sonic sees Chaos 1 emerge");
-			TestSpawnCutsceneList.Add(9, "Sonic and Tails are gassed");
-			TestSpawnCutsceneList.Add(11, "Sonic sees Chaos 4 transformation");
-			TestSpawnCutsceneList.Add(12, "Sonic and Tails part ways with Knuckles");
-			TestSpawnCutsceneList.Add(13, "Sonic and Tails take off on the Tornado 1");
-			TestSpawnCutsceneList.Add(17, "Sonic falling into Station Square");
-			TestSpawnCutsceneList.Add(18, "Sonic is found by Amy");
-			TestSpawnCutsceneList.Add(19, "Sonic and Amy go to Twinkle Park");
-			TestSpawnCutsceneList.Add(20, "Sonic goes looking for Amy");
-			TestSpawnCutsceneList.Add(21, "Sonic sees Zero and Amy at the station");
-			TestSpawnCutsceneList.Add(22, "Sonic sees Zero transported to the Egg Carrier");
-			TestSpawnCutsceneList.Add(23, "Sonic catches up with Tails on the Tornado 2");
-			TestSpawnCutsceneList.Add(26, "Sonic sees Eggman take Birdie's Emerald");
-			TestSpawnCutsceneList.Add(27, "Sonic defeats Gamma");
-			TestSpawnCutsceneList.Add(28, "Sonic finds Chaos 6");
-			TestSpawnCutsceneList.Add(29, "Sonic jumps from the Egg Carrier into the jungle");
-			TestSpawnCutsceneList.Add(30, "Sonic sees the temple come out of the ground");
-			TestSpawnCutsceneList.Add(32, "Sonic looks at the Perfect Chaos mural");
-			TestSpawnCutsceneList.Add(33, "Sonic enters the Past");
-			TestSpawnCutsceneList.Add(34, "Sonic listens to Tikal in the Past");
-			TestSpawnCutsceneList.Add(35, "Sonic sees Eggman heading to his base");
-			TestSpawnCutsceneList.Add(36, "Sonic faces the Egg Viper");
-			TestSpawnCutsceneList.Add(38, "Sonic's outro");
-			TestSpawnCutsceneList.Add(40, "Sonic vs. Knuckles");
-			TestSpawnCutsceneList.Add(41, "Sonic and Tails land on the Egg Carrier");
-			TestSpawnCutsceneList.Add(42, "Sonic and Tails awaken after being gassed");
-			TestSpawnCutsceneList.Add(43, "Sonic meets Chaos 0");
-			TestSpawnCutsceneList.Add(48, "Tails intro");
-			TestSpawnCutsceneList.Add(49, "Tails is rescued by Sonic");
-			TestSpawnCutsceneList.Add(50, "Tails and Sonic poolside");
-			TestSpawnCutsceneList.Add(51, "Tails faces off with the Egg Hornet");
-			TestSpawnCutsceneList.Add(52, "Tails sees Chaos 1 emerge");
-			TestSpawnCutsceneList.Add(53, "Tails and Sonic are gassed at Casinopolis");
-			TestSpawnCutsceneList.Add(56, "Tails vs. Knuckles");
-			TestSpawnCutsceneList.Add(57, "Tails sees Chaos 4 emerge");
-			TestSpawnCutsceneList.Add(58, "Tails and Sonic part ways with Knuckles");
-			TestSpawnCutsceneList.Add(59, "Tails and Sonic depart on the Tornado 1");
-			TestSpawnCutsceneList.Add(62, "Tails' flashback");
-			TestSpawnCutsceneList.Add(64, "Tails wakes up from his dream");
-			TestSpawnCutsceneList.Add(66, "Tails chases Froggy");
-			TestSpawnCutsceneList.Add(68, "Tails enters the Past");
-			TestSpawnCutsceneList.Add(69, "Tails talks to Tikal");
-			TestSpawnCutsceneList.Add(70, "Tails meets Big and lets go of Froggy");
-			TestSpawnCutsceneList.Add(71, "Tails takes off on the Tornado 2");
-			TestSpawnCutsceneList.Add(72, "Tails finds Sonic in Red Mountain");
-			TestSpawnCutsceneList.Add(75, "Tails faces off with Gamma");
-			TestSpawnCutsceneList.Add(76, "Tails and Amy escape from the Egg Carrier");
-			TestSpawnCutsceneList.Add(77, "Tails sees Eggman launching his missile attack");
-			TestSpawnCutsceneList.Add(78, "Tails follows Eggman after the missile");
-			TestSpawnCutsceneList.Add(80, "Tails takes on the Egg Walker");
-			TestSpawnCutsceneList.Add(81, "Tails defeated the Egg Walker");
-			TestSpawnCutsceneList.Add(82, "Tails outro");
-			TestSpawnCutsceneList.Add(83, "Error");
-			TestSpawnCutsceneList.Add(84, "Tails and Sonic landing on the Egg Carrier");
-			TestSpawnCutsceneList.Add(85, "Tails and Froggy go to the Past");
-			TestSpawnCutsceneList.Add(86, "Tails and Sonic awake after being gassed");
-			TestSpawnCutsceneList.Add(88, "Unused");
-			TestSpawnCutsceneList.Add(96, "Amy intro");
-			TestSpawnCutsceneList.Add(97, "Amy meets Birdie");
-			TestSpawnCutsceneList.Add(98, "Amy meets up with Sonic");
-			TestSpawnCutsceneList.Add(99, "Amy and Sonic visit Twinkle Park");
-			TestSpawnCutsceneList.Add(100, "Amy is kidnapped by Zero");
-			TestSpawnCutsceneList.Add(101, "Amy is released by Gamma");
-			TestSpawnCutsceneList.Add(102, "Amy escapes Hot Shelter");
-			TestSpawnCutsceneList.Add(103, "Amy finds herself in the Past");
-			TestSpawnCutsceneList.Add(104, "Amy meets Tikal");
-			TestSpawnCutsceneList.Add(105, "Amy sees Eggman take Birdie's Emerald");
-			TestSpawnCutsceneList.Add(106, "Amy and Tails escape the Egg Carrier");
-			TestSpawnCutsceneList.Add(107, "Error");
-			TestSpawnCutsceneList.Add(108, "Amy returns to the present");
-			TestSpawnCutsceneList.Add(109, "Amy decides to help find Birdie's family");
-			TestSpawnCutsceneList.Add(110, "Amy discovers the Final Egg Base");
-			TestSpawnCutsceneList.Add(111, "Amy chased by Zero in Final Egg");
-			TestSpawnCutsceneList.Add(112, "Amy and Birdie head back to the Egg Carrier");
-			TestSpawnCutsceneList.Add(113, "Amy is confronted by Zero");
-			TestSpawnCutsceneList.Add(114, "Amy outro");
-			TestSpawnCutsceneList.Add(117, "Amy is kidnapped to the Mystic Ruins");
-			TestSpawnCutsceneList.Add(128, "Knuckles intro");
-			TestSpawnCutsceneList.Add(130, "Knuckles goes hunting for the Master Emerald");
-			TestSpawnCutsceneList.Add(131, "Knuckles taken to the Past from Casinopolis");
-			TestSpawnCutsceneList.Add(132, "Knuckles finds himself in the Past");
-			TestSpawnCutsceneList.Add(133, "Knuckles sees Tikal talk to her father");
-			TestSpawnCutsceneList.Add(134, "Knuckles returns from the Past to Station Square");
-			TestSpawnCutsceneList.Add(135, "Knuckles and Chaos 2 face off");
-			TestSpawnCutsceneList.Add(136, "Knuckles is tricked by Eggman");
-			TestSpawnCutsceneList.Add(137, "Knuckles goes after Sonic");
-			TestSpawnCutsceneList.Add(138, "Knuckles vs. Sonic");
-			TestSpawnCutsceneList.Add(139, "Knuckles sees Chaos 4 emerge");
-			TestSpawnCutsceneList.Add(140, "Knuckles parts ways with Sonic and Tails");
-			TestSpawnCutsceneList.Add(141, "Knuckles goes to the Past from the temple");
-			TestSpawnCutsceneList.Add(142, "Knuckles at the Master Emerald Altar");
-			TestSpawnCutsceneList.Add(143, "Knuckles sees Tikal talking to Chaos");
-			TestSpawnCutsceneList.Add(145, "Knuckles restores most of the Master Emerald");
-			TestSpawnCutsceneList.Add(146, "Knuckles follows Gamma");
-			TestSpawnCutsceneList.Add(148, "Knuckles arrives on the Egg Carrier");
-			TestSpawnCutsceneList.Add(149, "Knuckles finds the last missing piece");
-			TestSpawnCutsceneList.Add(150, "Knuckles sees the Master Emerald Altar on fire");
-			TestSpawnCutsceneList.Add(151, "Knuckles witnesses the aftermath of Tikal's plight");
-			TestSpawnCutsceneList.Add(152, "Knuckles is back to the Egg Carrier");
-			TestSpawnCutsceneList.Add(153, "Knuckles fights Chaos 6");
-			TestSpawnCutsceneList.Add(154, "Knuckles has collected the final shards");
-			TestSpawnCutsceneList.Add(155, "Knuckles defeats Chaos 6");
-			TestSpawnCutsceneList.Add(156, "Error");
-			TestSpawnCutsceneList.Add(157, "Knuckles restores the Master Emerald");
-			TestSpawnCutsceneList.Add(159, "Knuckles outro");
-			TestSpawnCutsceneList.Add(160, "Knuckles follows Eggman in Station Square hotel");
-			TestSpawnCutsceneList.Add(176, "Gamma intro");
-			TestSpawnCutsceneList.Add(177, "Gamma enters Final Egg");
-			TestSpawnCutsceneList.Add(178, "Gamma completes his first objective at Final Egg");
-			TestSpawnCutsceneList.Add(179, "Gamma is told that he is a useless machine");
-			TestSpawnCutsceneList.Add(180, "Gamma's first fight with Beta");
-			TestSpawnCutsceneList.Add(181, "Gamma defeats Beta");
-			TestSpawnCutsceneList.Add(183, "Gamma and other E Series briefing");
-			TestSpawnCutsceneList.Add(184, "Gamma and Froggy go to the Past");
-			TestSpawnCutsceneList.Add(185, "Gamma cannot determine location");
-			TestSpawnCutsceneList.Add(186, "Gamma meets Tikal");
-			TestSpawnCutsceneList.Add(187, "Gamma brings Froggy to Eggman");
-			TestSpawnCutsceneList.Add(188, "Gamma goes to the wrong room");
-			TestSpawnCutsceneList.Add(189, "Gamma witnesses Beta being rebuilt");
-			TestSpawnCutsceneList.Add(190, "Gamma leaves Beta's room");
-			TestSpawnCutsceneList.Add(191, "Gamma meets and releases Amy");
-			TestSpawnCutsceneList.Add(192, "Gamma heading to the rear of the ship");
-			TestSpawnCutsceneList.Add(193, "Gamma emerges to fight Sonic");
-			TestSpawnCutsceneList.Add(194, "Gamma leaves the Egg Carrier");
-			TestSpawnCutsceneList.Add(195, "Gamma's objectives changed");
-			TestSpawnCutsceneList.Add(197, "Gamma sets out to rescue Zeta and Beta");
-			TestSpawnCutsceneList.Add(199, "Gamma outro");
-			TestSpawnCutsceneList.Add(208, "Big intro");
-			TestSpawnCutsceneList.Add(209, "Big goes searching for Froggy");
-			TestSpawnCutsceneList.Add(210, "Big sees Froggy heading into the sewers");
-			TestSpawnCutsceneList.Add(211, "Big finds Froggy and Tails");
-			TestSpawnCutsceneList.Add(212, "Big loses Froggy to Gamma");
-			TestSpawnCutsceneList.Add(216, "Big enters Hot Shelter");
-			TestSpawnCutsceneList.Add(217, "Big spots Froggy inside the tanks");
-			TestSpawnCutsceneList.Add(218, "Big saves Froggy in Hot Shelter");
-			TestSpawnCutsceneList.Add(219, "Big finds himself in the Past");
-			TestSpawnCutsceneList.Add(220, "Big sees Tikal and the Master Emerald");
-			TestSpawnCutsceneList.Add(221, "Big returns to the Egg Carrier");
-			TestSpawnCutsceneList.Add(222, "Big sees Froggy taken by Chaos 6");
-			TestSpawnCutsceneList.Add(223, "Big thanks Sonic for saving Froggy");
-			TestSpawnCutsceneList.Add(224, "Big and Froggy escape on the Tornado 2");
-			TestSpawnCutsceneList.Add(225, "Error");
-			TestSpawnCutsceneList.Add(226, "Big outro");
-			TestSpawnCutsceneList.Add(227, "Big sees Froggy heading to the beach");
-			TestSpawnCutsceneList.Add(240, "Crashed Tornado 2 in the jungle");
-			TestSpawnCutsceneList.Add(242, "Eggman heading to the Mystic Ruins base");
-			TestSpawnCutsceneList.Add(243, "Knuckles at the Master Emerald");
-			TestSpawnCutsceneList.Add(244, "Tails tells Sonic about Angel Island falling");
-			TestSpawnCutsceneList.Add(245, "Sonic and Tails find Eggman and Knuckles");
-			TestSpawnCutsceneList.Add(246, "Sonic travels to the Master Emerald Altar");
-			TestSpawnCutsceneList.Add(247, "Tikal pleads with her father");
-			TestSpawnCutsceneList.Add(248, "Tikal seals Chaos");
-			TestSpawnCutsceneList.Add(249, "Sonic returns to the present");
-			TestSpawnCutsceneList.Add(250, "Sonic and Tails find the Tornado 2");
-			TestSpawnCutsceneList.Add(251, "Sonic checks on Tikal in the past");
-			TestSpawnCutsceneList.Add(253, "Perfect Chaos reveals himself");
-			TestSpawnCutsceneList.Add(254, "Last Story outro");
-			TestSpawnCutsceneList.Add(255, "Everyone brings Sonic the emeralds");
-			TestSpawnCutsceneList.Add(256, "Sonic and Tails after landing on the Egg Carrier");
-			TestSpawnCutsceneList.Add(257, "Don't get too many ideas you fools! (Sonic)");
-			TestSpawnCutsceneList.Add(258, "The Egg Carrier has changed chape (Sonic)");
-			TestSpawnCutsceneList.Add(259, "Sonic at the Sky Deck entrance");
-			TestSpawnCutsceneList.Add(260, "Sonic got into the Egg Carrier (Is that it?)");
-			TestSpawnCutsceneList.Add(262, "Sonic heading to transform the Egg Carrier");
-			TestSpawnCutsceneList.Add(263, "Emergency alert cancelled (Sonic)");
-			TestSpawnCutsceneList.Add(272, "Tails and Sonic after landing on the Egg Carrier");
-			TestSpawnCutsceneList.Add(273, "Don't get too many ideas (Tails)");
-			TestSpawnCutsceneList.Add(274, "The Egg Carrier has changed shape (Tails)");
-			TestSpawnCutsceneList.Add(275, "Tails at the Sky Deck entrance");
-			TestSpawnCutsceneList.Add(276, "Tails got into the Egg Carrier (Is that it?)");
-			TestSpawnCutsceneList.Add(288, "The Egg Carrier changes shape (Knuckles)");
-			TestSpawnCutsceneList.Add(289, "The Egg Carrier transforms again (Knuckles)");
-			TestSpawnCutsceneList.Add(290, "Knuckles sensing the emeralds on the Egg Carrier");
-			TestSpawnCutsceneList.Add(304, "Amy in the Hedgehog Hammer room");
-			TestSpawnCutsceneList.Add(305, "Amy wins Hedgehog Hammer");
-			TestSpawnCutsceneList.Add(320, "Gamma is told to find the Jet Booster");
-			TestSpawnCutsceneList.Add(321, "Gamma heads to Hot Shelter");
-			TestSpawnCutsceneList.Add(322, "Gamma spots E-101 R");
-			TestSpawnCutsceneList.Add(336, "Emergency alert cancelled (Big)");
-			TestSpawnCutsceneList.Add(352, "The Echidna tribe faces Chaos");
-			TestSpawnCutsceneList.Add(357, "Sonic gets the Crystal Ring");
-			TestSpawnCutsceneList.Add(358, "Sonic gets the Light Speed Shoes");
-			TestSpawnCutsceneList.Add(359, "Sonic gets the Ancient Light");
-			TestSpawnCutsceneList.Add(360, "Tails gets the Jet Anklet");
-			TestSpawnCutsceneList.Add(361, "Tails gets the Rhythm Badge");
-			TestSpawnCutsceneList.Add(362, "Knuckles gets the Fighting Gloves");
-			TestSpawnCutsceneList.Add(363, "Knuckles gets the Shovel Claw");
-			TestSpawnCutsceneList.Add(364, "Amy gets the Long Hammer");
-			TestSpawnCutsceneList.Add(365, "Amy gets the Warrior Feather");
-			TestSpawnCutsceneList.Add(366, "Gamma gets the Laser Blaster");
-			TestSpawnCutsceneList.Add(367, "Gamma gets the Jet Booster");
-			TestSpawnCutsceneList.Add(368, "Big gets the Power Rod");
-			TestSpawnCutsceneList.Add(369, "Big gets the Life Belt");
-			TestSpawnCutsceneList.Add(374, "Ice Stone appears (Sonic)");
-			TestSpawnCutsceneList.Add(375, "Ice Stone appears (Tails)");
-			TestSpawnCutsceneList.Add(376, "Ice Stone appears (Big)");
-			TestSpawnCutsceneList.Add(377, "Employee Card appears (Sonic)");
-			TestSpawnCutsceneList.Add(378, "Passage to Angel Island opens (Sonic)");
-			TestSpawnCutsceneList.Add(379, "Passage to Angel Island opens (Tails)");
-			TestSpawnCutsceneList.Add(380, "Passage to Angel Island opens (Gamma)");
-			TestSpawnCutsceneList.Add(384, "Sonic sees the Egg Carrier in Red Mountain");
 			comboBoxTestSpawnEvent.Items.Clear();
 			foreach (var item in TestSpawnCutsceneList)
 			{
 				comboBoxTestSpawnEvent.Items.Add("EV" + item.Key.ToString("X4") + ": " + item.Value);
 			}
 		}
+
 		private void InitTestSpawnGameModeList()
 		{
-			TestSpawnGameModeList = new Dictionary<ushort, string>
-			{
-				{ 4, "Action Stage" },
-				{ 5, "Adventure" },
-				{ 9, "Trial" },
-				{ 10, "Mission" }
-			};
 			comboBoxTestSpawnGameMode.Items.Clear();
 			foreach (var item in TestSpawnGameModeList)
 			{
@@ -2368,8 +2318,37 @@ namespace SADXModManager
 				File.Delete(d3d8to9InstalledDLLName);
 		}
 
-		private void buttonUpdateD3D8to9_Click(object sender, EventArgs e)
+		private void CheckD3D8to9Update()
 		{
+			bool result = false;
+			if (!File.Exists(d3d8to9StoredDLLName) || !File.Exists(d3d8to9InstalledDLLName))
+				return;
+			try
+			{
+				long length1 = new FileInfo(d3d8to9InstalledDLLName).Length;
+				long length2 = new FileInfo(d3d8to9StoredDLLName).Length;
+				if (length1 != length2)
+					result = true;
+				else
+				{
+					byte[] file1 = File.ReadAllBytes(d3d8to9InstalledDLLName);
+					byte[] file2 = File.ReadAllBytes(d3d8to9StoredDLLName);
+					for (int i = 0; i < file1.Length; i++)
+					{
+						if (file1[i] != file2[i])
+							result = true;
+					}
+					return;
+				}
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(this, "Unable to check d3d8to9 version:\n" + ex.Message, "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				return;
+			}
+
+			if (!result)
+				return;
 			DialogResult update = MessageBox.Show(this,
 												  "The version of d3d8.dll in SADX folder differs from the one included with the Mod Loader." +
 												  " Would you like to update the installed copy?",
@@ -2379,36 +2358,6 @@ namespace SADXModManager
 			if (update == DialogResult.Yes)
 			{
 				CopyD3D9Dll();
-				buttonUpdateD3D8to9.Visible = CheckD3D8to9Update();
-			}
-		}
-
-		private bool CheckD3D8to9Update()
-		{
-			if (!File.Exists(d3d8to9StoredDLLName) || !File.Exists(d3d8to9InstalledDLLName))
-				return false;
-			try
-			{
-				long length1 = new FileInfo(d3d8to9InstalledDLLName).Length;
-				long length2 = new FileInfo(d3d8to9StoredDLLName).Length;
-				if (length1 != length2)
-					return true;
-				else
-				{
-					byte[] file1 = File.ReadAllBytes(d3d8to9InstalledDLLName);
-					byte[] file2 = File.ReadAllBytes(d3d8to9StoredDLLName);
-					for (int i = 0; i < file1.Length; i++)
-					{
-						if (file1[i] != file2[i])
-							return true;
-					}
-					return false;
-				}
-			}
-			catch (Exception ex)
-			{
-				MessageBox.Show(this, "Unable to check d3d8to9 version:\n" + ex.Message, "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				return false;
 			}
 		}
 		#endregion
@@ -2416,9 +2365,7 @@ namespace SADXModManager
 		#region Mod profiles
 		private void profileNameBox_TextChanged(object sender, EventArgs e)
 		{
-			if (string.IsNullOrEmpty(profileNameBox.Text) || profileNameBox.Text.Equals("SADXModLoader", StringComparison.OrdinalIgnoreCase)
-				|| profileNameBox.Text.Equals("mod", StringComparison.OrdinalIgnoreCase) || profileNameBox.Text.Equals("desktop", StringComparison.OrdinalIgnoreCase)
-				|| profileNameBox.Text.IndexOfAny(Path.GetInvalidFileNameChars()) != -1)
+			if (string.IsNullOrEmpty(textBoxProfileName.Text) || textBoxProfileName.Text.IndexOfAny(Path.GetInvalidFileNameChars()) != -1)
 			{
 				buttonSaveProfile.Enabled = false;
 				buttonLoadProfile.Enabled = false;
@@ -2426,23 +2373,30 @@ namespace SADXModManager
 			else
 			{
 				buttonSaveProfile.Enabled = true;
-				buttonLoadProfile.Enabled = File.Exists($"mods/{profileNameBox.Text}.ini");
+				buttonLoadProfile.Enabled = File.Exists(Path.Combine(managerAppDataPath, "SADX", textBoxProfileName.Text + ".json"));
 			}
 		}
 
 		private void buttonLoadProfile_Click(object sender, EventArgs e)
 		{
-			loaderini = IniSerializer.Deserialize<SADXLoaderInfo>($"mods/{profileNameBox.Text}.ini");
+			LoadCurrentProfile(true);
 			LoadSettings();
 		}
 
 		private void buttonSaveProfile_Click(object sender, EventArgs e)
 		{
-			Save();
-			File.Copy(loaderinipath, $"mods/{profileNameBox.Text}.ini", true);
-			if (profileNameBox.FindStringExact(profileNameBox.Text) == -1)
-				profileNameBox.Items.Add(profileNameBox.Text);
-			buttonLoadProfile.Enabled = true;
+			using (SaveProfileDialog prd = new SaveProfileDialog())
+			{
+				if (prd.ShowDialog() == DialogResult.OK)
+				{
+					profilesJson.ProfilesList.Add(new ProfileData { Name = prd.ProfileName, Filename = prd.ProfileName + ".json" });
+					textBoxProfileName.Items.Add(prd.ProfileName);
+					textBoxProfileName.SelectedIndex = textBoxProfileName.Items.Count - 1;
+					SaveSettings(true);
+					buttonLoadProfile.Enabled = true;
+				}
+			}
+
 		}
 		#endregion
 
@@ -2453,24 +2407,24 @@ namespace SADXModManager
 			 * Here, we take the newly selected Button,
 			 * and assign it to the selected Action.
 			*/
-			ushort selected = (ushort)comboMouseButtons.SelectedIndex;
+			ushort selected = (ushort)comboBoxMouseButtonAssignment.SelectedIndex;
 
-			switch (comboMouseActions.SelectedIndex)
+			switch (comboBoxMouseAction.SelectedIndex)
 			{
 				case 0:
-					configFile.GameConfig.MouseStart = IntToMouse(selected);
+					sonicDxIni.GameConfig.MouseStart = IntToMouse(selected);
 					break;
 				case 1:
-					configFile.GameConfig.MouseAttack = IntToMouse(selected);
+					sonicDxIni.GameConfig.MouseAttack = IntToMouse(selected);
 					break;
 				case 2:
-					configFile.GameConfig.MouseJump = IntToMouse(selected);
+					sonicDxIni.GameConfig.MouseJump = IntToMouse(selected);
 					break;
 				case 3:
-					configFile.GameConfig.MouseAction = IntToMouse(selected);
+					sonicDxIni.GameConfig.MouseAction = IntToMouse(selected);
 					break;
 				case 4:
-					configFile.GameConfig.MouseFlute = IntToMouse(selected);
+					sonicDxIni.GameConfig.MouseFlute = IntToMouse(selected);
 					break;
 			}
 		}
@@ -2509,22 +2463,22 @@ namespace SADXModManager
 			*/
 			ushort selected;
 
-			switch (comboMouseActions.SelectedIndex)
+			switch (comboBoxMouseAction.SelectedIndex)
 			{
 				case 0:
-					selected = configFile.GameConfig.MouseStart;
+					selected = sonicDxIni.GameConfig.MouseStart;
 					break;
 				case 1:
-					selected = configFile.GameConfig.MouseAttack;
+					selected = sonicDxIni.GameConfig.MouseAttack;
 					break;
 				case 2:
-					selected = configFile.GameConfig.MouseJump;
+					selected = sonicDxIni.GameConfig.MouseJump;
 					break;
 				case 3:
-					selected = configFile.GameConfig.MouseAction;
+					selected = sonicDxIni.GameConfig.MouseAction;
 					break;
 				case 4:
-					selected = configFile.GameConfig.MouseFlute;
+					selected = sonicDxIni.GameConfig.MouseFlute;
 					break;
 
 				default:
@@ -2532,7 +2486,7 @@ namespace SADXModManager
 					break;
 			}
 
-			comboMouseButtons.SelectedIndex = MouseToInt(selected);
+			comboBoxMouseButtonAssignment.SelectedIndex = MouseToInt(selected);
 		}
 
 		void buttonControl_SetButtonClicked(object sender, EventArgs e)
@@ -2571,7 +2525,7 @@ namespace SADXModManager
 
 		void ButtonPressed(int button)
 		{
-			ControllerConfigInternal config = controllerConfig[controllerConfigSelect.SelectedIndex];
+			ControllerConfigInternal config = controllerConfig[comboBoxControllerProfile.SelectedIndex];
 			if (button != -1)
 			{
 				if (Array.IndexOf(config.Buttons, button) != -1)
@@ -2596,22 +2550,23 @@ namespace SADXModManager
 		{
 			int i = buttonControls.IndexOf((ButtonControl)sender);
 			buttonControls[i].Text = "Unassigned";
-			controllerConfig[controllerConfigSelect.SelectedIndex].Buttons[i] = -1;
+			controllerConfig[comboBoxControllerProfile.SelectedIndex].Buttons[i] = -1;
 		}
 
-		private void controllerConfigSelect_SelectedIndexChanged(object sender, EventArgs e)
+
+		private void comboBoxControllerProfile_SelectedIndexChanged(object sender, EventArgs e)
 		{
-			if (controllerConfigSelect.SelectedIndex == -1)
+			if (comboBoxControllerProfile.SelectedIndex == -1)
 			{
-				controllerConfigRemove.Enabled = controllerConfigName.Enabled = false;
+				buttonControllerProfileRemove.Enabled = comboBoxControllerName.Enabled = false;
 				foreach (ButtonControl control in buttonControls)
 					control.Enabled = false;
 			}
 			else
 			{
-				controllerConfigRemove.Enabled = controllerConfigName.Enabled = true;
-				ControllerConfigInternal config = controllerConfig[controllerConfigSelect.SelectedIndex];
-				controllerConfigName.Text = config.Name;
+				buttonControllerProfileRemove.Enabled = comboBoxControllerName.Enabled = true;
+				ControllerConfigInternal config = controllerConfig[comboBoxControllerProfile.SelectedIndex];
+				comboBoxControllerName.Text = config.Name;
 				for (int i = 0; i < buttonControls.Count; i++)
 				{
 					buttonControls[i].Enabled = true;
@@ -2620,110 +2575,46 @@ namespace SADXModManager
 			}
 		}
 
-		private void controllerConfigAdd_Click(object sender, EventArgs e)
+		private void comboBoxControllerName_TextChanged(object sender, EventArgs e)
+		{
+			for (int i = 0; i < controllerConfig.Count; i++)
+			{
+				if (i != comboBoxControllerProfile.SelectedIndex && controllerConfig[i].Name == comboBoxControllerName.Text)
+				{
+					comboBoxControllerName.BackColor = Color.Red;
+					return;
+				}
+			}
+
+			comboBoxControllerName.BackColor = SystemColors.Window;
+			controllerConfig[comboBoxControllerProfile.SelectedIndex].Name = comboBoxControllerName.Text;
+			comboBoxControllerProfile.Items[comboBoxControllerProfile.SelectedIndex] = comboBoxControllerName.Text;
+		}
+
+		private void buttonControllerProfileAdd_Click(object sender, EventArgs e)
 		{
 			controllerConfig.Add(new ControllerConfigInternal
 			{
 				Name = "*NEW*",
 				Buttons = Enumerable.Repeat(-1, buttonIDs.Length).ToArray()
 			});
-			controllerConfigSelect.Items.Add("*NEW*");
-			controllerConfigSelect.SelectedIndex = controllerConfigSelect.Items.Count - 1;
+			comboBoxControllerProfile.Items.Add("*NEW*");
+			comboBoxControllerProfile.SelectedIndex = comboBoxControllerProfile.Items.Count - 1;
 		}
 
-		private void controllerConfigRemove_Click(object sender, EventArgs e)
+		private void buttonControllerProfileRemove_Click(object sender, EventArgs e)
 		{
-			controllerConfig.RemoveAt(controllerConfigSelect.SelectedIndex);
-			controllerConfigSelect.Items.RemoveAt(controllerConfigSelect.SelectedIndex);
-		}
-
-		private void controllerConfigName_TextChanged(object sender, EventArgs e)
-		{
-			for (int i = 0; i < controllerConfig.Count; i++)
-			{
-				if (i != controllerConfigSelect.SelectedIndex && controllerConfig[i].Name == controllerConfigName.Text)
-				{
-					controllerConfigName.BackColor = Color.Red;
-					return;
-				}
-			}
-
-			controllerConfigName.BackColor = SystemColors.Window;
-			controllerConfig[controllerConfigSelect.SelectedIndex].Name = controllerConfigName.Text;
-			controllerConfigSelect.Items[controllerConfigSelect.SelectedIndex] = controllerConfigName.Text;
-		}
-
-		private void Load_WindowUserSettings()
-		{
-			try
-			{
-				if (Settings.Default.Maximised)
-				{
-					Location = Settings.Default.Location;
-					WindowState = FormWindowState.Maximized;
-					Size = Settings.Default.Size;
-				}
-				else if (Settings.Default.Minimised)
-				{
-					Location = Settings.Default.Location;
-					WindowState = FormWindowState.Minimized;
-					Size = Settings.Default.Size;
-				}
-				else
-				{
-					Location = Settings.Default.Location;
-					Size = Settings.Default.Size;
-				}
-			}
-			catch (Exception)
-			{
-				MessageBox.Show("Invalid window configuration data detected. Window size will not be saved.\nPlease restart SADX Mod Manager to finish resetting to default settings.", "SADX Mod Manager Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				Directory.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SADXModManager"), true);
-			}
-		}
-
-		private void Save_WindowUserSettings()
-		{
-			try
-			{
-				if (WindowState == FormWindowState.Maximized)
-				{
-					Settings.Default.Location = RestoreBounds.Location;
-					Settings.Default.Size = RestoreBounds.Size;
-					Settings.Default.Maximised = true;
-					Settings.Default.Minimised = false;
-				}
-				else if (WindowState == FormWindowState.Normal)
-				{
-					Settings.Default.Location = Location;
-					Settings.Default.Size = Size;
-					Settings.Default.Maximised = false;
-					Settings.Default.Minimised = false;
-				}
-				else
-				{
-					Settings.Default.Location = RestoreBounds.Location;
-					Settings.Default.Size = RestoreBounds.Size;
-					Settings.Default.Maximised = false;
-					Settings.Default.Minimised = true;
-				}
-				Settings.Default.Save();
-			}
-			catch (Exception)
-			{
-				
-			}
+			controllerConfig.RemoveAt(comboBoxControllerProfile.SelectedIndex);
+			comboBoxControllerProfile.Items.RemoveAt(comboBoxControllerProfile.SelectedIndex);
 		}
 
 		private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
 		{
+			// Reset DirectInput
 			directInput?.Dispose();
 			directInput = null;
-
 			inputDevice?.Dispose();
 			inputDevice = null;
-
-			Save_WindowUserSettings();
 		}
 
 		private void MainForm_KeyDown(object sender, KeyEventArgs e)
@@ -2733,7 +2624,7 @@ namespace SADXModManager
 				controllerThread.Abort();
 				inputDevice.Unacquire();
 				inputDevice.SetNotification(null);
-				ControllerConfigInternal config = controllerConfig[controllerConfigSelect.SelectedIndex];
+				ControllerConfigInternal config = controllerConfig[comboBoxControllerProfile.SelectedIndex];
 				buttonControls[currentAction].Text = config.Buttons[currentAction] == -1
 					? "Unassigned"
 					: "Button " + (config.Buttons[currentAction] + 1).ToString("D2");
@@ -2743,49 +2634,514 @@ namespace SADXModManager
 
 		#endregion
 
-		#region Patches
-		public class PatchesData
+		#region Game Patches
+		/// <summary>Retrieves individual game patch settings in old SA Manager configuration</summary>
+		public bool GetLegacyGamePatchState(GamePatchData patchData)
 		{
-			public string Name { get; set; }
-			public string Author { get; set; }
-			public string Category { get; set; }
-			public string Description { get; set; }
-			public bool IsChecked { get; set; }
-			public string InternalName { get; set; }
-		}
-
-		public class PatchesList
-		{
-			public List<PatchesData> Patches { get; set; } = new List<PatchesData>();
-			public static PatchesList Deserialize(string path)
+			switch (patchData.Name)
 			{
-				if (File.Exists(path))
-				{
-					JsonSerializer js = new JsonSerializer() { Culture = System.Globalization.CultureInfo.InvariantCulture };
-					using (TextReader tr = File.OpenText(path))
-					using (JsonTextReader jtr = new JsonTextReader(tr))
-						return js.Deserialize<PatchesList>(jtr);
-				}
-
-				return null;
+				case "HRTFSound":
+					return gameSettings.Patches.HRTFSound;
+				case "KeepCamSettings":
+					return gameSettings.Patches.KeepCamSettings;
+				case "FixVertexColorRendering":
+					return gameSettings.Patches.FixVertexColorRendering;
+				case "MaterialColorFix":
+					return gameSettings.Patches.MaterialColorFix;
+				case "NodeLimit":
+					return gameSettings.Patches.NodeLimit;
+				case "FOVFix":
+					return gameSettings.Patches.FOVFix;
+				case "SkyChaseResolutionFix":
+					return gameSettings.Patches.SkyChaseResolutionFix;
+				case "Chaos2CrashFix":
+					return gameSettings.Patches.Chaos2CrashFix;
+				case "ChunkSpecularFix":
+					return gameSettings.Patches.ChunkSpecularFix;
+				case "E102NGonFix":
+					return gameSettings.Patches.E102NGonFix;
+				case "ChaoPanelFix":
+					return gameSettings.Patches.ChaoPanelFix;
+				case "PixelOffSetFix":
+					return gameSettings.Patches.PixelOffSetFix;
+				case "LightFix":
+					return gameSettings.Patches.LightFix;
+				case "KillGBIX":
+					return gameSettings.Patches.KillGBIX;
+				case "DisableCDCheck":
+					return gameSettings.Patches.DisableCDCheck;
+				case "ExtendedSaveSupport":
+					return gameSettings.Patches.ExtendedSaveSupport;
+				case "CrashGuard":
+					return gameSettings.Patches.CrashGuard;
+				case "XInputFix":
+					return gameSettings.Patches.XInputFix;
+				default:
+					return patchData.IsChecked; // Default value
 			}
 		}
 
 		public void InitPatches()
 		{
-			if (File.Exists("mods/Patches.json"))
+			if (File.Exists(patchesJsonPath))
 			{
-				PatchesList list = PatchesList.Deserialize("mods/Patches.json");
-				foreach (PatchesData patchesData in list.Patches)
+				bool isLegacyGamePatchSettings = gameSettings.EnabledGamePatches == null;
+				if (isLegacyGamePatchSettings)
+					gameSettings.EnabledGamePatches = new List<string>();
+				patchesJson = GamePatchesJson.Deserialize(patchesJsonPath);
+				bool sup = suppressEvent == true;
+				if (!sup)
+					suppressEvent = true;
+				listViewPatches.BeginUpdate();
+				listViewPatches.Items.Clear();
+				foreach (GamePatchData patchData in patchesJson.Patches)
 				{
-					listBoxPatches.Items.Add(patchesData.Name);
+					ListViewItem item = new ListViewItem(new[] { patchData.InternalName, patchData.Author, patchData.Category });
+					// If using the new game patch list, just check if the patch name is on the list
+					if (!isLegacyGamePatchSettings)
+						item.Checked = gameSettings.EnabledGamePatches.Contains(patchData.Name);
+					// If not, check the legacy settings
+					else if (GetLegacyGamePatchState(patchData))
+					{
+						item.Checked = true;
+						gameSettings.EnabledGamePatches.Add(patchData.Name);
+					}
+					listViewPatches.Items.Add(item);
+				}
+				listViewPatches.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent); // Patch name
+				listViewPatches.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent); // Author
+				listViewPatches.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.ColumnContent); // Category
+				listViewPatches.EndUpdate();
+				if (!sup)
+					suppressEvent = false;
+			}
+			else
+				tabControlGameConfig.TabPages.Remove(tabPagePatches);
+		}
+
+		private void listViewPatches_ItemChecked(object sender, ItemCheckedEventArgs e)
+		{
+			if (suppressEvent)
+				return;
+			foreach (ListViewItem item in listViewPatches.Items)
+			{
+				GamePatchData pdata = patchesJson.Patches.Find(a => a.InternalName == item.Text);
+				if (item.Checked && !gameSettings.EnabledGamePatches.Contains(pdata.Name))
+					gameSettings.EnabledGamePatches.Add(pdata.Name);
+				else if (!item.Checked && gameSettings.EnabledGamePatches.Contains(pdata.Name))
+					gameSettings.EnabledGamePatches.Remove(pdata.Name);
+			}
+		}
+
+		#endregion
+
+		#region Utilities
+		public T JsonDeserialize<T>(string path)
+		{
+			if (!File.Exists(path))
+				return default(T);
+			using (TextReader tr = File.OpenText(path))
+			using (JsonTextReader jtr = new JsonTextReader(tr))
+				return jsonSerializer.Deserialize<T>(jtr);
+		}
+
+		public void JsonSerialize(object t, string path)
+		{
+			Directory.CreateDirectory(Path.GetDirectoryName(path));
+			using (TextWriter tr = File.CreateText(path))
+				jsonSerializer.Serialize(tr, t);
+		}
+		#endregion
+
+		private void FilterModList(string filterString)
+		{
+			suppressEvent = true;
+			listViewMods.BeginUpdate();
+			listViewMods.Items.Clear();
+
+			foreach (KeyValuePair<string, SADXModInfo> inf in mods.OrderBy(x => x.Value.Name))
+			{
+				if (inf.Value.Name.ToLowerInvariant().Contains(filterString.ToLowerInvariant()))
+					listViewMods.Items.Add(new ListViewItem(new[] { inf.Value.Name, inf.Value.Author, inf.Value.Version, inf.Value.Category }) { Checked = gameSettings.EnabledMods.Contains(inf.Key), Tag = inf.Key });
+			}
+
+			listViewMods.EndUpdate();
+			suppressEvent = false;
+		}
+
+		private void checkBoxSearchMod_CheckedChanged(object sender, EventArgs e)
+		{
+			textBoxSearchMod.Visible = checkBoxSearchMod.Checked;
+			textBoxProfileName.Visible = buttonSaveProfile.Visible = buttonLoadProfile.Visible = !checkBoxSearchMod.Checked;
+			labelModProfile.Text = checkBoxSearchMod.Checked ? "Search Mods:" : "Profile:";
+			if (!checkBoxSearchMod.Checked)
+				FilterModList("");
+			else
+				textBoxSearchMod.Focus();
+		}
+
+		private void buttonSelectAllMods_Click(object sender, EventArgs e)
+		{
+			bool unselect = listViewMods.CheckedItems.Count > 0;
+			foreach (ListViewItem item in listViewMods.Items)
+				item.Checked = !unselect;
+		}
+
+		private void listViewPatches_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			string desc = "None";
+			if (listViewPatches.SelectedIndices.Count == 1)
+			{
+				GamePatchData patch = patchesJson.Patches.Find(a => a.InternalName == listViewPatches.SelectedItems[0].Text);
+				if (patch.Description != null && patch.Description != "")
+					desc = patch.Description;
+			}
+			labelPatchDescription.Text = "Description: " + desc;
+		}
+
+		private void textBoxSearchMod_TextChanged(object sender, EventArgs e)
+		{
+			if (checkBoxSearchMod.Checked)
+				FilterModList(textBoxSearchMod.Text);
+		}
+
+		private void textBoxSearchMod_KeyDown(object sender, KeyEventArgs e)
+		{
+			if (e.KeyCode == Keys.Escape)
+				checkBoxSearchMod.Checked = false;
+		}
+
+		private void buttonCheckModUpdates_Click(object sender, EventArgs e)
+		{
+			AutoUpdate(false, true, false, false, false, true);
+		}
+
+		private void newModToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			using (var ModDialog = new NewModDialog())
+			{
+				if (ModDialog.ShowDialog() == DialogResult.OK)
+					LoadModList();
+			}
+		}
+
+		private void ListControls()
+		{
+			List<string> ctrls = new List<string>
+			{
+				"Up", "Down", "Left", "Right", "Jump (A)", "Attack (B)", "Action (X)", "Whistle (Y)", "Start", "Camera Left", "Camera Right", "Look Up", "Look Down", "Look Left", "Look Right", "Z Button", "C Button", "D Button", "Center Camera", "Slow Walk", "Menu Up", "Menu Down", "Menu Left", "Menu Right"
+			};
+			foreach (var ctrl in ctrls)
+			{
+				listViewControlBindings.Items.Add(ctrl);
+			}
+			listViewControlBindings.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent); // Control name
+			listViewControlBindings.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent); // Control binding
+																									// Remove for now
+			tabControlGameConfig.TabPages.Remove(tabPageController);
+		}
+
+		private void radioButtonDInput_CheckedChanged(object sender, EventArgs e)
+		{
+			radioButtonMouseDisable.Enabled = false;//radioButtonSDL.Checked;
+			if (!radioButtonMouseDisable.Enabled && radioButtonMouseDisable.Checked)
+			{
+				radioButtonMouseDisable.Checked = false;
+				radioButtonMouseDragAccelerate.Checked = true;
+			}
+		}
+
+		private void comboBoxScreenMode_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			numericUpDownWindowHeight.Enabled = checkBoxWindowMaintainAspect.Enabled = (DisplayMode)comboBoxScreenMode.SelectedIndex == DisplayMode.CustomWindow;
+			numericUpDownWindowWidth.Enabled = (DisplayMode)comboBoxScreenMode.SelectedIndex == DisplayMode.CustomWindow && !checkBoxWindowMaintainAspect.Checked;
+		}
+
+		private void toolStripMenuItemDeleteProfile_Click(object sender, EventArgs e)
+		{
+			if (MessageBox.Show(this, "Would you like to delete profile " + textBoxProfileName.Text + "?", "SADX Mod Manager", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+			{
+				suppressEvent = true;
+				// Delete profile file
+				File.Delete(Path.Combine(managerAppDataPath, "SADX", textBoxProfileName.Text + ".json"));
+				// Set default profile
+				profilesJson.ProfileIndex = 0;
+				// Delete entries for profiles that don't exist
+				List<ProfileData> deleteProfiles = new List<ProfileData>();
+				foreach (ProfileData data in profilesJson.ProfilesList)
+					if (!File.Exists(Path.Combine(managerAppDataPath, "SADX", data.Filename)))
+						deleteProfiles.Add(data);
+				foreach (ProfileData data in deleteProfiles)
+					profilesJson.ProfilesList.Remove(data);
+				// Save profiles list
+				JsonSerialize(profilesJson, profilesListJsonPath);
+				// Delete profile item in text box
+				textBoxProfileName.Items.Remove(textBoxProfileName.Text);
+				textBoxProfileName.SelectedIndex = 0;
+				textBoxProfileName.Text = "Default";
+				suppressEvent = false;
+				// Reload current (default) profile
+				LoadCurrentProfile(false);
+			}
+		}
+
+		private void textBoxProfileName_MouseDown(object sender, MouseEventArgs e)
+		{
+			if (e.Button != MouseButtons.Right || textBoxProfileName.Text == "Default")
+			{
+				return;
+			}
+			contextMenuStripProfile.Show(Cursor.Position);
+		}
+
+		private void textBoxProfileName_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			if (suppressEvent)
+				return;
+			profilesJson.ProfileIndex = textBoxProfileName.SelectedIndex;
+		}
+
+		/// <summary>Makes a WebRequest to retrieve the size of a download</summary>
+		private long GetDownloadSize(string url)
+		{
+			long result = 0;
+			WebRequest req = WebRequest.Create(url);
+			req.Method = "HEAD";
+			using (WebResponse resp = req.GetResponse())
+			{
+				if (long.TryParse(resp.Headers.Get("Content-Length"), out long contentLength))
+				{
+					result = contentLength;
+				}
+			}
+			return result;
+		}
+
+		private DateTime GetDownloadDate(string url)
+		{
+			// Get last modified date
+			WebRequest req = WebRequest.Create(url);
+			using (HttpWebResponse res = (HttpWebResponse)req.GetResponse())
+				return res.LastModified;
+		}
+
+		/// <summary>Retrieves a download for an update for SADX Mod Loader from direct links (null if no update)</summary>
+		private DownloadItem CheckLoaderUpdates()
+		{
+			string mlverfile = Path.Combine(managerAppDataPath, "sadxmlver.txt");
+			try
+			{
+				// Read version info
+				string msg = webClient.DownloadString("http://mm.reimuhakurei.net/toolchangelog.php?tool=sadxml&rev=" + (File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "590"));
+				// If there's no info, there's no update
+				if (msg.Length == 0 && File.Exists(Path.Combine(gameSettings.GamePath, "mods", "SADXModLoader.dll")))
+					return null;
+				string targetver = msg[12] == ' ' ? msg.Substring(9, 3) : msg.Substring(9, 4);
+				long size = GetDownloadSize(loaderUpdateUrl);
+				// If the URL doesn't work, try the other one
+				if (size == 0)
+				{
+					loaderUpdateUrl = "http://mm.reimuhakurei.net/sadxmods/SADXModLoader.7z";
+					size = GetDownloadSize(loaderUpdateUrl);
+				}
+				// If the other one doesn't work either, output an error
+				if (size == 0)
+				{
+					MessageBox.Show(this, "Could not retrieve SADX Mod Loader update information: size is 0", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					return null;
+				}
+				// Get last modified date
+				DateTime modifiedDate = GetDownloadDate(loaderUpdateUrl);
+				return new DownloadItem("Mod Loader", loaderUpdateUrl, size, msg.Replace("\n", "\r\n"), DownloadItem.DownloadItemType.Loader, targetver, modifiedDate);
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(this, "Could not retrieve SADX Mod Loader update information: " + ex.Message.ToString(), "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				return null;
+			}
+		}
+
+		/// <summary>Retrieves a download for an update for the Steam launcher from a direct link (null if no update)</summary>
+		private DownloadItem CheckLauncherUpdates()
+		{
+			string appLauncherExe = Path.Combine(Path.Combine(gameSettings.GamePath, "AppLauncher.exe"));
+			if (File.Exists(appLauncherExe))
+			{
+				string localcrc = "AppLauncher.exe," + Force.Crc32.Crc32Algorithm.Compute(File.ReadAllBytes(appLauncherExe)).ToString("X") + "\r\n";
+				string remotecrc = webClient.DownloadString("https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/AppLauncher/AppLauncher.crc");
+				// If CRC matches, exit
+				if (localcrc == remotecrc)
+					return null;
+			}
+			// Get download size
+			long size = GetDownloadSize(launcherUpdateUrl);
+			// Get last modified date
+			DateTime modifiedDate = GetDownloadDate(launcherUpdateUrl);
+			// Create a version string
+			string ver = string.Format("{0}/{1}/{2} {3}:{4}", modifiedDate.Year, modifiedDate.Month, modifiedDate.Day, modifiedDate.Hour, modifiedDate.Minute);
+			return new DownloadItem("Steam Launcher", launcherUpdateUrl, size, "No changelog available", DownloadItem.DownloadItemType.Launcher, ver, modifiedDate);
+		}
+
+		/// <summary>Retrieves a download for an update for SADX Mod Manager Classic from a direct link (null if no update)</summary>
+		private DownloadItem CheckManagerUpdates()
+		{
+			string changelog;
+			string mlverfile = Path.Combine(managerAppDataPath, "sadxmanagerver.txt");
+			try
+			{
+				// Read remote and local version info
+				string msg_remote = webClient.DownloadString("https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/sadx-manager-classic/sadxmanagerver.txt");
+				string msg_local = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "1.00";
+				// If there's no difference, there's no update
+				if (msg_remote == msg_local)
+					return null;
+				// Get size
+				long size = GetDownloadSize(managerUpdateUrl);
+				// If the URL doesn't work, output an error
+				if (size == 0)
+				{
+					MessageBox.Show(this, "Could not retrieve SADX Mod Manager Classic update information: size is 0", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					return null;
+				}
+				// Get last modified date
+				DateTime modifiedDate = GetDownloadDate(managerUpdateUrl);
+				try
+				{
+					changelog = webClient.DownloadString(managerChangelogUrl);
+				}
+				catch (Exception ex)
+				{
+					changelog = "Error retrieving Mod Manager Classic changelog: " + ex.Message.ToString();
+				}
+				return new DownloadItem("Mod Manager Classic", managerUpdateUrl, size, changelog, DownloadItem.DownloadItemType.Manager, msg_remote, modifiedDate);
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(this, "Could not retrieve SADX Mod Manager Classic update information: " + ex.Message.ToString(), "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				return null;
+			}
+		}
+
+		/// <summary>Change SADX game folder in the currently loaded profile.</summary>
+		private void toolStripStatusLabelGameFolder_Click(object sender, EventArgs e)
+		{
+			using (OpenFileDialog dialog = new OpenFileDialog
+			{
+				Title = "Select the location of sonic.exe",
+				InitialDirectory = gameSettings.GamePath,
+				Filter = "SADX 2004 EXE|sonic.exe",
+				AutoUpgradeEnabled = true,
+				CheckFileExists = true,
+				CheckPathExists = true,
+				Multiselect = false,
+				RestoreDirectory = true
+			})
+			{
+				if (dialog.ShowDialog() == DialogResult.OK)
+				{
+					gameSettings.GamePath = Path.GetDirectoryName(dialog.FileName);
+					SaveSettings(!checkBoxSingleProfile.Checked);
+					LoadCurrentProfile(!checkBoxSingleProfile.Checked);
 				}
 			}
 		}
 
-		private void listBoxPatches_ItemCheck(object sender, ItemCheckEventArgs e)
+		private void SortList(object sender, ColumnClickEventArgs e)
 		{
+			suppressEvent = true;
+			ListView lv = (ListView)sender;
+			lv.ListViewItemSorter = lvwColumnSorter;
+			// https://learn.microsoft.com/en-us/troubleshoot/developer/visualstudio/csharp/language-compilers/sort-listview-by-column
+			// Determine if clicked column is already the column that is being sorted.
+			if (e.Column == lvwColumnSorter.SortColumn)
+			{
+
+				// Reverse the current sort direction for this column.
+				if (lvwColumnSorter.Order == SortOrder.Ascending)
+				{
+					lvwColumnSorter.Order = SortOrder.Descending;
+				}
+				else
+				{
+					lvwColumnSorter.Order = SortOrder.Ascending;
+				}
+			}
+			else
+			{
+				// Set the column number that is to be sorted; default to ascending.
+				lvwColumnSorter.SortColumn = e.Column;
+				lvwColumnSorter.Order = SortOrder.Ascending;
+			}
+			// Perform the sort with these new sort options.
+			lv.Sort();
+			lv.ListViewItemSorter = null;
+			foreach (ListViewItem item in lv.CheckedItems)
+			{
+				lv.Items.Remove(item);
+				lv.Items.Insert(0, item);
+			}
+			suppressEvent = false;
 		}
-		#endregion
+
+		private void listViewCodes_ColumnClick(object sender, ColumnClickEventArgs e)
+		{
+			SortList(sender, e);
+		}
+
+		private void listViewMods_ColumnClick(object sender, ColumnClickEventArgs e)
+		{
+			SortList(sender, e);
+		}
+
+		private void listViewPatches_ColumnClick(object sender, ColumnClickEventArgs e)
+		{
+			SortList(sender, e);
+		}
+
+		private void checkBoxTestSpawnAngleDeg_CheckedChanged(object sender, EventArgs e)
+		{
+			if (checkBoxTestSpawnAngleDeg.Checked)
+				numericUpDownTestSpawnAngle.Value = (int)Math.Round((float)numericUpDownTestSpawnAngle.Value * (360.0f / 65535.0f));
+			else
+				numericUpDownTestSpawnAngle.Value = (int)Math.Round((float)numericUpDownTestSpawnAngle.Value / (360.0f / 65535.0f));
+		}
+
+		void Application_ThreadException(object sender, System.Threading.ThreadExceptionEventArgs e)
+		{
+			string errDesc = "SADX Mod Manager has crashed with the following error:\n" + e.Exception.GetType().Name + ".\n\n" +
+				"If you wish to report a bug, please include the following in your report:";
+			ErrorDialog report = new ErrorDialog("SADX Mod Manager", errDesc, e.Exception.ToString());
+			DialogResult dgresult = report.ShowDialog();
+			switch (dgresult)
+			{
+				case DialogResult.OK:
+				case DialogResult.Abort:
+					Environment.Exit(0);
+					break;
+			}
+		}
+
+		private void disableUpdatesToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			foreach (ListViewItem item in listViewMods.SelectedItems)
+			{
+				string tag = (string)item.Tag;
+				if (managerConfig.IgnoredModUpdates.Contains(tag))
+				{
+					managerConfig.IgnoredModUpdates.Remove(tag);
+					item.ForeColor = SystemColors.WindowText;
+				}
+				else
+				{
+					managerConfig.IgnoredModUpdates.Add(tag);
+					item.ForeColor = SystemColors.GrayText;
+				}
+			}
+		}
+
+		private void configureToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			configureModButton_Click(sender, e);
+		}
 	}
 }

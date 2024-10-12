@@ -61,13 +61,22 @@ namespace SADXModManager.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to This can cause MOD USER DATA (SAVE FILES, CONFIG FILES) TO BE LOST upon next update! To prevent this, you should never run this on mods you did not develop.
-        ///
-        ///Are you sure you wish to continue?.
+        ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static string GenerateManifestWarning {
+        internal static byte[] _7z_dll {
             get {
-                return ResourceManager.GetString("GenerateManifestWarning", resourceCulture);
+                object obj = ResourceManager.GetObject("_7z_dll", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] _7z_exe {
+            get {
+                object obj = ResourceManager.GetObject("_7z_exe", resourceCulture);
+                return ((byte[])(obj));
             }
         }
     }
