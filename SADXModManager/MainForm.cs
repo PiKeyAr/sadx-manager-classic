@@ -255,6 +255,20 @@ namespace SADXModManager
 			// Create a new profile if it doesn't exist
 			if (gameSettings == null)
 				gameSettings = new GameSettings();
+			// Populate save list
+			if (!Directory.Exists(Path.Combine(gameSettings.GamePath, "savedata")))
+				Directory.CreateDirectory(Path.Combine(gameSettings.GamePath, "savedata"));
+			string[] saveListAll = Directory.GetFiles(Path.Combine(gameSettings.GamePath, "savedata"), "*.snc");
+			int savecount = 1;
+			for (int ind = 0; ind < saveListAll.Length; ind++)
+			{
+				if (Path.GetFileNameWithoutExtension(saveListAll[ind]).ToUpperInvariant() != "SONICADVENTURE_DX_CHAOGARDEN" &&
+					Path.GetFileNameWithoutExtension(saveListAll[ind]).ToUpperInvariant() != "SONICADVENTURECHAOGARDEN")
+				{
+					saveList.Add(savecount, Path.GetFileNameWithoutExtension(saveListAll[ind]));
+					savecount++;
+				}
+			}
 			// Set paths for stuff inside game folder
 			sonicDxIniPath = Path.Combine(gameSettings.GamePath, "sonicDX.ini");
 			d3d8to9InstalledDLLName = Path.Combine(gameSettings.GamePath, "d3d8.dll");
@@ -500,17 +514,12 @@ namespace SADXModManager
 			checkBoxTestSpawnGameMode.Checked = gameSettings.TestSpawn.UseGameMode;
 			comboBoxTestSpawnGameMode.SelectedIndex = GetTestspawnGamemodeIndex(gameSettings.TestSpawn.GameModeIndex, false);
 			checkBoxTestSpawnSave.Checked = gameSettings.TestSpawn.UseSave;
-			// Populate save list
-			if (!Directory.Exists(Path.Combine(gameSettings.GamePath, "savedata")))
-				Directory.CreateDirectory(Path.Combine(gameSettings.GamePath, "savedata"));
-			string[] saveList = Directory.GetFiles(Path.Combine(gameSettings.GamePath, "savedata"), "*.snc");
-			foreach (string file in saveList)
+			comboBoxTestSpawnSave.Items.Clear();
+			for (int ind = 1; ind < saveList.Count + 1; ind++)
 			{
-				if (Path.GetFileNameWithoutExtension(file).ToUpperInvariant() != "SONICADVENTURE_DX_CHAOGARDEN" &&
-					Path.GetFileNameWithoutExtension(file).ToUpperInvariant() != "SONICADVENTURECHAOGARDEN")
-					comboBoxTestSpawnSave.Items.Add(Path.GetFileNameWithoutExtension(file));
+				comboBoxTestSpawnSave.Items.Add(saveList[ind]);
 			}
-			comboBoxTestSpawnSave.SelectedIndex = Math.Max(-1, gameSettings.TestSpawn.SaveIndex - 1);
+			comboBoxTestSpawnSave.SelectedIndex = GetTestspawnSaveIndex(gameSettings.TestSpawn.SaveIndex, false);
 			// Load Options/Update settings
 			checkBoxCheckLoaderUpdatesStartup.Checked = managerConfig.UpdateCheck;
 			checkBoxCheckUpdateModsStartup.Checked = managerConfig.ModUpdateCheck;
@@ -605,7 +614,7 @@ namespace SADXModManager
 					infoNew.Add(mod.Key, mod.Value);
 			}
 			updateChecker.RunWorkerAsync(infoNew.Select(x => new KeyValuePair<string, ModInfo>(x.Key, x.Value)).ToList());
-			buttonCheckForUpdatesNow.Enabled = false;
+			buttonCheckForUpdatesNow.Enabled = buttonCheckModUpdates.Enabled = false;
 		}
 
 		private void LoadModList()
@@ -1080,7 +1089,7 @@ namespace SADXModManager
 			gameSettings.TestSpawn.UseGameMode = checkBoxTestSpawnGameMode.Checked;
 			gameSettings.TestSpawn.GameModeIndex = GetTestspawnGamemodeIndex(comboBoxTestSpawnGameMode.SelectedIndex, true);
 			gameSettings.TestSpawn.UseSave = checkBoxTestSpawnSave.Checked;
-			gameSettings.TestSpawn.SaveIndex = comboBoxTestSpawnSave.SelectedIndex + 1;
+			gameSettings.TestSpawn.SaveIndex = GetTestspawnSaveIndex(comboBoxTestSpawnSave.SelectedIndex, true);
 			managerConfig.AngleDeg = checkBoxTestSpawnAngleDeg.Checked;
 			managerConfig.AngleHex = checkBoxTestSpawnAngleHex.Checked;
 			// Save Options settings
@@ -1533,6 +1542,7 @@ namespace SADXModManager
 		private void UpdateChecker_EnableControls()
 		{
 			buttonCheckForUpdatesNow.Enabled = true;
+			buttonCheckModUpdates.Enabled = true;
 			checkForUpdatesToolStripMenuItem.Enabled = true;
 			verifyToolStripMenuItem.Enabled = true;
 			forceUpdateToolStripMenuItem.Enabled = true;
@@ -1639,6 +1649,7 @@ namespace SADXModManager
 			Invoke(new Action(() =>
 			{
 				buttonCheckForUpdatesNow.Enabled = false;
+				buttonCheckModUpdates.Enabled = false;
 				checkForUpdatesToolStripMenuItem.Enabled = false;
 				verifyToolStripMenuItem.Enabled = false;
 				forceUpdateToolStripMenuItem.Enabled = false;
@@ -2001,6 +2012,7 @@ namespace SADXModManager
 
 					modUpdater.ForceUpdate = true;
 					buttonCheckForUpdatesNow.Enabled = false;
+					buttonCheckModUpdates.Enabled = false;
 				}
 			}
 		}
@@ -2013,6 +2025,7 @@ namespace SADXModManager
 		private void buttonCheckForUpdates_Click(object sender, EventArgs e)
 		{
 			buttonCheckForUpdatesNow.Enabled = false;
+			buttonCheckModUpdates.Enabled = false;
 			AutoUpdate(false, true, true, true, true, true);
 			UpdateChecker_EnableControls();
 		}
@@ -2245,7 +2258,7 @@ namespace SADXModManager
 			{
 				if (fromcombo && mode.Value == comboBoxTestSpawnGameMode.Text)
 					return mode.Key;
-				if (mode.Key == index)
+				if (!fromcombo && mode.Key == index)
 					return comboBoxTestSpawnGameMode.FindString(mode.Value);
 			}
 			return -1;
@@ -2257,8 +2270,24 @@ namespace SADXModManager
 			{
 				if (fromcombo && scene.Value == comboBoxTestSpawnEvent.Text)
 					return scene.Key;
-				if (scene.Key == index)
+				if (!fromcombo && scene.Key == index)
 					return comboBoxTestSpawnEvent.FindString("EV" + scene.Key.ToString("X4"));
+			}
+			return -1;
+		}
+
+		public int GetTestspawnSaveIndex(int index, bool fromcombo)
+		{
+			foreach (var save in saveList)
+			{
+				if (fromcombo && save.Value == comboBoxTestSpawnSave.Text)
+				{
+					return save.Key;
+				}
+				if (!fromcombo && save.Key == index)
+				{
+					return comboBoxTestSpawnSave.FindString(save.Value);
+				}
 			}
 			return -1;
 		}

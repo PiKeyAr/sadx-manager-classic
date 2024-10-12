@@ -51,6 +51,8 @@ namespace SADXModManager
 		public static string generateManifestWarning = "This can cause MOD USER DATA (SAVE FILES, CONFIG FILES) TO BE LOST upon next update! To prevent this, you should never run this on mods you did not develop.\r\n\r\nAre you sure you wish to continue?";
 
 		// Dictionaries
+		public static Dictionary<int, string> saveList = new Dictionary<int, string>();
+
 		public static Dictionary<int, string> TestSpawnGameModeList = new Dictionary<int, string>
 		{
 			{ 4, "Action Stage" },
