@@ -79,5 +79,14 @@ namespace SADXModManager.Properties {
                 return ((byte[])(obj));
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to 1.00.
+        /// </summary>
+        internal static string VersionString {
+            get {
+                return ResourceManager.GetString("VersionString", resourceCulture);
+            }
+        }
     }
 }

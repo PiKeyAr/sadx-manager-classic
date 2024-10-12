@@ -1,5 +1,7 @@
-﻿using SADXModManager.DataClasses;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Net;
+using Newtonsoft.Json;
+using SADXModManager.DataClasses;
 
 namespace SADXModManager
 {
@@ -29,6 +31,12 @@ namespace SADXModManager
 		/// <summary>Path to d3d8m.dll</summary>
 		public static string d3d8to9StoredDLLName;
 
+		/// <summary>JSON serializer</summary>
+		public static readonly JsonSerializer jsonSerializer = new JsonSerializer() { Culture = System.Globalization.CultureInfo.InvariantCulture, Formatting = Formatting.Indented, NullValueHandling = NullValueHandling.Ignore, };
+
+		/// <summary>WebClient instance</summary>
+		public static readonly WebClient webClient = new WebClient();
+
 		// Serializable structs
 		/// <summary>Deserialized profile containing mod list, game settings etc.</summary>
 		public static GameSettings gameSettings;
@@ -46,6 +54,8 @@ namespace SADXModManager
 		public static string managerChangelogUrl = "https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/sadx-manager-classic/changelog.txt";
 		/// <summary>URL of Steam Launcher archive</summary>
 		public static string launcherUpdateUrl = "https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/Setup/data/AppLauncher.7z";
+		/// <summary>URL of Steam conversion tools archive</summary>
+		public static string steamToolsUpdateUrl = "https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/Setup/data/steam_tools.7z";
 
 		// Strings
 		public static string generateManifestWarning = "This can cause MOD USER DATA (SAVE FILES, CONFIG FILES) TO BE LOST upon next update! To prevent this, you should never run this on mods you did not develop.\r\n\r\nAre you sure you wish to continue?";

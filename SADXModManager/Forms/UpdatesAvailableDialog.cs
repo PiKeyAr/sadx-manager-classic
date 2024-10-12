@@ -10,7 +10,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -52,7 +51,7 @@ namespace SADXModManager.Forms
 		private readonly CancellationTokenSource tokenSource = new CancellationTokenSource();
 		public event EventHandler CancelEvent;
 
-		public UpdatesAvailableDialog(List<DownloadItem> items, string updatePath)
+		public UpdatesAvailableDialog(List<DownloadItem> items, string updatePath, bool firstInstall = false)
 		{
 			InitializeComponent();
 			this.updatePath = updatePath;
@@ -73,8 +72,28 @@ namespace SADXModManager.Forms
 			ClearDownloadDetails();
 			listViewUpdates.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent); // Update name
 			listViewUpdates.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent); // Update size
-			listViewUpdates.Items[0].Selected = true;
+			if (listViewUpdates.Items.Count > 0)
+				listViewUpdates.Items[0].Selected = true;
 			listViewUpdates.EndUpdate();
+			if (firstInstall)
+			{
+				buttonCancel.Enabled = false;
+				buttonUpdateSelected.Enabled = false;
+				labelUpdatesAvailable.Text = "To install the Mod Loader, the following files will be downloaded:";
+				Text = "Installing SADX Mod Loader";
+				if (listViewUpdates.Items.Count == 0)
+				{
+					MessageBox.Show(this, "All items have already been installed.", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+					Process.Start(Path.Combine(Variables.managerExePath, "SADXModManager.exe"));
+					Environment.Exit(0);
+				}
+				Shown += OnShown;
+			}
+		}
+
+		private void OnShown(object sender, EventArgs eventArgs)
+		{
+			BeginUpdate();
 		}
 
 		protected virtual void OnCancelEvent()
@@ -353,6 +372,15 @@ namespace SADXModManager.Forms
 											Process.Start(filePath, $"update \"{Variables.managerExePath}\"");
 											Environment.Exit(0);
 											break;
+										// Install Steam tools
+										case DownloadItem.DownloadItemType.SteamTools:
+											// Extract to game folder
+											Process.Start(new ProcessStartInfo("7z.exe", $"x -aoa -o\"{Path.Combine(updatePath, "steam_tools")}\" \"{filePath}\"") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
+											// Initialize conversion
+											string arg = "\"" + Variables.gameSettings.GamePath + "\"" + " \"" + Path.Combine(updatePath, "steam_tools") + "\"";
+											Process.Start(Path.Combine(updatePath, "steam_tools", "SteamHelper.exe"), arg).WaitForExit();
+										break;
+
 									}
 								}, token))
 								{
@@ -605,7 +633,7 @@ namespace SADXModManager.Forms
 						break;
 					case ItemAction.Finish:
 						progressBarItem.Value = 100;
-						labelItemProgress.Text = string.Format("Downloading {0}: finished file {1} of {2}", statItemName, statFilesItemDownloaded, statFilesItemTotal);
+						labelItemProgress.Text = string.Format("Downloading {0}: finished file {1} of {2}", statItemName, Math.Min(statFilesItemDownloaded, statFilesItemTotal), statFilesItemTotal);
 						labelTotalProgress.Text = string.Format("Downloading item {0} of {1}: {2}/{3}", statItemIndex, statItemsTotal, SizeSuffix.GetSizeSuffix(statSizeDownloaded), SizeSuffix.GetSizeSuffix(statSizeTotal));
 						break;
 				}

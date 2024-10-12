@@ -125,6 +125,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Utils.cs" />
     <Compile Include="Variables.cs" />
     <EmbeddedResource Include="Controls\ButtonControl.resx">
       <DependentUpon>ButtonControl.cs</DependentUpon>

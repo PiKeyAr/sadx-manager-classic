@@ -12,7 +12,8 @@ namespace SADXModManager.DataClasses
 			Loader,
 			Manager,
 			Launcher,
-			Mod
+			Mod,
+			SteamTools
 		}
 
 		public string Name;

@@ -1355,8 +1355,8 @@
             this.comboBoxScreenMode.FormattingEnabled = true;
             this.comboBoxScreenMode.Items.AddRange(new object[] {
             "Windowed",
-            "Borderless Fullscreen",
-            "Exclusive Fullscreen",
+			"Exclusive Fullscreen",
+			"Borderless Fullscreen",
             "Custom Window"});
             this.comboBoxScreenMode.Location = new System.Drawing.Point(87, 46);
             this.comboBoxScreenMode.Name = "comboBoxScreenMode";

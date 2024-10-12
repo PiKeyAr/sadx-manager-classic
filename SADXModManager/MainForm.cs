@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using IniFile;
-using Newtonsoft.Json;
 using SharpDX.DirectInput;
 using ModManagerCommon;
 using ModManagerCommon.Forms;
@@ -21,6 +20,7 @@ using SADXModManager.Controls;
 using SADXModManager.DataClasses;
 using static SADXModManager.GraphicsSettings;
 using static SADXModManager.Variables;
+using static SADXModManager.Utils;
 
 // TODO for first release:
 // First startup and SADX folder location
@@ -58,10 +58,6 @@ namespace SADXModManager
 		/// <summary>Path to Patches.json</summary>
 		public string patchesJsonPath;
 
-		// Updates
-		/// <summary>WebClient instance</summary>
-		readonly WebClient webClient = new WebClient();
-
 		// Stuff used for BackgroundWorker
 		/// <summary>True if the Mod Loader update check is underway</summary>
 		bool CheckLoader;
@@ -95,8 +91,6 @@ namespace SADXModManager
 		readonly ModUpdater modUpdater = new ModUpdater();
 		/// <summary>Background check for updates</summary>
 		BackgroundWorker updateChecker;
-		/// <summary>JSON serializer</summary>
-		static readonly JsonSerializer jsonSerializer = new JsonSerializer() { Culture = System.Globalization.CultureInfo.InvariantCulture, Formatting = Formatting.Indented, NullValueHandling = NullValueHandling.Ignore, };
 		/// <summary>Drag and drop identifier</summary>
 		static readonly string moddropname = "Mod" + Process.GetCurrentProcess().Id;
 		/// <summary>Class to sort ListView by column</summary>
@@ -1496,37 +1490,6 @@ namespace SADXModManager
 			HandleUri(args.Uri);
 		}
 
-		/// <summary>Loader and Manager update checker</summary>
-		/// <param name="button">The "Check for updates" button was pressed by the user</param>
-		private void CheckForLoaderAndManagerUpdates(bool button = false)
-		{
-			// Cancel the automatic update check in some cases
-			if (!button)
-			{
-				// Already checked for updates
-				if (!managerConfig.UpdateCheck)
-					return;
-				// Not long enough since the last check
-				if (!UpdateTimeElapsed(managerConfig.UpdateUnit, managerConfig.UpdateFrequency, DateTime.FromFileTimeUtc(managerConfig.UpdateTime)))
-					return;
-			}
-			// Build the list of download items
-			List<DownloadItem> downloadItems = new List<DownloadItem>();
-			// Loader update
-
-			// If there are any downloads, open the update check dialog
-			if (downloadItems.Count > 0)
-			{
-				using (UpdatesAvailableDialog upd = new UpdatesAvailableDialog(downloadItems, updatesTempPath))
-				{
-					upd.ShowDialog();
-				}
-			}
-			// Set the variable to tell that the check has completed
-			checkedForUpdates = true;
-			managerConfig.UpdateTime = DateTime.UtcNow.ToFileTimeUtc();
-		}
-
 		private void InitializeWorker()
 		{
 			if (updateChecker != null)
@@ -1691,15 +1654,15 @@ namespace SADXModManager
 			}
 
 			// Loader update
-			DownloadItem loaderItem = CheckLoaderUpdates();
+			DownloadItem loaderItem = CheckLoaderUpdates(this);
 			if (loaderItem != null)
 				items.Add(loaderItem);
 			// Launcher update
-			DownloadItem launcherItem = CheckLauncherUpdates();
+			DownloadItem launcherItem = CheckLauncherUpdates(this);
 			if (launcherItem != null)
 				items.Add(launcherItem);
 			// Manager update
-			DownloadItem managerItem = CheckManagerUpdates();
+			DownloadItem managerItem = CheckManagerUpdates(this);
 			if (managerItem != null)
 				items.Add(managerItem);
 
@@ -1776,15 +1739,15 @@ namespace SADXModManager
 				foreach (var upd in updates)
 					items.Add(new DownloadItem(upd));
 			// Loader update
-			DownloadItem loaderItem = CheckLoaderUpdates();
+			DownloadItem loaderItem = CheckLoaderUpdates(this);
 			if (loaderItem != null)
 				items.Add(loaderItem);
 			// Launcher update
-			DownloadItem launcherItem = CheckLauncherUpdates();
+			DownloadItem launcherItem = CheckLauncherUpdates(this);
 			if (launcherItem != null)
 				items.Add(launcherItem);
 			// Manager update
-			DownloadItem managerItem = CheckManagerUpdates();
+			DownloadItem managerItem = CheckManagerUpdates(this);
 			if (managerItem != null)
 				items.Add(managerItem);
 
@@ -2764,24 +2727,6 @@ namespace SADXModManager
 
 		#endregion
 
-		#region Utilities
-		public T JsonDeserialize<T>(string path)
-		{
-			if (!File.Exists(path))
-				return default(T);
-			using (TextReader tr = File.OpenText(path))
-			using (JsonTextReader jtr = new JsonTextReader(tr))
-				return jsonSerializer.Deserialize<T>(jtr);
-		}
-
-		public void JsonSerialize(object t, string path)
-		{
-			Directory.CreateDirectory(Path.GetDirectoryName(path));
-			using (TextWriter tr = File.CreateText(path))
-				jsonSerializer.Serialize(tr, t);
-		}
-		#endregion
-
 		private void FilterModList(string filterString)
 		{
 			suppressEvent = true;
@@ -2928,127 +2873,6 @@ namespace SADXModManager
 			if (suppressEvent)
 				return;
 			profilesJson.ProfileIndex = textBoxProfileName.SelectedIndex;
-		}
-
-		/// <summary>Makes a WebRequest to retrieve the size of a download</summary>
-		private long GetDownloadSize(string url)
-		{
-			long result = 0;
-			WebRequest req = WebRequest.Create(url);
-			req.Method = "HEAD";
-			using (WebResponse resp = req.GetResponse())
-			{
-				if (long.TryParse(resp.Headers.Get("Content-Length"), out long contentLength))
-				{
-					result = contentLength;
-				}
-			}
-			return result;
-		}
-
-		private DateTime GetDownloadDate(string url)
-		{
-			// Get last modified date
-			WebRequest req = WebRequest.Create(url);
-			using (HttpWebResponse res = (HttpWebResponse)req.GetResponse())
-				return res.LastModified;
-		}
-
-		/// <summary>Retrieves a download for an update for SADX Mod Loader from direct links (null if no update)</summary>
-		private DownloadItem CheckLoaderUpdates()
-		{
-			string mlverfile = Path.Combine(managerAppDataPath, "sadxmlver.txt");
-			try
-			{
-				// Read version info
-				string msg = webClient.DownloadString("http://mm.reimuhakurei.net/toolchangelog.php?tool=sadxml&rev=" + (File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "590"));
-				// If there's no info, there's no update
-				if (msg.Length == 0 && File.Exists(Path.Combine(gameSettings.GamePath, "mods", "SADXModLoader.dll")))
-					return null;
-				string targetver = msg[12] == ' ' ? msg.Substring(9, 3) : msg.Substring(9, 4);
-				long size = GetDownloadSize(loaderUpdateUrl);
-				// If the URL doesn't work, try the other one
-				if (size == 0)
-				{
-					loaderUpdateUrl = "http://mm.reimuhakurei.net/sadxmods/SADXModLoader.7z";
-					size = GetDownloadSize(loaderUpdateUrl);
-				}
-				// If the other one doesn't work either, output an error
-				if (size == 0)
-				{
-					MessageBox.Show(this, "Could not retrieve SADX Mod Loader update information: size is 0", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
-					return null;
-				}
-				// Get last modified date
-				DateTime modifiedDate = GetDownloadDate(loaderUpdateUrl);
-				return new DownloadItem("Mod Loader", loaderUpdateUrl, size, msg.Replace("\n", "\r\n"), DownloadItem.DownloadItemType.Loader, targetver, modifiedDate);
-			}
-			catch (Exception ex)
-			{
-				MessageBox.Show(this, "Could not retrieve SADX Mod Loader update information: " + ex.Message.ToString(), "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				return null;
-			}
-		}
-
-		/// <summary>Retrieves a download for an update for the Steam launcher from a direct link (null if no update)</summary>
-		private DownloadItem CheckLauncherUpdates()
-		{
-			string appLauncherExe = Path.Combine(Path.Combine(gameSettings.GamePath, "AppLauncher.exe"));
-			if (File.Exists(appLauncherExe))
-			{
-				string localcrc = "AppLauncher.exe," + Force.Crc32.Crc32Algorithm.Compute(File.ReadAllBytes(appLauncherExe)).ToString("X") + "\r\n";
-				string remotecrc = webClient.DownloadString("https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/AppLauncher/AppLauncher.crc");
-				// If CRC matches, exit
-				if (localcrc == remotecrc)
-					return null;
-			}
-			// Get download size
-			long size = GetDownloadSize(launcherUpdateUrl);
-			// Get last modified date
-			DateTime modifiedDate = GetDownloadDate(launcherUpdateUrl);
-			// Create a version string
-			string ver = string.Format("{0}/{1}/{2} {3}:{4}", modifiedDate.Year, modifiedDate.Month, modifiedDate.Day, modifiedDate.Hour, modifiedDate.Minute);
-			return new DownloadItem("Steam Launcher", launcherUpdateUrl, size, "No changelog available", DownloadItem.DownloadItemType.Launcher, ver, modifiedDate);
-		}
-
-		/// <summary>Retrieves a download for an update for SADX Mod Manager Classic from a direct link (null if no update)</summary>
-		private DownloadItem CheckManagerUpdates()
-		{
-			string changelog;
-			string mlverfile = Path.Combine(managerAppDataPath, "sadxmanagerver.txt");
-			try
-			{
-				// Read remote and local version info
-				string msg_remote = webClient.DownloadString("https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/sadx-manager-classic/sadxmanagerver.txt");
-				string msg_local = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "1.00";
-				// If there's no difference, there's no update
-				if (msg_remote == msg_local)
-					return null;
-				// Get size
-				long size = GetDownloadSize(managerUpdateUrl);
-				// If the URL doesn't work, output an error
-				if (size == 0)
-				{
-					MessageBox.Show(this, "Could not retrieve SADX Mod Manager Classic update information: size is 0", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
-					return null;
-				}
-				// Get last modified date
-				DateTime modifiedDate = GetDownloadDate(managerUpdateUrl);
-				try
-				{
-					changelog = webClient.DownloadString(managerChangelogUrl);
-				}
-				catch (Exception ex)
-				{
-					changelog = "Error retrieving Mod Manager Classic changelog: " + ex.Message.ToString();
-				}
-				return new DownloadItem("Mod Manager Classic", managerUpdateUrl, size, changelog, DownloadItem.DownloadItemType.Manager, msg_remote, modifiedDate);
-			}
-			catch (Exception ex)
-			{
-				MessageBox.Show(this, "Could not retrieve SADX Mod Manager Classic update information: " + ex.Message.ToString(), "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				return null;
-			}
 		}
 
 		/// <summary>Change SADX game folder in the currently loaded profile.</summary>

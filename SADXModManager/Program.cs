@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
@@ -39,6 +40,7 @@ namespace SADXModManager
 
 		static void RealMain(string[] args)
 		{
+			ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072;
 			AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
 			// URL handler
