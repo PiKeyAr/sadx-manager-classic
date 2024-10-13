@@ -41,6 +41,8 @@
             this.buttonExit = new System.Windows.Forms.Button();
             this.pictureBoxManagerIcon = new System.Windows.Forms.PictureBox();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
+            this.checkBoxDirectX = new System.Windows.Forms.CheckBox();
+            this.checkBoxVCC = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxManagerIcon)).BeginInit();
             this.SuspendLayout();
             // 
@@ -67,13 +69,13 @@
             // 
             this.textBoxGameFolder.Location = new System.Drawing.Point(97, 47);
             this.textBoxGameFolder.Name = "textBoxGameFolder";
-            this.textBoxGameFolder.Size = new System.Drawing.Size(303, 20);
+            this.textBoxGameFolder.Size = new System.Drawing.Size(311, 20);
             this.textBoxGameFolder.TabIndex = 0;
             this.textBoxGameFolder.TextChanged += new System.EventHandler(this.textBoxGameFolder_TextChanged);
             // 
             // buttonBrowse
             // 
-            this.buttonBrowse.Location = new System.Drawing.Point(406, 45);
+            this.buttonBrowse.Location = new System.Drawing.Point(414, 45);
             this.buttonBrowse.Name = "buttonBrowse";
             this.buttonBrowse.Size = new System.Drawing.Size(75, 23);
             this.buttonBrowse.TabIndex = 1;
@@ -149,11 +151,37 @@
             this.pictureBoxManagerIcon.TabStop = false;
             this.pictureBoxManagerIcon.Click += new System.EventHandler(this.pictureBoxManagerIcon_Click);
             // 
+            // checkBoxDirectX
+            // 
+            this.checkBoxDirectX.AutoSize = true;
+            this.checkBoxDirectX.Checked = true;
+            this.checkBoxDirectX.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBoxDirectX.Location = new System.Drawing.Point(16, 103);
+            this.checkBoxDirectX.Name = "checkBoxDirectX";
+            this.checkBoxDirectX.Size = new System.Drawing.Size(115, 17);
+            this.checkBoxDirectX.TabIndex = 10;
+            this.checkBoxDirectX.Text = "Install DirectX 9.0c";
+            this.checkBoxDirectX.UseVisualStyleBackColor = true;
+            // 
+            // checkBoxVCC
+            // 
+            this.checkBoxVCC.AutoSize = true;
+            this.checkBoxVCC.Checked = true;
+            this.checkBoxVCC.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBoxVCC.Location = new System.Drawing.Point(137, 103);
+            this.checkBoxVCC.Name = "checkBoxVCC";
+            this.checkBoxVCC.Size = new System.Drawing.Size(156, 17);
+            this.checkBoxVCC.TabIndex = 11;
+            this.checkBoxVCC.Text = "Update Visual C++ runtimes";
+            this.checkBoxVCC.UseVisualStyleBackColor = true;
+            // 
             // InstallationWizard
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(501, 132);
+            this.Controls.Add(this.checkBoxVCC);
+            this.Controls.Add(this.checkBoxDirectX);
             this.Controls.Add(this.pictureBoxManagerIcon);
             this.Controls.Add(this.buttonExit);
             this.Controls.Add(this.buttonInstall);
@@ -189,5 +217,7 @@
 		private System.Windows.Forms.Button buttonExit;
 		private System.Windows.Forms.PictureBox pictureBoxManagerIcon;
 		private System.Windows.Forms.ToolTip toolTip1;
+		private System.Windows.Forms.CheckBox checkBoxDirectX;
+		private System.Windows.Forms.CheckBox checkBoxVCC;
 	}
 }

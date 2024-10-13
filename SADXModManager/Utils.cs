@@ -1,16 +1,36 @@
-﻿using Newtonsoft.Json;
-using SADXModManager.DataClasses;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Security.Cryptography;
 using System.Windows.Forms;
+using Microsoft.Win32;
+using Newtonsoft.Json;
+using SADXModManager.DataClasses;
 using static SADXModManager.Variables;
 
 namespace SADXModManager
 {
 	public static class Utils
 	{
+		/// <summary>Retrieves a value from a registry subkey.</summary>
+		public static RegistryKey GetRegistryKey(string key)
+		{
+			RegistryKey hkcu32 = RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, RegistryView.Registry32);
+			RegistryKey hklm32 = RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.LocalMachine, RegistryView.Registry32);
+			RegistryKey hkcu64 = RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, RegistryView.Registry64);
+			RegistryKey hklm64 = RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.LocalMachine, RegistryView.Registry64);
+			RegistryKey result = hklm32.OpenSubKey(key);
+			if (result == null)
+				result = hklm64.OpenSubKey(key);
+			if (result == null)
+				result = hkcu32.OpenSubKey(key);
+			if (result == null)
+				result = hkcu64.OpenSubKey(key);
+			return result;
+		}
+
+		/// <summary>Deserializes a class from a JSON file.</summary>
 		public static T JsonDeserialize<T>(string path)
 		{
 			if (!File.Exists(path))
@@ -20,6 +40,7 @@ namespace SADXModManager
 				return jsonSerializer.Deserialize<T>(jtr);
 		}
 
+		/// <summary>Serializes a class to a JSON file.</summary>
 		public static void JsonSerialize(object t, string path)
 		{
 			Directory.CreateDirectory(Path.GetDirectoryName(path));
@@ -27,7 +48,7 @@ namespace SADXModManager
 				jsonSerializer.Serialize(tr, t);
 		}
 
-		/// <summary>Makes a WebRequest to retrieve the size of a download</summary>
+		/// <summary>Makes a WebRequest to retrieve the size of a download.</summary>
 		public static long GetDownloadSize(string url)
 		{
 			long result = 0;
@@ -43,6 +64,7 @@ namespace SADXModManager
 			return result;
 		}
 
+		/// <summary>Makes a WebRequest to retrieve the modified date of a download.</summary>
 		public static DateTime GetDownloadDate(string url)
 		{
 			// Get last modified date
@@ -51,7 +73,7 @@ namespace SADXModManager
 				return res.LastModified;
 		}
 
-		/// <summary>Retrieves a download for an update for SADX Mod Loader from direct links (null if no update)</summary>
+		/// <summary>Retrieves a download for an update for SADX Mod Loader from direct links (null if no update).</summary>
 		public static DownloadItem CheckLoaderUpdates(Form parent)
 		{
 			string mlverfile = Path.Combine(managerAppDataPath, "sadxmlver.txt");
@@ -81,9 +103,11 @@ namespace SADXModManager
 			}
 		}
 
-		/// <summary>Retrieves a download for an update for the Steam launcher from a direct link (null if no update)</summary>
+		/// <summary>Retrieves a download for an update for the Steam launcher from a direct link (null if no update).</summary>
 		public static DownloadItem CheckLauncherUpdates(Form parent)
 		{
+			long size = 0;
+			DateTime modifiedDate = DateTime.Now;
 			string appLauncherExe = Path.Combine(Path.Combine(gameSettings.GamePath, "AppLauncher.exe"));
 			if (File.Exists(appLauncherExe))
 			{
@@ -93,16 +117,23 @@ namespace SADXModManager
 				if (localcrc == remotecrc)
 					return null;
 			}
-			// Get download size
-			long size = GetDownloadSize(launcherUpdateUrl);
-			// Get last modified date
-			DateTime modifiedDate = GetDownloadDate(launcherUpdateUrl);
-			// Create a version string
+			try
+			{
+				// Get download size
+				size = GetDownloadSize(launcherUpdateUrl);
+				// Get last modified date
+				modifiedDate = GetDownloadDate(launcherUpdateUrl);
+				// Create a version string
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(parent, "Could not retrieve SADX Launcher size or modified date: " + ex.Message.ToString(), "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
 			string ver = string.Format("{0}/{1}/{2} {3}:{4}", modifiedDate.Year, modifiedDate.Month, modifiedDate.Day, modifiedDate.Hour, modifiedDate.Minute);
 			return new DownloadItem("Steam Launcher", launcherUpdateUrl, size, "No changelog available", DownloadItem.DownloadItemType.Launcher, ver, modifiedDate);
 		}
 
-		/// <summary>Retrieves a download for an update for SADX Mod Manager Classic from a direct link (null if no update)</summary>
+		/// <summary>Retrieves a download for an update for SADX Mod Manager Classic from a direct link (null if no update).</summary>
 		public static DownloadItem CheckManagerUpdates(Form parent)
 		{
 			string changelog;
@@ -142,9 +173,11 @@ namespace SADXModManager
 			}
 		}
 
-		/// <summary>Retrieves a download for an update for the Steam conversion tools from a direct link (null if not requred)</summary>
+		/// <summary>Retrieves a download for an update for the Steam conversion tools from a direct link (null if not requred).</summary>
 		public static DownloadItem CheckSteamToolUpdates(Form parent)
 		{
+			long size = 0;
+			DateTime modifiedDate = DateTime.Now;
 			MD5 md5 = MD5.Create();
 			string sonicexe = Path.Combine(gameSettings.GamePath, "Sonic Adventure DX.exe");
 			// Steam
@@ -158,7 +191,8 @@ namespace SADXModManager
 				if (filehash != "d526786ad2e3967d084c0b3e1f92cb47")
 				{
 					MessageBox.Show(parent, "Critical error: SADX Steam EXE file has a wrong checksum. Reinstall the game on Steam and try again.", "SADX Mod Manager Critical Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-					Environment.Exit(0);
+					criticalError = true;
+					return null;
 				}
 			}
 			// Not Steam
@@ -175,6 +209,11 @@ namespace SADXModManager
 					{
 						case "c6d65712475602252bfce53d0d8b7d6f": // US cracked
 						case "3cd8ce57f5e1946762e7526a429e572f": // US original
+						case "4d9b59aea4ee361e4f25475df1447bfd": // US cracked + manifest
+						case "e46580fc390285174acae895a90c5c84": // US cracked SA1 save icon + manifest
+						case "b215d5dfc16514c0cc354449c101c7d0": // US cracked SA1 box icon + manifest
+						case "f8c0b356519d7c459f7b726d63462791": // US cracked SA1 HD icon + manifest
+						case "a35eb183684e3eb964351de391db82e8": // US cracked SADX icon + manifest
 							return null;
 						case "6e2e64ebf62787af47ed813221040898": // JP
 						case "ad6388fa1a703e90d0fc693c5cdb4c5d": // EU original
@@ -183,33 +222,90 @@ namespace SADXModManager
 						case "6b3c7a0013cbfd9b12c3765e9ba3a73e": // KR
 							break;
 						default:
-							string message = "Setup has detected that sonic.exe is incompatible with the Mod Loader." +
-								"\nThe following versions are not supported:" +
-								"\n\nSold Out Software(SafeDisc DRM)" +
-								"\nJapanese release(SafeDisc DRM)" +
-								"\nCracked copies of the European version" +
-								"\nOther hacked EXEs(pirate translations etc.)" +
-								"\n\nIf your version of the game is different from the above, please contact PkR at the x - hax Discord." +
-								"\n\nsonic.exe MD5: {0}";
-							MessageBox.Show(parent, string.Format(message, filehash), "SADX Mod Manager Critical Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-							Environment.Exit(0);
-							break;
+							MessageBox.Show(parent, string.Format(sonicExeMd5Error, filehash), "SADX Mod Manager Critical Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+							criticalError = true;
+							return null;
 					}
 				}
 				else
 				// No EXE found
 				{
 					MessageBox.Show(parent, "Critical error: no SADX executable was found.", "SADX Mod Manager Critical Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-					Environment.Exit(0);
+					criticalError = true;
+					return null;
 				}
 			}
-			// Get download size
-			long size = GetDownloadSize(steamToolsUpdateUrl);
-			// Get last modified date
-			DateTime modifiedDate = GetDownloadDate(steamToolsUpdateUrl);
+			try
+			{
+				// Get download size
+				size = GetDownloadSize(steamToolsUpdateUrl);
+				// Get last modified date
+				modifiedDate = GetDownloadDate(steamToolsUpdateUrl);
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(parent, "Could not retrieve Steam conversion tools size or modified date: " + ex.Message.ToString(), "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
 			// Create a version string
 			string ver = string.Format("{0}/{1}/{2} {3}:{4}", modifiedDate.Year, modifiedDate.Month, modifiedDate.Day, modifiedDate.Hour, modifiedDate.Minute);
 			return new DownloadItem("Conversion Tools", steamToolsUpdateUrl, size, "These tools will convert your SADX installation for Mod Loader compatibility.", DownloadItem.DownloadItemType.SteamTools, ver, modifiedDate);
+		}
+
+		/// <summary>Retrieves a download for Visual C++ runtime (null if no update).</summary>
+		public static DownloadItem CheckVisualCppRuntimeUpdate(Form parent, string registryKey, string downloadUrl, string version)
+		{
+			long size = 0;
+			DateTime modifiedDate = DateTime.Now;
+			RegistryKey key = GetRegistryKey(registryKey);
+			if (key != null)
+			{
+				int val = (int)key.GetValue("Installed", 0);
+				if (val == 1)
+					return null;
+			}
+			try
+			{
+				// Get download size
+				size = GetDownloadSize(downloadUrl);
+				// Get last modified date
+				modifiedDate = GetDownloadDate(downloadUrl);
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(parent, "Could not retrieve Visual C++ runtime size or modified date: " + ex.Message.ToString(), "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+			return new DownloadItem("Visual C++ Runtime", downloadUrl, size, "No changelog available", DownloadItem.DownloadItemType.VisualCppRuntime, version, modifiedDate);
+		}
+
+		/// <summary>Retrieves a list of downloads for Visual C++ runtimes (empty list if no update).</summary>
+		public static List<DownloadItem> CheckVisualCRuntimeUpdates(Form parent)
+		{
+			List<DownloadItem> result = new List<DownloadItem>();
+			result.Add(CheckVisualCppRuntimeUpdate(parent, "SOFTWARE\\Microsoft\\VisualStudio\\10.0\\VC\\VCRedist\\x86", "https://download.microsoft.com/download/C/6/D/C6D0FD4E-9E53-4897-9B91-836EBA2AACD3/vcredist_x86.exe", "2010 SP1"));
+			result.Add(CheckVisualCppRuntimeUpdate(parent, "SOFTWARE\\Microsoft\\VisualStudio\\11.0\\VC\\Runtimes\\x86", "https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe", "2012"));
+			result.Add(CheckVisualCppRuntimeUpdate(parent, "SOFTWARE\\Microsoft\\VisualStudio\\12.0\\VC\\Runtimes\\x86", "http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x86.exe", "2013"));
+			result.Add(CheckVisualCppRuntimeUpdate(parent, "SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x86", "https://aka.ms/vs/17/release/vc_redist.x86.exe", "2015-2022"));
+			return result;
+		}
+
+		/// <summary>Returns a download item for DirectX 9.0c 2010 end-user runtime.</summary>
+		public static DownloadItem GetDirectXDownload(Form parent)
+		{
+			long size = 0;
+			DateTime modifiedDate = DateTime.Now;
+			string downloadUrl = "https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe";
+			try
+			{
+				// Get download size
+				size = GetDownloadSize(downloadUrl);
+				// Get last modified date
+				modifiedDate = GetDownloadDate(downloadUrl);
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(parent, "Could not retrieve DirectX 9.0c runtime size or modified date: " + ex.Message.ToString(), "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+			return new DownloadItem("DirectX", downloadUrl, size, "No changelog available", DownloadItem.DownloadItemType.DirectXRuntime, "9.0c", modifiedDate);
 		}
 	}
 }

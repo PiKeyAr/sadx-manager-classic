@@ -7,6 +7,9 @@ namespace SADXModManager
 {
 	public static class Variables
 	{
+		// Variables
+		/// <summary>When this is true, the program will try to close as soon as possible</summary>
+		public static bool criticalError;
 		// Paths
 		/// <summary>Path to the folder containing SADXModManager.exe</summary>
 		public static string managerExePath;
@@ -59,6 +62,7 @@ namespace SADXModManager
 
 		// Strings
 		public static string generateManifestWarning = "This can cause MOD USER DATA (SAVE FILES, CONFIG FILES) TO BE LOST upon next update! To prevent this, you should never run this on mods you did not develop.\r\n\r\nAre you sure you wish to continue?";
+		public static string sonicExeMd5Error = "Setup has detected that sonic.exe is incompatible with the Mod Loader.\r\n\nThe following versions are not supported:\n\nSold Out Software (SafeDisc DRM)\nJapanese release (SafeDisc DRM)\nCracked copies of the European version\nOther hacked EXEs (pirate translations etc.)\n\nIf your version of the game is different from the above, please contact PkR on the x-hax Discord\n\nsonic.exe MD5: {0}";
 
 		// Dictionaries
 		public static Dictionary<int, string> saveList = new Dictionary<int, string>();

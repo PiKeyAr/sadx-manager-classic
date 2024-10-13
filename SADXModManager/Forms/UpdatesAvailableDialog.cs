@@ -1,7 +1,4 @@
-﻿using ModManagerCommon;
-using SADXModManager.DataClasses;
-using SADXModManager.Properties;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -13,6 +10,9 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using ModManagerCommon;
+using SADXModManager.DataClasses;
+using SADXModManager.Properties;
 
 namespace SADXModManager.Forms
 {
@@ -53,6 +53,11 @@ namespace SADXModManager.Forms
 
 		public UpdatesAvailableDialog(List<DownloadItem> items, string updatePath, bool firstInstall = false)
 		{
+			if (Variables.criticalError)
+			{
+				DialogResult = DialogResult.Abort;
+				Close();
+			}
 			InitializeComponent();
 			this.updatePath = updatePath;
 			this.CancelEvent += OnCancelEvent;
@@ -153,7 +158,7 @@ namespace SADXModManager.Forms
 			// If there are no items, exit
 			if (ItemsToDownload.Count == 0)
 			{
-				DialogResult = DialogResult.Cancel;
+				DialogResult = DialogResult.None;
 				Close();
 			}
 
@@ -379,8 +384,15 @@ namespace SADXModManager.Forms
 											// Initialize conversion
 											string arg = "\"" + Variables.gameSettings.GamePath + "\"" + " \"" + Path.Combine(updatePath, "steam_tools") + "\"";
 											Process.Start(Path.Combine(updatePath, "steam_tools", "SteamHelper.exe"), arg).WaitForExit();
-										break;
-
+											break;
+										// Install Visual C++ runtime
+										case DownloadItem.DownloadItemType.VisualCppRuntime:
+											Process.Start(filePath, "/q /norestart").WaitForExit();
+											break;
+										// Install DirectX 9.0c runtime
+										case DownloadItem.DownloadItemType.DirectXRuntime:
+											Process.Start(filePath, "/Q").WaitForExit();
+											break;
 									}
 								}, token))
 								{
@@ -582,7 +594,7 @@ namespace SADXModManager.Forms
 			{
 				// If nothing is going on, just close the window
 				case ItemAction.None:
-					DialogResult = DialogResult.Cancel;
+					DialogResult = Items.Count > 0 ? DialogResult.Abort : DialogResult.None;
 					Close();
 					return;
 				// If something is going on, show a prompt first
@@ -590,7 +602,7 @@ namespace SADXModManager.Forms
 					if (MessageBox.Show(this, "Are you sure you want to cancel?", "Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
 						return;
 					OnCancelEvent();
-					DialogResult = DialogResult.Cancel;
+					DialogResult = DialogResult.Abort;
 					Close();
 					return;
 			}

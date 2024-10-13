@@ -22,8 +22,8 @@ using static SADXModManager.GraphicsSettings;
 using static SADXModManager.Variables;
 using static SADXModManager.Utils;
 
-// TODO for first release:
-// First startup and SADX folder location
+// TODO for first release
+// Import SADXModLoader.ini
 
 // TODO for second release:
 // Improved 1-click install dialog

@@ -13,7 +13,9 @@ namespace SADXModManager.DataClasses
 			Manager,
 			Launcher,
 			Mod,
-			SteamTools
+			SteamTools,
+			VisualCppRuntime,
+			DirectXRuntime
 		}
 
 		public string Name;

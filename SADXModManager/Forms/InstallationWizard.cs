@@ -28,22 +28,6 @@ namespace SADXModManager.Forms
 			Environment.Exit(0);
 		}
 
-		public RegistryKey GetRegistryKey(string key)
-		{
-			RegistryKey hkcu32 = RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, RegistryView.Registry32);
-			RegistryKey hklm32 = RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.LocalMachine, RegistryView.Registry32);
-			RegistryKey hkcu64 = RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, RegistryView.Registry64);
-			RegistryKey hklm64 = RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.LocalMachine, RegistryView.Registry64);
-			RegistryKey result = hklm32.OpenSubKey(key);
-			if (result == null)
-				result = hklm64.OpenSubKey(key);
-			if (result == null)
-				result = hkcu32.OpenSubKey(key);
-			if (result == null)
-				result = hkcu64.OpenSubKey(key);
-			return result;
-		}
-
 		public string LocateGameFolder()
 		{
 			string result = "";
@@ -203,11 +187,57 @@ namespace SADXModManager.Forms
 			if (radioButtonGameFolder.Checked)
 				managerExePath = gamePath;
 			// Create download items
-			List<DownloadItem> items = new List<DownloadItem>
-			{ CheckSteamToolUpdates(this), CheckLoaderUpdates(this), CheckLauncherUpdates(this), CheckManagerUpdates(this) };
+			List<DownloadItem> items = new List<DownloadItem>();
+			if (checkBoxVCC.Checked)
+				items.AddRange(CheckVisualCRuntimeUpdates(this));
+			if (checkBoxDirectX.Checked)
+				items.Add(GetDirectXDownload(this));
+			items.Add(CheckSteamToolUpdates(this));
+			items.Add(CheckLoaderUpdates(this));
+			items.Add(CheckLauncherUpdates(this));
+			DownloadItem manager = CheckManagerUpdates(this);
+			bool isManager = manager != null; // Manager has been downloaded
+			if (isManager)
+				items.Add(manager);
+			// If a critical error happened during the download check, abort
+			if (criticalError)
+			{
+				Close();
+				Application.Exit();
+			}
+			// Open the dialog
 			using (UpdatesAvailableDialog uDialog = new UpdatesAvailableDialog(items, Path.Combine(managerAppDataPath, "Updates"), true))
 			{
-				DialogResult = uDialog.ShowDialog();
+				DialogResult result = uDialog.ShowDialog();
+				switch (result)
+				{
+					// Downloads finished
+					case DialogResult.OK:
+						// If the Manager wasn't downloaded but is present in the folder, run it
+						if (!isManager)
+						{
+							if (File.Exists(Path.Combine(managerExePath, "SADXModManager.exe")))
+								Process.Start(Path.Combine(managerExePath, "SADXModManager.exe"));
+						}
+						Close();
+						Application.Exit();
+						return;
+					// No items to download
+					case DialogResult.None:
+						if (!isManager)
+						{
+							if (File.Exists(Path.Combine(managerExePath, "SADXModManager.exe")))
+								Process.Start(Path.Combine(managerExePath, "SADXModManager.exe"));
+							Close();
+							Application.Exit();
+						}
+						break;
+					// Downloads cancelled or critical error
+					case DialogResult.Abort:
+						Close();
+						Application.Exit();
+						return;
+				}
 			}
 		}
 	}
