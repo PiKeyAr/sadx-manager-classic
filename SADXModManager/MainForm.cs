@@ -239,7 +239,7 @@ namespace SADXModManager
 		private void LoadCurrentProfile(bool loadProfile)
 		{
 			if (loadProfile)
-				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", profilesJson.ProfilesList[profilesJson.ProfileIndex].Filename);
+				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", profilesJson.ProfilesList[Math.Min(profilesJson.ProfileIndex, profilesJson.ProfilesList.Count - 1)].Filename);
 			else
 				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", "Default.json");
 			gameSettings = JsonDeserialize<GameSettings>(currentProfileJsonPath);
@@ -253,6 +253,7 @@ namespace SADXModManager
 			if (!Directory.Exists(Path.Combine(gameSettings.GamePath, "savedata")))
 				Directory.CreateDirectory(Path.Combine(gameSettings.GamePath, "savedata"));
 			string[] saveListAll = Directory.GetFiles(Path.Combine(gameSettings.GamePath, "savedata"), "*.snc");
+			saveList = new Dictionary<int, string>();
 			int savecount = 1;
 			for (int ind = 0; ind < saveListAll.Length; ind++)
 			{
@@ -304,7 +305,7 @@ namespace SADXModManager
 			textBoxProfileName.Items.Clear();
 			foreach (var item in profilesJson.ProfilesList)
 				textBoxProfileName.Items.Add(item.Name.Replace(".json", ""));
-			textBoxProfileName.SelectedIndex = profilesJson.ProfileIndex;
+			textBoxProfileName.SelectedIndex = Math.Min(profilesJson.ProfileIndex, textBoxProfileName.Items.Count - 1);
 			textBoxProfileName.EndUpdate();
 			// Load sonicDX.ini
 			sonicDxIni = File.Exists(sonicDxIniPath) ? IniSerializer.Deserialize<SonicDxIni>(sonicDxIniPath) : new SonicDxIni();
@@ -2381,14 +2382,21 @@ namespace SADXModManager
 			{
 				if (prd.ShowDialog() == DialogResult.OK)
 				{
-					profilesJson.ProfilesList.Add(new ProfileData { Name = prd.ProfileName, Filename = prd.ProfileName + ".json" });
-					textBoxProfileName.Items.Add(prd.ProfileName);
-					textBoxProfileName.SelectedIndex = textBoxProfileName.Items.Count - 1;
+					// Check if the specified name already exists
+					bool exists = false;
+					foreach (ProfileData data in Variables.profilesJson.ProfilesList)
+						if (data.Name == prd.ProfileName)
+							exists = true;
+					if (!exists)
+					{
+						profilesJson.ProfilesList.Add(new ProfileData { Name = prd.ProfileName, Filename = prd.ProfileName + ".json" });
+						textBoxProfileName.Items.Add(prd.ProfileName);
+						textBoxProfileName.SelectedIndex = textBoxProfileName.Items.Count - 1;
+					}
 					SaveSettings(true);
 					buttonLoadProfile.Enabled = true;
 				}
 			}
-
 		}
 		#endregion
 

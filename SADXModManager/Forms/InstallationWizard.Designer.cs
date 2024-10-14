@@ -72,6 +72,7 @@
             this.textBoxGameFolder.Size = new System.Drawing.Size(311, 20);
             this.textBoxGameFolder.TabIndex = 0;
             this.textBoxGameFolder.TextChanged += new System.EventHandler(this.textBoxGameFolder_TextChanged);
+            this.textBoxGameFolder.KeyDown += new System.Windows.Forms.KeyEventHandler(this.textBoxGameFolder_KeyDown);
             // 
             // buttonBrowse
             // 
@@ -125,7 +126,7 @@
             this.buttonInstall.Location = new System.Drawing.Point(333, 97);
             this.buttonInstall.Name = "buttonInstall";
             this.buttonInstall.Size = new System.Drawing.Size(75, 23);
-            this.buttonInstall.TabIndex = 4;
+            this.buttonInstall.TabIndex = 6;
             this.buttonInstall.Text = "Install";
             this.buttonInstall.UseVisualStyleBackColor = true;
             this.buttonInstall.Click += new System.EventHandler(this.buttonInstall_Click);
@@ -136,7 +137,7 @@
             this.buttonExit.Location = new System.Drawing.Point(414, 97);
             this.buttonExit.Name = "buttonExit";
             this.buttonExit.Size = new System.Drawing.Size(75, 23);
-            this.buttonExit.TabIndex = 5;
+            this.buttonExit.TabIndex = 7;
             this.buttonExit.Text = "Exit";
             this.buttonExit.UseVisualStyleBackColor = true;
             this.buttonExit.Click += new System.EventHandler(this.buttonExit_Click);
@@ -159,8 +160,9 @@
             this.checkBoxDirectX.Location = new System.Drawing.Point(16, 103);
             this.checkBoxDirectX.Name = "checkBoxDirectX";
             this.checkBoxDirectX.Size = new System.Drawing.Size(115, 17);
-            this.checkBoxDirectX.TabIndex = 10;
+            this.checkBoxDirectX.TabIndex = 4;
             this.checkBoxDirectX.Text = "Install DirectX 9.0c";
+            this.toolTip1.SetToolTip(this.checkBoxDirectX, "Install DirectX 9.0c which is required for some mods.");
             this.checkBoxDirectX.UseVisualStyleBackColor = true;
             // 
             // checkBoxVCC
@@ -171,8 +173,9 @@
             this.checkBoxVCC.Location = new System.Drawing.Point(137, 103);
             this.checkBoxVCC.Name = "checkBoxVCC";
             this.checkBoxVCC.Size = new System.Drawing.Size(156, 17);
-            this.checkBoxVCC.TabIndex = 11;
+            this.checkBoxVCC.TabIndex = 5;
             this.checkBoxVCC.Text = "Update Visual C++ runtimes";
+            this.toolTip1.SetToolTip(this.checkBoxVCC, "Update Visual C++ runtimes which are required by most mods.");
             this.checkBoxVCC.UseVisualStyleBackColor = true;
             // 
             // InstallationWizard
@@ -198,6 +201,7 @@
             this.Name = "InstallationWizard";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Welcome Screen";
+            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.InstallationWizard_KeyDown);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxManagerIcon)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();

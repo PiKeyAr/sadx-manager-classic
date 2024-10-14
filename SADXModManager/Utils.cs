@@ -307,5 +307,12 @@ namespace SADXModManager
 			}
 			return new DownloadItem("DirectX", downloadUrl, size, "No changelog available", DownloadItem.DownloadItemType.DirectXRuntime, "9.0c", modifiedDate);
 		}
+
+		/// <summary>Imports settings from SADXModLoader.ini.</summary>
+		public static void ImportOldLoaderSettings(SADXLoaderInfo info)
+		{
+			gameSettings.EnabledMods = info.Mods;
+			gameSettings.EnabledCodes = info.EnabledCodes;
+		}
 	}
 }

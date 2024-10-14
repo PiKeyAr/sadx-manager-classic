@@ -239,6 +239,7 @@
             this.toolStripMenuItemSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.checkForUpdatesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.forceUpdateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem2Separator2 = new System.Windows.Forms.ToolStripSeparator();
             this.disableUpdatesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.uninstallToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItemSeparator3 = new System.Windows.Forms.ToolStripSeparator();
@@ -254,7 +255,6 @@
             this.toolStripStatusLabelGameFolder = new System.Windows.Forms.ToolStripStatusLabel();
             this.contextMenuStripProfile = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.toolStripMenuItemDeleteProfile = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripMenuItem2Separator2 = new System.Windows.Forms.ToolStripSeparator();
             labelGameScreen = new System.Windows.Forms.Label();
             label1 = new System.Windows.Forms.Label();
             label2 = new System.Windows.Forms.Label();
@@ -455,7 +455,7 @@
             this.checkBoxKeepManagerOpen.Size = new System.Drawing.Size(213, 18);
             this.checkBoxKeepManagerOpen.TabIndex = 0;
             this.checkBoxKeepManagerOpen.Text = "Keep Manager Open during Gameplay";
-            this.toolTip.SetToolTip(this.checkBoxKeepManagerOpen, "Uncheck to allow the game to run in the background.");
+            this.toolTip.SetToolTip(this.checkBoxKeepManagerOpen, "Don\'t close the Manager after clicking \'Save and Play\'.");
             this.checkBoxKeepManagerOpen.UseVisualStyleBackColor = true;
             // 
             // buttonInstallURLHandler
@@ -468,6 +468,8 @@
             this.buttonInstallURLHandler.Size = new System.Drawing.Size(119, 22);
             this.buttonInstallURLHandler.TabIndex = 2;
             this.buttonInstallURLHandler.Text = "Enable 1-Click Install";
+            this.toolTip.SetToolTip(this.buttonInstallURLHandler, "Install the URL handler which will enable the Manager to parse 1-click install li" +
+        "nks on GitHub, GameBanana etc.");
             this.buttonInstallURLHandler.UseVisualStyleBackColor = true;
             this.buttonInstallURLHandler.Click += new System.EventHandler(this.installURLHandlerButton_Click);
             // 
@@ -1021,7 +1023,7 @@
             this.checkBoxShowMouse.Size = new System.Drawing.Size(189, 18);
             this.checkBoxShowMouse.TabIndex = 3;
             this.checkBoxShowMouse.Text = "Show Mouse Cursor in Fullscreen";
-            this.toolTip.SetToolTip(this.checkBoxShowMouse, "Enable scaling for UI elements (recommended).");
+            this.toolTip.SetToolTip(this.checkBoxShowMouse, "Prevents the mouse cursor from being hidden in Full Screen modes.");
             this.checkBoxShowMouse.UseVisualStyleBackColor = true;
             // 
             // checkBoxScaleHud
@@ -1049,6 +1051,7 @@
             this.comboBoxBackgroundFill.Name = "comboBoxBackgroundFill";
             this.comboBoxBackgroundFill.Size = new System.Drawing.Size(88, 21);
             this.comboBoxBackgroundFill.TabIndex = 0;
+            this.toolTip.SetToolTip(this.comboBoxBackgroundFill, resources.GetString("comboBoxBackgroundFill.ToolTip"));
             // 
             // comboBoxFmvFill
             // 
@@ -1063,6 +1066,7 @@
             this.comboBoxFmvFill.Name = "comboBoxFmvFill";
             this.comboBoxFmvFill.Size = new System.Drawing.Size(88, 21);
             this.comboBoxFmvFill.TabIndex = 1;
+            this.toolTip.SetToolTip(this.comboBoxFmvFill, resources.GetString("comboBoxFmvFill.ToolTip"));
             // 
             // labeFmvFillMode
             // 
@@ -1355,8 +1359,8 @@
             this.comboBoxScreenMode.FormattingEnabled = true;
             this.comboBoxScreenMode.Items.AddRange(new object[] {
             "Windowed",
-			"Exclusive Fullscreen",
-			"Borderless Fullscreen",
+            "Exclusive Fullscreen",
+            "Borderless Fullscreen",
             "Custom Window"});
             this.comboBoxScreenMode.Location = new System.Drawing.Point(87, 46);
             this.comboBoxScreenMode.Name = "comboBoxScreenMode";
@@ -1564,11 +1568,13 @@
             // radioButtonSDL
             // 
             this.radioButtonSDL.AutoSize = true;
-            this.radioButtonSDL.Location = new System.Drawing.Point(156, 19);
+            this.radioButtonSDL.Location = new System.Drawing.Point(132, 19);
             this.radioButtonSDL.Name = "radioButtonSDL";
             this.radioButtonSDL.Size = new System.Drawing.Size(110, 17);
             this.radioButtonSDL.TabIndex = 1;
             this.radioButtonSDL.Text = "Better Input (SDL)";
+            this.toolTip.SetToolTip(this.radioButtonSDL, "Use the SDL library for input, which supports modern controllers and remapping.\r\n" +
+        "Keyboard controls can also be remapped in this mode.");
             this.radioButtonSDL.UseVisualStyleBackColor = true;
             // 
             // radioButtonDInput
@@ -1581,6 +1587,8 @@
             this.radioButtonDInput.TabIndex = 0;
             this.radioButtonDInput.TabStop = true;
             this.radioButtonDInput.Text = "DirectInput (Vanilla)";
+            this.toolTip.SetToolTip(this.radioButtonDInput, "Use the game\'s original input system.\r\nIt does not support axis remapping and may" +
+        " not work well with some controllers.");
             this.radioButtonDInput.UseVisualStyleBackColor = true;
             this.radioButtonDInput.CheckedChanged += new System.EventHandler(this.radioButtonDInput_CheckedChanged);
             // 
@@ -2133,8 +2141,8 @@
             this.checkBoxUseBassMusic.Size = new System.Drawing.Size(128, 18);
             this.checkBoxUseBassMusic.TabIndex = 1;
             this.checkBoxUseBassMusic.Text = "Use BASS for Music";
-            this.toolTip.SetToolTip(this.checkBoxUseBassMusic, "Experimental option to replace DirectSound with BASS. Adds a global volume contro" +
-        "l and improves sound effects volume. May not be stable yet.");
+            this.toolTip.SetToolTip(this.checkBoxUseBassMusic, "Use the BASS audio library for music and voice playback.\r\nRequired for ADX music " +
+        "and voices.");
             this.checkBoxUseBassMusic.UseVisualStyleBackColor = true;
             // 
             // checkBoxUseBassSE
@@ -2146,8 +2154,9 @@
             this.checkBoxUseBassSE.Size = new System.Drawing.Size(167, 18);
             this.checkBoxUseBassSE.TabIndex = 3;
             this.checkBoxUseBassSE.Text = "Use BASS for Sound Effects";
-            this.toolTip.SetToolTip(this.checkBoxUseBassSE, "Experimental option to replace DirectSound with BASS. Adds a global volume contro" +
-        "l and improves sound effects volume. May not be stable yet.");
+            this.toolTip.SetToolTip(this.checkBoxUseBassSE, "Experimental option to replace DirectSound with BASS.\r\nAdds a global volume contr" +
+        "ol and improves sound effects volume.\r\nRequired for SADX installations converted" +
+        " from the Steam version.");
             this.checkBoxUseBassSE.UseVisualStyleBackColor = true;
             this.checkBoxUseBassSE.CheckedChanged += new System.EventHandler(this.checkBassSE_CheckedChanged);
             // 
@@ -2307,7 +2316,7 @@
             this.checkBoxEnableDebugConsole.Size = new System.Drawing.Size(70, 18);
             this.checkBoxEnableDebugConsole.TabIndex = 0;
             this.checkBoxEnableDebugConsole.Text = "Console";
-            this.toolTip.SetToolTip(this.checkBoxEnableDebugConsole, "Shows a console and displays debug messages.");
+            this.toolTip.SetToolTip(this.checkBoxEnableDebugConsole, "Prints debug messages to a separate console window.");
             this.checkBoxEnableDebugConsole.UseVisualStyleBackColor = true;
             // 
             // checkBoxEnableDebugScreen
@@ -2832,6 +2841,7 @@
             this.checkBoxSingleProfile.Size = new System.Drawing.Size(117, 17);
             this.checkBoxSingleProfile.TabIndex = 1;
             this.checkBoxSingleProfile.Text = "Single Profile Mode";
+            this.toolTip.SetToolTip(this.checkBoxSingleProfile, resources.GetString("checkBoxSingleProfile.ToolTip"));
             this.checkBoxSingleProfile.UseVisualStyleBackColor = true;
             // 
             // buttonCheckGameHealth
@@ -2874,6 +2884,7 @@
             this.buttonSwitchToSAManager.Size = new System.Drawing.Size(121, 23);
             this.buttonSwitchToSAManager.TabIndex = 3;
             this.buttonSwitchToSAManager.Text = "Switch to SA Manager";
+            this.toolTip.SetToolTip(this.buttonSwitchToSAManager, "Replace Mod Manager Classic with the modern SA Mod Manager.");
             this.buttonSwitchToSAManager.UseVisualStyleBackColor = true;
             this.buttonSwitchToSAManager.Visible = false;
             // 
@@ -2886,6 +2897,7 @@
             this.checkBoxCheckLoaderUpdatesStartup.Size = new System.Drawing.Size(209, 18);
             this.checkBoxCheckLoaderUpdatesStartup.TabIndex = 1;
             this.checkBoxCheckLoaderUpdatesStartup.Text = "Check for Loader Updates on Startup";
+            this.toolTip.SetToolTip(this.checkBoxCheckLoaderUpdatesStartup, "Check for Mod Loader updates every time the Manager starts up.");
             this.checkBoxCheckLoaderUpdatesStartup.UseVisualStyleBackColor = true;
             // 
             // buttonCheckForUpdatesNow
@@ -2917,6 +2929,7 @@
             this.checkBoxCheckUpdateModsStartup.Size = new System.Drawing.Size(197, 18);
             this.checkBoxCheckUpdateModsStartup.TabIndex = 0;
             this.checkBoxCheckUpdateModsStartup.Text = "Check for Mod Updates on Startup";
+            this.toolTip.SetToolTip(this.checkBoxCheckUpdateModsStartup, "Check for mod updates every time the Manager starts up.");
             this.checkBoxCheckUpdateModsStartup.UseVisualStyleBackColor = true;
             // 
             // numericUpDownUpdateFrequency
@@ -2935,6 +2948,7 @@
             this.numericUpDownUpdateFrequency.Name = "numericUpDownUpdateFrequency";
             this.numericUpDownUpdateFrequency.Size = new System.Drawing.Size(62, 20);
             this.numericUpDownUpdateFrequency.TabIndex = 5;
+            this.toolTip.SetToolTip(this.numericUpDownUpdateFrequency, "Set the interval for automatic update checks.");
             this.numericUpDownUpdateFrequency.Value = new decimal(new int[] {
             1,
             0,
@@ -2955,6 +2969,7 @@
             this.comboBoxUpdateUnit.Name = "comboBoxUpdateUnit";
             this.comboBoxUpdateUnit.Size = new System.Drawing.Size(121, 21);
             this.comboBoxUpdateUnit.TabIndex = 4;
+            this.toolTip.SetToolTip(this.comboBoxUpdateUnit, "Set the time unit for automatic update checks.");
             this.comboBoxUpdateUnit.SelectedIndexChanged += new System.EventHandler(this.comboUpdateFrequency_SelectedIndexChanged);
             // 
             // checkBoxCheckManagerUpdateStartup
@@ -2966,6 +2981,7 @@
             this.checkBoxCheckManagerUpdateStartup.Size = new System.Drawing.Size(218, 18);
             this.checkBoxCheckManagerUpdateStartup.TabIndex = 2;
             this.checkBoxCheckManagerUpdateStartup.Text = "Check for Manager Updates on Startup";
+            this.toolTip.SetToolTip(this.checkBoxCheckManagerUpdateStartup, "Check for Mod Manager updates every time it starts up.");
             this.checkBoxCheckManagerUpdateStartup.UseVisualStyleBackColor = true;
             // 
             // contextMenuStripMod
@@ -2987,12 +3003,12 @@
             this.contextMenuStripMod.Name = "modContextMenu";
             this.contextMenuStripMod.ShowCheckMargin = true;
             this.contextMenuStripMod.ShowImageMargin = false;
-            this.contextMenuStripMod.Size = new System.Drawing.Size(181, 220);
+            this.contextMenuStripMod.Size = new System.Drawing.Size(172, 198);
             // 
             // openFolderToolStripMenuItem
             // 
             this.openFolderToolStripMenuItem.Name = "openFolderToolStripMenuItem";
-            this.openFolderToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.openFolderToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
             this.openFolderToolStripMenuItem.Text = "Open Mod Folder";
             this.openFolderToolStripMenuItem.ToolTipText = "Open the location of the mod.";
             this.openFolderToolStripMenuItem.Click += new System.EventHandler(this.openFolderToolStripMenuItem_Click);
@@ -3000,14 +3016,14 @@
             // configureToolStripMenuItem
             // 
             this.configureToolStripMenuItem.Name = "configureToolStripMenuItem";
-            this.configureToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.configureToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
             this.configureToolStripMenuItem.Text = "Configure...";
             this.configureToolStripMenuItem.Click += new System.EventHandler(this.configureToolStripMenuItem_Click);
             // 
             // verifyToolStripMenuItem
             // 
             this.verifyToolStripMenuItem.Name = "verifyToolStripMenuItem";
-            this.verifyToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.verifyToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
             this.verifyToolStripMenuItem.Text = "Verify Integrity";
             this.verifyToolStripMenuItem.ToolTipText = "Check if the mod\'s files are intact.";
             this.verifyToolStripMenuItem.Click += new System.EventHandler(this.verifyToolStripMenuItem_Click);
@@ -3015,12 +3031,12 @@
             // toolStripMenuItemSeparator1
             // 
             this.toolStripMenuItemSeparator1.Name = "toolStripMenuItemSeparator1";
-            this.toolStripMenuItemSeparator1.Size = new System.Drawing.Size(177, 6);
+            this.toolStripMenuItemSeparator1.Size = new System.Drawing.Size(168, 6);
             // 
             // checkForUpdatesToolStripMenuItem
             // 
             this.checkForUpdatesToolStripMenuItem.Name = "checkForUpdatesToolStripMenuItem";
-            this.checkForUpdatesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.checkForUpdatesToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
             this.checkForUpdatesToolStripMenuItem.Text = "Check for Updates";
             this.checkForUpdatesToolStripMenuItem.ToolTipText = "Check if there are any updates for the selected mod.";
             this.checkForUpdatesToolStripMenuItem.Click += new System.EventHandler(this.checkForUpdatesToolStripMenuItem_Click);
@@ -3028,15 +3044,20 @@
             // forceUpdateToolStripMenuItem
             // 
             this.forceUpdateToolStripMenuItem.Name = "forceUpdateToolStripMenuItem";
-            this.forceUpdateToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.forceUpdateToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
             this.forceUpdateToolStripMenuItem.Text = "Force Update";
             this.forceUpdateToolStripMenuItem.ToolTipText = "Force download the latest version of the mod.";
             this.forceUpdateToolStripMenuItem.Click += new System.EventHandler(this.forceUpdateToolStripMenuItem_Click);
             // 
+            // toolStripMenuItem2Separator2
+            // 
+            this.toolStripMenuItem2Separator2.Name = "toolStripMenuItem2Separator2";
+            this.toolStripMenuItem2Separator2.Size = new System.Drawing.Size(168, 6);
+            // 
             // disableUpdatesToolStripMenuItem
             // 
             this.disableUpdatesToolStripMenuItem.Name = "disableUpdatesToolStripMenuItem";
-            this.disableUpdatesToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.disableUpdatesToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
             this.disableUpdatesToolStripMenuItem.Text = "Disable Updates";
             this.disableUpdatesToolStripMenuItem.ToolTipText = "Check this to prevent the mod from receiving any updates.";
             this.disableUpdatesToolStripMenuItem.Click += new System.EventHandler(this.disableUpdatesToolStripMenuItem_Click);
@@ -3044,7 +3065,7 @@
             // uninstallToolStripMenuItem
             // 
             this.uninstallToolStripMenuItem.Name = "uninstallToolStripMenuItem";
-            this.uninstallToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.uninstallToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
             this.uninstallToolStripMenuItem.Text = "Uninstall";
             this.uninstallToolStripMenuItem.ToolTipText = "Remove this mod.";
             this.uninstallToolStripMenuItem.Click += new System.EventHandler(this.uninstallToolStripMenuItem_Click);
@@ -3052,12 +3073,12 @@
             // toolStripMenuItemSeparator3
             // 
             this.toolStripMenuItemSeparator3.Name = "toolStripMenuItemSeparator3";
-            this.toolStripMenuItemSeparator3.Size = new System.Drawing.Size(177, 6);
+            this.toolStripMenuItemSeparator3.Size = new System.Drawing.Size(168, 6);
             // 
             // generateManifestToolStripMenuItem
             // 
             this.generateManifestToolStripMenuItem.Name = "generateManifestToolStripMenuItem";
-            this.generateManifestToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.generateManifestToolStripMenuItem.Size = new System.Drawing.Size(171, 22);
             this.generateManifestToolStripMenuItem.Text = "Generate Manifest";
             this.generateManifestToolStripMenuItem.ToolTipText = "Create a mod manifest (for developers).";
             this.generateManifestToolStripMenuItem.Click += new System.EventHandler(this.generateManifestToolStripMenuItem_Click);
@@ -3150,11 +3171,6 @@
             this.toolStripMenuItemDeleteProfile.Size = new System.Drawing.Size(119, 22);
             this.toolStripMenuItemDeleteProfile.Text = "Delete Profile";
             this.toolStripMenuItemDeleteProfile.Click += new System.EventHandler(this.toolStripMenuItemDeleteProfile_Click);
-            // 
-            // toolStripMenuItem2Separator2
-            // 
-            this.toolStripMenuItem2Separator2.Name = "toolStripMenuItem2Separator2";
-            this.toolStripMenuItem2Separator2.Size = new System.Drawing.Size(177, 6);
             // 
             // MainForm
             // 

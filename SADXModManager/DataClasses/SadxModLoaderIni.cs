@@ -1,19 +1,20 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
+using IniFile;
 using ModManagerCommon;
 
 // SADXModLoader.ini in the mods folder (from old versions of the Mod Manager)
 
 namespace SADXModManager
 {
-	enum FillMode
+	public enum FillMode
 	{
 		Stretch = 0,
 		Fit = 1,
 		Fill = 2
 	}
 
-	class SADXLoaderInfo : LoaderInfo
+	public class SADXLoaderInfo : LoaderInfo
 	{
 		public bool DebugConsole { get; set; }
 
@@ -26,7 +27,6 @@ namespace SADXModManager
 
 		public bool? ShowConsole { get { return null; } set { if (value.HasValue) DebugConsole = value.Value; } }
 
-		public bool DisableCDCheck { get; set; }
 
 		[DefaultValue(640)]
 		public int HorizontalResolution { get; set; } = 640;
@@ -36,7 +36,8 @@ namespace SADXModManager
 
 		public bool ForceAspectRatio { get; set; }
 
-		public bool WindowedFullscreen { get; set; }
+		[DefaultValue(true)]
+		public bool WindowedFullscreen { get; set; } = true;
 
 		[DefaultValue(true)]
 		public bool EnableVsync { get; set; } = true;
@@ -74,8 +75,9 @@ namespace SADXModManager
 
 		public bool ResizableWindow { get; set; }
 
-		[DefaultValue(false)]
-		public bool ScaleHud { get; set; }
+		[IniAlwaysInclude]
+		[DefaultValue(true)]
+		public bool ScaleHud { get; set; } = true;
 
 		[DefaultValue((int)FillMode.Fill)]
 		public int BackgroundFillMode { get; set; } = (int)FillMode.Fill;
@@ -83,19 +85,29 @@ namespace SADXModManager
 		[DefaultValue((int)FillMode.Fit)]
 		public int FmvFillMode { get; set; } = (int)FillMode.Fit;
 
-		[DefaultValue(false)]
-		public bool DisablePolyBuff { get; set; }
-		
+		[DefaultValue(true)]
+		public bool EnableBassMusic { get; set; }
+
 		[DefaultValue(false)]
 		public bool EnableBassSFX { get; set; }
 
 		[DefaultValue(100)]
 		public int SEVolume { get; set; } = 100;
 
+		#region Manager Settings
+		public int Theme { get; set; } = 0;
+		[DefaultValue(0)]
+		public int Language { get; set; } = 0;
+		[DefaultValue(true)]
+		public bool InputModEnabled { get; set; }
+		[DefaultValue(true)]
+		public bool managerOpen { get; set; }
 		[DefaultValue(false)]
-		public bool DisableMaterialColorFix { get; set; }
-		[DefaultValue(false)]
-		public bool DisableInterpolationFix { get; set; }
+		public bool devMode { get; set; }
+
+		#endregion
+
+		#region TestSpawn
 
 		[DefaultValue(-1)]
 		public int TestSpawnLevel { get; set; } = -1;
@@ -131,6 +143,46 @@ namespace SADXModManager
 
 		[DefaultValue(-1)]
 		public int TestSpawnSaveID { get; set; } = -1;
+		#endregion
+
+		#region Patches
+		[DefaultValue(true)]
+		public bool HRTFSound { get; set; }
+		[DefaultValue(true)]
+		public bool CCEF { get; set; }
+		[DefaultValue(true)]
+		public bool PolyBuff { get; set; } //vertex color 
+		[DefaultValue(true)]
+		public bool MaterialColorFix { get; set; }
+		[DefaultValue(true)]
+		public bool NodeLimit { get; set; }
+		[DefaultValue(true)]
+		public bool FovFix { get; set; }
+		[DefaultValue(true)]
+		public bool SCFix { get; set; }
+		[DefaultValue(true)]
+		public bool Chaos2CrashFix { get; set; }
+		[DefaultValue(true)]
+		public bool ChunkSpecFix { get; set; }
+		[DefaultValue(true)]
+		public bool E102PolyFix { get; set; }
+		[DefaultValue(true)]
+		public bool ChaoPanelFix { get; set; }
+		[DefaultValue(true)]
+		public bool PixelOffSetFix { get; set; }
+		[DefaultValue(true)]
+		public bool LightFix { get; set; }
+		[DefaultValue(true)]
+		public bool KillGbix { get; set; }
+		public bool DisableCDCheck { get; set; }
+		[DefaultValue(true)]
+		public bool ExtendedSaveSupport { get; set; }
+		[DefaultValue(true)]
+		public bool CrashGuard { get; set; }
+		[DefaultValue(false)]
+		public bool XInputFix { get; set; }
+
+		#endregion
 
 		public SADXLoaderInfo()
 		{

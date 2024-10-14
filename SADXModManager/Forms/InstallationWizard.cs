@@ -10,6 +10,7 @@ using SADXModManager.Properties;
 using SADXModManager.DataClasses;
 using static SADXModManager.Variables;
 using static SADXModManager.Utils;
+using IniFile;
 
 namespace SADXModManager.Forms
 {
@@ -143,6 +144,7 @@ namespace SADXModManager.Forms
 					{
 						case DialogResult.Cancel:
 						default:
+							buttonInstall.Enabled = true;
 							return;
 						case DialogResult.Yes:
 							int attempt = 0;
@@ -173,14 +175,39 @@ namespace SADXModManager.Forms
 					}
 				}
 			}
+			// Check if SADXModLoader.ini exists and prompt to reuse it
+			if (Directory.Exists(Path.Combine(gamePath, "mods")))
+			{
+				if (File.Exists(Path.Combine(gamePath, "mods", "SADXModLoader.ini")))
+				{
+					DialogResult useOld = MessageBox.Show(this, string.Format("Setup has found a legacy Mod Loader configuration in {0}. Would you like to reuse it?", Path.Combine(gamePath, "mods", "SADXModLoader.ini")), "SADX Mod Manager", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation);
+					switch (useOld)
+					{
+						case DialogResult.Cancel:
+						default:
+							buttonInstall.Enabled = true;
+							return;
+						case DialogResult.Yes:
+							SADXLoaderInfo oldConfig = IniSerializer.Deserialize<SADXLoaderInfo>(Path.Combine(gamePath, "mods", "SADXModLoader.ini"));
+							gameSettings = new GameSettings { GamePath = gamePath };
+
+							break;
+						case DialogResult.No:
+							break;
+					}
+				}
+			}
 			// Create a new configuration			
 			Directory.CreateDirectory(managerAppDataPath);
 			managerConfig = new DataClasses.ClassicManagerJson();
 			profilesJson = new DataClasses.ProfilesJson();
 			profilesJson.ProfilesList.Add(new ProfileData { Name = "Default", Filename = "Default.json" });
-			gameSettings = new GameSettings { GamePath = gamePath };
-			gameSettings.Graphics.HorizontalResolution = Screen.PrimaryScreen.Bounds.Width;
-			gameSettings.Graphics.VerticalResolution = Screen.PrimaryScreen.Bounds.Height;
+			if (gameSettings == null)
+			{
+				gameSettings = new GameSettings { GamePath = gamePath };
+				gameSettings.Graphics.HorizontalResolution = Screen.PrimaryScreen.Bounds.Width;
+				gameSettings.Graphics.VerticalResolution = Screen.PrimaryScreen.Bounds.Height;
+			}
 			JsonSerialize(gameSettings, Path.Combine(managerAppDataPath, "SADX", "Default.json"));
 			JsonSerialize(profilesJson, Path.Combine(managerAppDataPath, "SADX", "Profiles.json"));
 			JsonSerialize(managerConfig, Path.Combine(managerAppDataPath, "ManagerClassic.json"));
@@ -238,6 +265,22 @@ namespace SADXModManager.Forms
 						Application.Exit();
 						return;
 				}
+			}
+		}
+
+		private void InstallationWizard_KeyDown(object sender, KeyEventArgs e)
+		{
+			if (e.KeyCode == Keys.Enter && buttonInstall.Enabled)
+			{
+				buttonInstall_Click(sender, e);
+			}
+		}
+
+		private void textBoxGameFolder_KeyDown(object sender, KeyEventArgs e)
+		{
+			if (e.KeyCode == Keys.Enter && buttonInstall.Enabled)
+			{
+				buttonInstall_Click(sender, e);
 			}
 		}
 	}

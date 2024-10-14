@@ -144,6 +144,25 @@
   <metadata name="toolTip.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>17, 17</value>
   </metadata>
+  <metadata name="toolTip.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+    <value>17, 17</value>
+  </metadata>
+  <data name="comboBoxBackgroundFill.ToolTip" xml:space="preserve">
+    <value>Sets the scaling mode for backgrounds.
+Stretch: The backgrounds will be stretched without maintaining the aspect ratio.
+Fit: The backgrounds will be displayed with borders.
+Fill: The backgrounds will be cropped and zoomed in to display without borders.</value>
+  </data>
+  <data name="comboBoxFmvFill.ToolTip" xml:space="preserve">
+    <value>Sets the scaling mode for videos.
+Stretch: The video will be stretched without maintaining the aspect ratio.
+Fit: The video will be displayed with borders.
+Fill: The video will be cropped and zoomed in to display without borders.</value>
+  </data>
+  <data name="checkBoxSingleProfile.ToolTip" xml:space="preserve">
+    <value>In this mode, only the 'Default' profile will be modified when clicking 'Save' or 'Save &amp; Play' at the bottom.
+Other profiles will be modified only when you save them using the 'Save...' button next to the profile list.</value>
+  </data>
   <metadata name="contextMenuStripMod.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>114, 17</value>
   </metadata>
