@@ -215,12 +215,13 @@ namespace SADXModManager
 						case "f8c0b356519d7c459f7b726d63462791": // US cracked SA1 HD icon + manifest
 						case "a35eb183684e3eb964351de391db82e8": // US cracked SADX icon + manifest
 							return null;
-						case "6e2e64ebf62787af47ed813221040898": // JP
 						case "ad6388fa1a703e90d0fc693c5cdb4c5d": // EU original
 						case "57f987014504e0f0dcfc154dfd48fead": // EU Best Buy
 						case "9c1184502ad6d1bed8b2833822e3a477": // EU Sonic PC Collection
 						case "6b3c7a0013cbfd9b12c3765e9ba3a73e": // KR
 							break;
+						case "6e2e64ebf62787af47ed813221040898": // JP
+						case "1b65b196137b5a853d781ba93a3046a2": // Sold Out
 						default:
 							MessageBox.Show(parent, string.Format(sonicExeMd5Error, filehash), "SADX Mod Manager Critical Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 							criticalError = true;
