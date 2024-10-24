@@ -21,11 +21,13 @@ using SADXModManager.DataClasses;
 using static SADXModManager.GraphicsSettings;
 using static SADXModManager.Variables;
 using static SADXModManager.Utils;
+using System.Text;
 
 // TODO for first release
 // Import SADXModLoader.ini
 
 // TODO for second release:
+// Add mods from URL
 // Improved 1-click install dialog
 // Mod dependencies
 // Reset to optimal/failsafe settings
@@ -36,7 +38,6 @@ using static SADXModManager.Utils;
 
 // TODO for third release:
 // Add mods from archive
-// Add mods from URL
 // AA and AF settings
 
 namespace SADXModManager
@@ -95,7 +96,8 @@ namespace SADXModManager
 		static readonly string moddropname = "Mod" + Process.GetCurrentProcess().Id;
 		/// <summary>Class to sort ListView by column</summary>
 		readonly ListViewColumnSorter lvwColumnSorter;
-
+		/// <summary>List of URIs to parse for 1-click mod install</summary>
+		static List<string> uri1click = new List<string>();
 		// Serialized structs
 		/// <summary>Deserialized sonicDX.ini</summary>
 		private SonicDxIni sonicDxIni;
@@ -281,8 +283,7 @@ namespace SADXModManager
 
 		private void MainForm_Load(object sender, EventArgs e)
 		{
-			// Try to use TLS 1.2
-			try { ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072; } catch { }
+
 			// Set debugger thing
 			if (!Debugger.IsAttached)
 				Environment.CurrentDirectory = Application.StartupPath;
@@ -582,7 +583,7 @@ namespace SADXModManager
 			}
 		}
 
-		private void AutoUpdate(bool startup, bool force, bool loader, bool manager, bool launcher, bool cmods)
+		private void AutoUpdate(bool startup, bool force, bool loader, bool manager, bool launcher, bool cmods, bool oneclick = false)
 		{
 			// Automatic
 			if (!force && !startup && !UpdateTimeElapsed(managerConfig.UpdateUnit, managerConfig.UpdateFrequency, DateTime.FromFileTimeUtc(managerConfig.ModUpdateTime)))
@@ -594,14 +595,19 @@ namespace SADXModManager
 			CheckLauncher = launcher;
 			CheckMods = cmods;
 
-			if (!CheckLoader && !CheckMods && !CheckManager && !CheckLauncher)
+			if (!CheckLoader && !CheckMods && !CheckManager && !CheckLauncher && !oneclick)
 				return;
 
 			InitializeWorker();
 
 			toolStripStatusLabel.Text = "Checking for updates...";
-			checkedForUpdates = true;
-			managerConfig.ModUpdateTime = DateTime.UtcNow.ToFileTimeUtc();
+			if (oneclick)
+				toolStripStatusLabel.Text = "Parsing URLs...";
+			if (cmods)
+			{
+				checkedForUpdates = true;
+				managerConfig.ModUpdateTime = DateTime.UtcNow.ToFileTimeUtc();
+			}
 			Dictionary<string, SADXModInfo> infoNew = new Dictionary<string, SADXModInfo>();
 			foreach (KeyValuePair<string, SADXModInfo> mod in mods)
 			{
@@ -1315,8 +1321,9 @@ namespace SADXModManager
 			}
 		}
 
-		private void HandleUri(string uri)
+		private DownloadItem HandleUri(string uri)
 		{
+			
 			if (WindowState == FormWindowState.Minimized)
 			{
 				WindowState = FormWindowState.Normal;
@@ -1327,6 +1334,7 @@ namespace SADXModManager
 			Uri url;
 			string name;
 			string author;
+			string info = "No changelog available";
 			string[] split = uri.Substring("sadxmm:".Length).Split(',');
 			url = new Uri(split[0]);
 			Dictionary<string, string> fields = new Dictionary<string, string>(split.Length - 1);
@@ -1353,7 +1361,7 @@ namespace SADXModManager
 									MessageBoxButtons.OK,
 									MessageBoxIcon.Error);
 
-					return;
+					return null;
 				}
 
 				GameBananaItem gbi;
@@ -1375,10 +1383,11 @@ namespace SADXModManager
 									MessageBoxButtons.OK,
 									MessageBoxIcon.Error);
 
-					return;
+					return null;
 				}
 				name = gbi.Name;
 				author = gbi.OwnerName;
+				info = gbi.Body;
 			}
 			else if (fields.ContainsKey("name") && fields.ContainsKey("author"))
 			{
@@ -1393,47 +1402,14 @@ namespace SADXModManager
 								MessageBoxButtons.OK,
 								MessageBoxIcon.Error);
 
-				return;
+				return null;
 			}
 
 			var dummyInfo = new ModInfo
 			{
 				Name = name,
-				Author = author
+				Author = author,
 			};
-
-			DialogResult result = MessageBox.Show(this, $"Do you want to install mod \"{dummyInfo.Name}\" by {dummyInfo.Author} from {url.DnsSafeHost}?", "Mod Download", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-			if (result != DialogResult.Yes)
-			{
-				return;
-			}
-
-			#region Create update folder
-
-			do
-			{
-				try
-				{
-					result = DialogResult.Cancel;
-
-					if (!Directory.Exists(updatesTempPath))
-					{
-						Directory.CreateDirectory(updatesTempPath);
-					}
-				}
-				catch (Exception ex)
-				{
-					result = MessageBox.Show(this,
-											 "Failed to create temporary update directory:\n" +
-											 ex.Message +
-											 "\n\nWould you like to retry?",
-											 "Directory Creation Failed",
-											 MessageBoxButtons.RetryCancel);
-				}
-			} while (result == DialogResult.Retry);
-
-			#endregion
 
 			string dummyPath = dummyInfo.Name;
 
@@ -1445,16 +1421,30 @@ namespace SADXModManager
 				dummyPath = dummyPath.Replace(c, '_');
 			}
 
-			dummyPath = Path.Combine("mods", dummyPath);
+			dummyPath = Path.Combine("mods", dummyPath);			
 
-			var updates = new List<ModDownload>
-			{
-				new ModDownload(dummyInfo, dummyPath, url.AbsoluteUri, null, 0)
-			};
+			long size = 0;
+			DateTime date = DateTime.Now;
 
-			using (var progress = new ModDownloadDialog(updates, updatesTempPath))
+			// Get request
+			WebRequest req = WebRequest.Create(url.AbsoluteUri);
+			req.Method = "HEAD";
+			
+			using (WebResponse resp = req.GetResponse())
 			{
-				progress.ShowDialog(this);
+				size = GetDownloadSize(resp);
+				date = GetDownloadDate(resp);
+			}
+			ModDownload download = new ModDownload(dummyInfo, dummyPath, url.AbsoluteUri, info, size);
+
+			DownloadItem item = new DownloadItem(download);
+			item.UploadDate = date;
+
+			return item;
+			/*
+			if (result != DialogResult.OK)
+			{
+				return;
 			}
 
 			do
@@ -1474,7 +1464,7 @@ namespace SADXModManager
 											 MessageBoxButtons.RetryCancel);
 				}
 			} while (result == DialogResult.Retry);
-
+			*/
 			LoadModList();
 		}
 
@@ -2971,7 +2961,21 @@ namespace SADXModManager
 		{
 			string errDesc = "SADX Mod Manager has crashed with the following error:\n" + e.Exception.GetType().Name + ".\n\n" +
 				"If you wish to report a bug, please include the following in your report:";
-			ErrorDialog report = new ErrorDialog("SADX Mod Manager", errDesc, e.Exception.ToString());
+
+			StackTrace st = new StackTrace(e.Exception, true);
+			// Get the first stack frame
+			StackFrame frame = st.GetFrame(0);
+			// Get the file name
+			string fileName = frame.GetFileName();
+			// Get the method name
+			string methodName = frame.GetMethod().Name;
+			// Get the line number from the stack frame
+			int line = frame.GetFileLineNumber();
+			// Get the column number
+			int col = frame.GetFileColumnNumber();
+			StringBuilder stringBuilder = new StringBuilder();
+			stringBuilder.AppendLine(e.Exception.ToString());
+			ErrorDialog report = new ErrorDialog("SADX Mod Manager", errDesc, stringBuilder.ToString());
 			DialogResult dgresult = report.ShowDialog();
 			switch (dgresult)
 			{

@@ -7,12 +7,14 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using ModManagerCommon;
 using SADXModManager.DataClasses;
 using SADXModManager.Properties;
+using static SADXModManager.Utils;
 
 namespace SADXModManager.Forms
 {
@@ -53,12 +55,15 @@ namespace SADXModManager.Forms
 
 		public UpdatesAvailableDialog(List<DownloadItem> items, string updatePath, bool firstInstall = false)
 		{
+			InitializeComponent();
 			if (Variables.criticalError)
 			{
 				DialogResult = DialogResult.Abort;
 				Close();
 			}
-			InitializeComponent();
+
+			SetDoubleBuffered(tabControlUpdateDetails, true);
+			SetDoubleBuffered(tableLayoutPanelDownload, true);
 			this.updatePath = updatePath;
 			this.CancelEvent += OnCancelEvent;
 			Items = items;
@@ -67,7 +72,7 @@ namespace SADXModManager.Forms
 			{
 				if (item != null)
 				{
-					listViewUpdates.Items.Add(new ListViewItem(new[] { string.Format("{0} {1}", item.Name, item.Version), SizeSuffix.GetSizeSuffix(item.Size) })
+					listViewUpdates.Items.Add(new ListViewItem(new[] { string.Format("{0} {1}", item.Name, item.Version), SizeSuffix.GetSizeSuffix(item.DownloadSize) })
 					{
 						Checked = true,
 						Tag = item,
@@ -94,6 +99,12 @@ namespace SADXModManager.Forms
 				}
 				Shown += OnShown;
 			}
+		}
+
+		private static void SetDoubleBuffered(Control control, bool enable)
+		{
+			PropertyInfo doubleBufferPropertyInfo = control.GetType().GetProperty("DoubleBuffered", BindingFlags.Instance | BindingFlags.NonPublic);
+			doubleBufferPropertyInfo?.SetValue(control, enable, null);
 		}
 
 		private void OnShown(object sender, EventArgs eventArgs)
@@ -192,7 +203,7 @@ namespace SADXModManager.Forms
 			// Set total size
 			statSizeTotal = 0;
 			foreach (var item in ItemsToDownload)
-				statSizeTotal += item.Size;
+				statSizeTotal += item.DownloadSize;
 
 			// Set up updater
 			using (var client = new UpdaterWebClient())
@@ -284,7 +295,7 @@ namespace SADXModManager.Forms
 										}
 									}
 
-									var uri = new Uri(item.URL);
+									var uri = new Uri(item.DownloadUrl);
 									string filePath = Path.Combine(updatePath, uri.Segments.Last());
 
 									var info = new FileInfo(filePath);
@@ -467,82 +478,82 @@ namespace SADXModManager.Forms
 				}
 			}
 		}
+		
+		private void SetUpdateControlInfo(Control labelValue, Control labelLabel, string value)
+		{
+			if (!string.IsNullOrEmpty(value))
+			{
+				labelLabel.Visible = labelValue.Visible = true;
+				labelValue.Text = value;
+			}
+			else
+				labelLabel.Visible = labelValue.Visible = false;
+		}
 	
 		/// <summary>Updates download info in UI.</summary>
 		private void SetDownloadDetails(DownloadItem item)
 		{
-			// Changelog
-			textBoxChangelog.Text = item.Changelog;
-			// Mod download info
-			ModDownload entry = item.ModDownloadInfo;
-			if (entry != null)
-			{
-				// Number of files in the download
-				labelDownloadFileCountValue.Text = entry.FilesToDownload.ToString();
-				// Download details
-				labelDownloadPublishedValue.Text = entry.Updated.ToString(CultureInfo.CurrentCulture);
-				labelDownloadSizeValue.Text = SizeSuffix.GetSizeSuffix(entry.Size);
-				labelDownloadFileCountValue.Text = entry.FilesToDownload.ToString();
-				// Release details
-				if (string.IsNullOrEmpty(entry.Name))
-					groupReleaseDetails.Visible = false;
-				else
-				{
-					labelReleasePublishedValue.Text = entry.Published.ToString(CultureInfo.CurrentCulture);
-					labelReleasePageValue.Text = !string.IsNullOrEmpty(entry.ReleaseUrl) ? entry.ReleaseUrl : entry.Url;
-					labelReleaseNameValue.Text = entry.Name;
-					labelReleaseTagValue.Text = entry.Version;
-					groupReleaseDetails.Visible = true;
-				}
-				listViewUpdateFiles.BeginUpdate();
-				listViewUpdateFiles.Items.Clear();
-				// List of files for self-hosted mods
-				if (entry.Type == ModDownloadType.Modular)
-				{
-					foreach (ModManifestDiff i in entry.ChangedFiles)
-					{
-						string file = i.State == ModManifestState.Moved ? $"{i.Last.FilePath} -> {i.Current.FilePath}" : i.Current.FilePath;
-						listViewUpdateFiles.Items.Add(new ListViewItem(new[] { i.State.ToString(), file }));
-					}
-				}
-				// Add the single file from direct download URL for archive mods
-				else
-				{
-					listViewUpdateFiles.Items.Add(new ListViewItem(new[] { "Download", GetFilenameFromUrl(entry.Url) }));
-				}
-				listViewUpdateFiles.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.HeaderSize);
-				listViewUpdateFiles.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent);
-				listViewUpdateFiles.EndUpdate();
-			}
-			// Loader/Manager/Launcher download info
+			// Remove File and Information tabs
+			tabControlUpdateDetails.TabPages.Remove(tabPageUpdateInformation);
+			tabControlUpdateDetails.TabPages.Remove(tabPageUpdateFiles);
+			// Set data for the Details tab
+			tableLayoutPanelDownload.SuspendLayout();
+			labelUpdateName.Text = item.Name;
+			labelUpdateAuthor.Text = item.Authors;
+			// Version
+			SetUpdateControlInfo(labelUpdateVersion, labelD3Version, item.Version);
+			// Upload Date
+			labelUploadDate.Text = item.UploadDate.ToString(CultureInfo.CurrentCulture);
+			// Upload Date vs Release Date
+			if (item.UploadDate != item.ReleaseDate && item.ReleaseDate.Year >= 2004)
+				SetUpdateControlInfo(labelReleaseDate, labelD4ReleaseDate, item.ReleaseDate.ToString(CultureInfo.CurrentCulture));
 			else
+				SetUpdateControlInfo(labelReleaseDate, labelD4ReleaseDate, "");
+			// Download Size
+			labelDownloadSize.Text = SizeSuffix.GetSizeSuffix(item.DownloadSize);
+			// File Count
+			labelDownloadFileCount.Text = item.FileCount.ToString();
+			// Homepage
+			SetUpdateControlInfo(labelHomepage, labelD8Homepage, item.HomepageUrl);
+			// Download Link
+			labelDownloadLink.Text = item.DownloadUrl;
+			// Release Name
+			SetUpdateControlInfo(labelReleaseName, labelD9ReleaseName, item.ReleaseName);
+			// Release Tag
+			SetUpdateControlInfo(labelReleaseTag, labelD10ReleaseTag, item.ReleaseTag);
+			// Description
+			textBoxUpdateDescription.Text = "Description: " + item.Description;
+			// Set data for the Changelog tab
+			if (!string.IsNullOrEmpty(item.Changelog))
 			{
-				labelDownloadFileCountValue.Text = "1";
-				labelDownloadSizeValue.Text = SizeSuffix.GetSizeSuffix(item.Size);
-				labelReleasePageValue.Text = item.URL;
-				labelReleaseNameValue.Text = item.Name;
-				labelDownloadPublishedValue.Text = item.Published.ToString(CultureInfo.CurrentCulture);
-				// File list
+				tabControlUpdateDetails.TabPages.Add(tabPageUpdateInformation);
+				// Convert HTML tags if there's a GameBanana description
+				if (item.GameBanana)
+					HtmlToRtf(item.Changelog, textBoxChangelog);
+				else
+					textBoxChangelog.Text = item.Changelog;
+			}
+			// Set data for the Files tab
+			if (item.Files != null && item.Files.Count > 0)
+			{
+				tabControlUpdateDetails.TabPages.Add(tabPageUpdateFiles);
 				listViewUpdateFiles.BeginUpdate();
 				listViewUpdateFiles.Items.Clear();
-				listViewUpdateFiles.Items.Add(new ListViewItem(new[] { "Download", GetFilenameFromUrl(item.URL) }));
+				foreach (var file in item.Files)
+				{
+					listViewUpdateFiles.Items.Add(new ListViewItem(new[] { file.Item1, file.Item2, SizeSuffix.GetSizeSuffix(file.Item3) }));
+				}
 				listViewUpdateFiles.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.HeaderSize);
+				listViewUpdateFiles.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.ColumnContent);
 				listViewUpdateFiles.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent);
 				listViewUpdateFiles.EndUpdate();
 			}
+			tableLayoutPanelDownload.ResumeLayout();
 		}
 
 		/// <summary>Erases download info in UI.</summary>
 		private void ClearDownloadDetails()
 		{
-			textBoxChangelog.Text = "No changelog available";
-			labelDownloadFileCountValue.Text = "N/A";
-			labelDownloadPublishedValue.Text = "N/A";
-			labelDownloadSizeValue.Text = "N/A";
-			labelReleaseNameValue.Text = "N/A";
-			labelReleasePageValue.Text = "N/A";
-			labelReleaseTagValue.Text = "N/A";
-			labelReleasePublishedValue.Text = "N/A";
 			listViewUpdateFiles.Items.Clear();
 		}
 
@@ -570,9 +581,9 @@ namespace SADXModManager.Forms
 		/// <summary>Clicking links in release info.</summary>
 		private void labelReleasePageValue_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
 		{
-			if (labelReleasePageValue.Text == "N/A")
+			if (labelHomepage.Text == "N/A")
 				return;
-			Process.Start(new ProcessStartInfo(labelReleasePageValue.Text) { UseShellExecute = true });
+			Process.Start(new ProcessStartInfo(labelHomepage.Text) { UseShellExecute = true });
 		}
 
 		/// <summary>Clicking links in the changelog.</summary>
@@ -650,6 +661,13 @@ namespace SADXModManager.Forms
 						break;
 				}
 			}	
+		}
+
+		private void labelDownloadLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+		{
+			if (labelDownloadLink.Text == "N/A")
+				return;
+			Process.Start(new ProcessStartInfo(labelDownloadLink.Text) { UseShellExecute = true });
 		}
 	}
 }

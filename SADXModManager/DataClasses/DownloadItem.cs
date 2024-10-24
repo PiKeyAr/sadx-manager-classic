@@ -1,5 +1,7 @@
 ﻿using ModManagerCommon;
 using System;
+using System.Collections.Generic;
+using System.Windows.Forms;
 
 // Downloads for the 'Updates are available' dialog
 
@@ -18,38 +20,53 @@ namespace SADXModManager.DataClasses
 			DirectXRuntime
 		}
 
+		public bool Required;
+		public bool GameBanana;
+
 		public string Name;
-		public string URL;
-		public string Path;
+		public string Authors;
 		public string Version;
-		public long Size;
+		public DateTime ReleaseDate;
+		public DateTime UploadDate;
+		public long DownloadSize;
+		public int FileCount;
+		public string HomepageUrl;
+		public string DownloadUrl;
+		public string ReleaseName;
+		public string ReleaseTag;
+		public string Description;
+		public List<Tuple<string, string, long>> Files;
 		public string Changelog;
+
 		public DownloadItemType Type;
 		public ModDownload ModDownloadInfo;
-		public DateTime Published;
 
-		public DownloadItem(string name, string url, long size, string changelog, DownloadItemType type, string version, DateTime published, ModDownload modDownload = null)
+		public DownloadItem()
 		{
-			Name = name;
-			URL = url;
-			Size = size;
-			Changelog = changelog;
-			Type = type;
-			Version = version;
-			ModDownloadInfo = modDownload;
-			Published = published;
 		}
 
 		public DownloadItem(ModDownload modDownload)
 		{
-			Name = modDownload.Info.Name;
-			URL = modDownload.Url;
-			Size = modDownload.Size;
-			Changelog = modDownload.Changes.Trim();
-			Type = DownloadItemType.Mod;
-			Version = modDownload.Version;
 			ModDownloadInfo = modDownload;
-			Published = modDownload.Published;
+			Type = DownloadItemType.Mod;
+			Name = modDownload.Info.Name;
+			Authors = modDownload.Info.Author;
+			Version = modDownload.Version;
+			ReleaseDate = modDownload.Published;
+			UploadDate = modDownload.Updated;
+			DownloadSize = modDownload.Size;
+			FileCount = modDownload.FilesToDownload;
+			HomepageUrl = !string.IsNullOrEmpty(modDownload.HomePage) ? modDownload.HomePage : modDownload.ReleaseUrl;
+			MessageBox.Show(modDownload.HomePage);
+			DownloadUrl = modDownload.Url;
+			ReleaseName = modDownload.Name;
+			ReleaseTag = !string.IsNullOrEmpty(modDownload.ReleaseUrl) ? modDownload.Version : "";
+			Description = modDownload.Info.Description;
+			Files = new List<Tuple<string, string, long>>();
+			if (modDownload.ChangedFiles != null)
+				foreach (var file in modDownload.ChangedFiles)
+					Files.Add(new Tuple<string,string,long>(file.State.ToString(), file.Current.FilePath, file.Current.FileSize));
+			Changelog = modDownload.Changes.Trim();
 		}
 	};
 }

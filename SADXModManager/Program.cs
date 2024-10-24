@@ -40,7 +40,8 @@ namespace SADXModManager
 
 		static void RealMain(string[] args)
 		{
-			ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072;
+			// Try to use TLS 1.2
+			try { ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072; } catch { }
 			AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
 			// URL handler
@@ -205,7 +206,7 @@ namespace SADXModManager
 				Exception ex = (Exception)e.ExceptionObject;
 				string errDesc = "SADX Mod Manager has crashed with the following error:\n" + ex.GetType().Name + ".\n\n" +
 					"If you wish to report a bug, please include the following in your report:";
-				ErrorDialog report = new ErrorDialog("SADX Mod Manager", errDesc, ex.ToString());
+				ErrorDialog report = new ErrorDialog("SADX Mod Manager", errDesc, ex.ToString() + "\n\n" + ex.Message.ToString());
 				DialogResult dgresult = report.ShowDialog(primaryForm);
 				switch (dgresult)
 				{

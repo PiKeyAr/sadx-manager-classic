@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Security.Cryptography;
+using System.Text;
 using System.Windows.Forms;
 using Microsoft.Win32;
 using Newtonsoft.Json;
@@ -49,28 +50,21 @@ namespace SADXModManager
 		}
 
 		/// <summary>Makes a WebRequest to retrieve the size of a download.</summary>
-		public static long GetDownloadSize(string url)
+		public static long GetDownloadSize(WebResponse resp)
 		{
 			long result = 0;
-			WebRequest req = WebRequest.Create(url);
-			req.Method = "HEAD";
-			using (WebResponse resp = req.GetResponse())
+			if (long.TryParse(resp.Headers.Get("Content-Length"), out long contentLength))
 			{
-				if (long.TryParse(resp.Headers.Get("Content-Length"), out long contentLength))
-				{
-					result = contentLength;
-				}
+				result = contentLength;
 			}
 			return result;
 		}
 
 		/// <summary>Makes a WebRequest to retrieve the modified date of a download.</summary>
-		public static DateTime GetDownloadDate(string url)
+		public static DateTime GetDownloadDate(WebResponse res)
 		{
-			// Get last modified date
-			WebRequest req = WebRequest.Create(url);
-			using (HttpWebResponse res = (HttpWebResponse)req.GetResponse())
-				return res.LastModified;
+			HttpWebResponse httpWebResponse = res as HttpWebResponse;
+			return httpWebResponse.LastModified;
 		}
 
 		/// <summary>Retrieves a download for an update for SADX Mod Loader from direct links (null if no update).</summary>
@@ -85,16 +79,40 @@ namespace SADXModManager
 				if (msg.Length == 0 && File.Exists(Path.Combine(gameSettings.GamePath, "mods", "SADXModLoader.dll")))
 					return null;
 				string targetver = msg[12] == ' ' ? msg.Substring(9, 3) : msg.Substring(9, 4);
-				long size = GetDownloadSize(loaderUpdateUrl);
-				// If the URL doesn't work, output an error
-				if (size == 0)
+				// Get request
+				WebRequest req = WebRequest.Create(loaderUpdateUrl);
+				req.Method = "HEAD";
+				using (WebResponse resp = req.GetResponse())
 				{
-					MessageBox.Show(parent, "Could not retrieve SADX Mod Loader update information: size is 0", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
-					return null;
+					// Get size
+					long size = GetDownloadSize(resp);
+					// If the URL doesn't work, output an error
+					if (size == 0)
+					{
+						MessageBox.Show(parent, "Could not retrieve SADX Mod Loader update information: size is 0", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+						return null;
+					}
+					// Get last modified date
+					DateTime modifiedDate = GetDownloadDate((HttpWebResponse)resp);
+					return new DownloadItem()
+					{
+						Name = "Mod Loader",
+						Authors = "MainMemory && x-hax",
+						Version = targetver,
+						ReleaseDate = modifiedDate,
+						UploadDate = modifiedDate,
+						DownloadSize = size,
+						FileCount = 1,
+						HomepageUrl = "https://github.com/X-Hax/sadx-mod-loader",
+						DownloadUrl = loaderUpdateUrl,
+						ReleaseName = "Revision " + targetver,
+						ReleaseTag = "",
+						Description = "The main tool that makes modding possible. Always keep it up to date.",
+						Files = new List<Tuple<string, string, long>> { new Tuple<string, string, long>("Download", "SADXModLoader.7z", size) },
+						Changelog = msg.Replace("\n", "\r\n"),
+						Type = DownloadItem.DownloadItemType.Loader
+					};
 				}
-				// Get last modified date
-				DateTime modifiedDate = GetDownloadDate(loaderUpdateUrl);
-				return new DownloadItem("Mod Loader", loaderUpdateUrl, size, msg.Replace("\n", "\r\n"), DownloadItem.DownloadItemType.Loader, targetver, modifiedDate);
 			}
 			catch (Exception ex)
 			{
@@ -119,18 +137,41 @@ namespace SADXModManager
 			}
 			try
 			{
-				// Get download size
-				size = GetDownloadSize(launcherUpdateUrl);
-				// Get last modified date
-				modifiedDate = GetDownloadDate(launcherUpdateUrl);
-				// Create a version string
+				// Get request
+				WebRequest req = WebRequest.Create(loaderUpdateUrl);
+				req.Method = "HEAD";
+				using (WebResponse resp = req.GetResponse())
+				{
+					// Get download size
+					size = GetDownloadSize(resp);
+					// Get last modified date
+					modifiedDate = GetDownloadDate(resp);
+					// Create a version string
+				}
 			}
 			catch (Exception ex)
 			{
 				MessageBox.Show(parent, "Could not retrieve SADX Launcher size or modified date: " + ex.Message.ToString(), "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 			string ver = string.Format("{0}/{1}/{2} {3}:{4}", modifiedDate.Year, modifiedDate.Month, modifiedDate.Day, modifiedDate.Hour, modifiedDate.Minute);
-			return new DownloadItem("Steam Launcher", launcherUpdateUrl, size, "No changelog available", DownloadItem.DownloadItemType.Launcher, ver, modifiedDate);
+			return new DownloadItem()
+			{
+				Name = "AppLauncher for Steam",
+				Authors = "PkR",
+				Version = ver,
+				ReleaseDate = modifiedDate,
+				UploadDate = modifiedDate,
+				DownloadSize = size,
+				FileCount = 1,
+				HomepageUrl = "https://sadxmodinstaller.unreliable.network/index.php/tools/",
+				DownloadUrl = launcherUpdateUrl,
+				ReleaseName = "",
+				ReleaseTag = "",
+				Description = "This tool replaces the Steam version's launcher. It can be used to configure keyboard and gamepad controls.",
+				Files = new List<Tuple<string, string, long>> { new Tuple<string, string, long>("Download", "AppLauncher.7z", size) },
+				Changelog = "",
+				Type = DownloadItem.DownloadItemType.Launcher
+			};
 		}
 
 		/// <summary>Retrieves a download for an update for SADX Mod Manager Classic from a direct link (null if no update).</summary>
@@ -146,25 +187,48 @@ namespace SADXModManager
 				// If there's no difference, there's no update
 				if (msg_remote == msg_local && File.Exists(Path.Combine(managerExePath, "SADXModManager.exe")))
 					return null;
-				// Get size
-				long size = GetDownloadSize(managerUpdateUrl);
-				// If the URL doesn't work, output an error
-				if (size == 0)
+				// Get request
+				WebRequest req = WebRequest.Create(managerUpdateUrl);
+				req.Method = "HEAD";
+				using (WebResponse resp = req.GetResponse())
 				{
-					MessageBox.Show(parent, "Could not retrieve SADX Mod Manager Classic update information: size is 0", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
-					return null;
+					// Get size
+					long size = GetDownloadSize(resp);
+					// If the URL doesn't work, output an error
+					if (size == 0)
+					{
+						MessageBox.Show(parent, "Could not retrieve SADX Mod Manager Classic update information: size is 0", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+						return null;
+					}
+					// Get last modified date
+					DateTime modifiedDate = GetDownloadDate(resp);
+					try
+					{
+						changelog = webClient.DownloadString(managerChangelogUrl);
+					}
+					catch (Exception ex)
+					{
+						changelog = "Error retrieving Mod Manager Classic changelog: " + ex.Message.ToString();
+					}
+					return new DownloadItem()
+					{
+						Name = "Mod Manager Classic",
+						Authors = "PkR",
+						Version = msg_remote,
+						ReleaseDate = modifiedDate,
+						UploadDate = modifiedDate,
+						DownloadSize = size,
+						FileCount = 1,
+						HomepageUrl = "https://sadxmodinstaller.unreliable.network/index.php/tools/",
+						DownloadUrl = managerUpdateUrl,
+						ReleaseName = "",
+						ReleaseTag = "",
+						Description = "This tool replaces the Steam version's launcher. It can be used to configure keyboard and gamepad controls.",
+						Files = new List<Tuple<string, string, long>> { new Tuple<string, string, long>("Download", "SADXModManager.exe", size) },
+						Changelog = changelog,
+						Type = DownloadItem.DownloadItemType.Manager
+					};
 				}
-				// Get last modified date
-				DateTime modifiedDate = GetDownloadDate(managerUpdateUrl);
-				try
-				{
-					changelog = webClient.DownloadString(managerChangelogUrl);
-				}
-				catch (Exception ex)
-				{
-					changelog = "Error retrieving Mod Manager Classic changelog: " + ex.Message.ToString();
-				}
-				return new DownloadItem("Mod Manager Classic", managerUpdateUrl, size, changelog, DownloadItem.DownloadItemType.Manager, msg_remote, modifiedDate);
 			}
 			catch (Exception ex)
 			{
@@ -238,10 +302,16 @@ namespace SADXModManager
 			}
 			try
 			{
-				// Get download size
-				size = GetDownloadSize(steamToolsUpdateUrl);
-				// Get last modified date
-				modifiedDate = GetDownloadDate(steamToolsUpdateUrl);
+				// Get request
+				WebRequest req = WebRequest.Create(steamToolsUpdateUrl);
+				req.Method = "HEAD";
+				using (WebResponse resp = req.GetResponse())
+				{
+					// Get download size
+					size = GetDownloadSize(resp);
+					// Get last modified date
+					modifiedDate = GetDownloadDate(resp);
+				}
 			}
 			catch (Exception ex)
 			{
@@ -249,7 +319,25 @@ namespace SADXModManager
 			}
 			// Create a version string
 			string ver = string.Format("{0}/{1}/{2} {3}:{4}", modifiedDate.Year, modifiedDate.Month, modifiedDate.Day, modifiedDate.Hour, modifiedDate.Minute);
-			return new DownloadItem("Conversion Tools", steamToolsUpdateUrl, size, "These tools will convert your SADX installation for Mod Loader compatibility.", DownloadItem.DownloadItemType.SteamTools, ver, modifiedDate);
+			return new DownloadItem()
+			{
+				Required = true,
+				Name = "Conversion Tools",
+				Authors = "PkR",
+				Version = ver,
+				ReleaseDate = modifiedDate,
+				UploadDate = modifiedDate,
+				DownloadSize = size,
+				FileCount = 1,
+				HomepageUrl = "https://sadxmodinstaller.unreliable.network/index.php/tools/",
+				DownloadUrl = steamToolsUpdateUrl,
+				ReleaseName = "",
+				ReleaseTag = "",
+				Description = "These tools will convert your SADX installation for Mod Loader compatibility.",
+				Files = new List<Tuple<string, string, long>> { new Tuple<string, string, long>("Download", "steam_tools.7z", size) },
+				Changelog = "",
+				Type = DownloadItem.DownloadItemType.SteamTools
+			};
 		}
 
 		/// <summary>Retrieves a download for Visual C++ runtime (null if no update).</summary>
@@ -266,16 +354,39 @@ namespace SADXModManager
 			}
 			try
 			{
-				// Get download size
-				size = GetDownloadSize(downloadUrl);
-				// Get last modified date
-				modifiedDate = GetDownloadDate(downloadUrl);
+				// Get request
+				WebRequest req = WebRequest.Create(downloadUrl);
+				req.Method = "HEAD";
+				using (WebResponse resp = req.GetResponse())
+				{
+					// Get download size
+					size = GetDownloadSize(resp);
+					// Get last modified date
+					modifiedDate = GetDownloadDate(resp);
+				}
 			}
 			catch (Exception ex)
 			{
 				MessageBox.Show(parent, "Could not retrieve Visual C++ runtime size or modified date: " + ex.Message.ToString(), "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
-			return new DownloadItem("Visual C++ Runtime", downloadUrl, size, "No changelog available", DownloadItem.DownloadItemType.VisualCppRuntime, version, modifiedDate);
+			return new DownloadItem()
+			{
+				Name = "Visual C++ Runtime",
+				Authors = "Microsoft",
+				Version = version,
+				ReleaseDate = modifiedDate,
+				UploadDate = modifiedDate,
+				DownloadSize = size,
+				FileCount = 1,
+				HomepageUrl = "https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170/",
+				DownloadUrl = downloadUrl,
+				ReleaseName = "",
+				ReleaseTag = "",
+				Description = "These runtimes are required for C++ programs and DLLs compiled with Visual Studio. You need them for mods to work.",
+				Files = new List<Tuple<string, string, long>> { new Tuple<string, string, long>("Download", "vcredist_x86.exe", size) },
+				Changelog = "",
+				Type = DownloadItem.DownloadItemType.VisualCppRuntime
+			};
 		}
 
 		/// <summary>Retrieves a list of downloads for Visual C++ runtimes (empty list if no update).</summary>
@@ -297,23 +408,136 @@ namespace SADXModManager
 			string downloadUrl = "https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe";
 			try
 			{
-				// Get download size
-				size = GetDownloadSize(downloadUrl);
-				// Get last modified date
-				modifiedDate = GetDownloadDate(downloadUrl);
+				// Get request
+				WebRequest req = WebRequest.Create(downloadUrl);
+				req.Method = "HEAD";
+				using (WebResponse resp = req.GetResponse())
+				{
+					// Get download size
+					size = GetDownloadSize(resp);
+					// Get last modified date
+					modifiedDate = GetDownloadDate(resp);
+				}
 			}
 			catch (Exception ex)
 			{
 				MessageBox.Show(parent, "Could not retrieve DirectX 9.0c runtime size or modified date: " + ex.Message.ToString(), "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
-			return new DownloadItem("DirectX", downloadUrl, size, "No changelog available", DownloadItem.DownloadItemType.DirectXRuntime, "9.0c", modifiedDate);
+			return new DownloadItem()
+			{
+				Name = "DirectX",
+				Authors = "Microsoft",
+				Version = "9.0c",
+				ReleaseDate = modifiedDate,
+				UploadDate = modifiedDate,
+				DownloadSize = size,
+				FileCount = 1,
+				HomepageUrl = "https://www.microsoft.com/en-us/download/details.aspx?id=35",
+				DownloadUrl = downloadUrl,
+				ReleaseName = "",
+				ReleaseTag = "",
+				Description = "Enables Direct3D 9 (and earlier) games to run. This runtime is required to run the base game.",
+				Files = new List<Tuple<string, string, long>> { new Tuple<string, string, long>("Download", "dxwebsetup.exe", size) },
+				Changelog = "",
+				Type = DownloadItem.DownloadItemType.DirectXRuntime
+			};
+		}
+
+		public static void HtmlToRtf(string html, RichTextBox rtbTemp)
+		{
+			html = html.Replace("&nbsp;", " ");
+			StringBuilder result = new StringBuilder();
+			result.Append(@"{\rtf1\ansi ");
+			for (int c = 0; c < html.Length; c++)
+			{
+				if (html[c] != '<')
+					result.Append(html[c]);
+				else
+				{
+					StringBuilder stringBuilder = new StringBuilder();
+					for (int i = c; i < html.Length; i++)
+					{
+						if (html[i] != '>')
+							stringBuilder.Append(html[i]);
+						else
+						{
+							stringBuilder.Append(html[i]);
+							c = i;
+							//MessageBox.Show(stringBuilder.ToString());
+							break;
+
+						}
+					}
+					string tag = stringBuilder.ToString();
+					switch (tag)
+					{
+						case "<b>":
+							result.Append(@"\b ");
+							break;
+						case "</b>":
+							result.Append(@"\b0");
+							break;
+						case "<br>":
+						case "<p>":
+							result.Append(@"\line ");
+							break;
+						case "<hr>":
+							result.Append("--------");
+							break;
+						default:
+							if (tag.Contains("<li"))
+								result.Append(@"\line \bullet ");
+							else if (tag.Contains("<a href="))
+							{
+								string url = tag.Replace("<a href=", "").Replace("<", "").Replace(">", "").Replace("\"", "").Replace("target=_blank","");
+								result.Append(" (LINK: " + url + ") ");
+							}
+							else if (tag.Contains("<img src="))
+							{
+								string url = tag.Replace("<img src=", "").Replace("<", "").Replace(">", "").Replace("\"", "").Replace("target=_blank", "");
+								result.Append(" (IMAGE: " + url + ") ");
+							}
+							break;
+					}
+				}
+
+			}
+			rtbTemp.Rtf = result.ToString();
 		}
 
 		/// <summary>Imports settings from SADXModLoader.ini.</summary>
 		public static void ImportOldLoaderSettings(SADXLoaderInfo info)
 		{
+			// Debug settings
+			gameSettings.DebugSettings.EnableDebugScreen = info.DebugScreen;
+			gameSettings.DebugSettings.EnableDebugCrashLog = info.DebugCrashLog;
+			gameSettings.DebugSettings.EnableDebugConsole = info.DebugConsole;
+			gameSettings.DebugSettings.EnableDebugFile = info.DebugFile;
+			// Test Spawn settings
+			gameSettings.TestSpawn.UseCharacter = info.TestSpawnCharacter != -1;
+			gameSettings.TestSpawn.UseSave = info.TestSpawnSaveID != -1;
+			gameSettings.TestSpawn.UseGameMode = info.TestSpawnGameMode != -1;
+			gameSettings.TestSpawn.ActIndex = info.TestSpawnAct;
+			gameSettings.TestSpawn.LevelIndex = info.TestSpawnLevel;
+			gameSettings.TestSpawn.CharacterIndex = info.TestSpawnCharacter;
+			gameSettings.TestSpawn.GameTextLanguage = info.TextLanguage;
+			gameSettings.TestSpawn.GameVoiceLanguage = info.VoiceLanguage;
+			gameSettings.TestSpawn.GameModeIndex = info.TestSpawnGameMode;
+			gameSettings.TestSpawn.EventIndex = info.TestSpawnEvent;
+			gameSettings.TestSpawn.Rotation = info.TestSpawnRotation;
+			managerConfig.AngleHex = info.TestSpawnRotationHex;
+			gameSettings.TestSpawn.SaveIndex = info.TestSpawnSaveID;
+			gameSettings.TestSpawn.XPosition = (float)info.TestSpawnX;
+			gameSettings.TestSpawn.YPosition = (float)info.TestSpawnY;
+			gameSettings.TestSpawn.ZPosition = (float)info.TestSpawnZ;
+			// Mods
 			gameSettings.EnabledMods = info.Mods;
+			// Codes
 			gameSettings.EnabledCodes = info.EnabledCodes;
+			// Patches
+			gameSettings.EnabledGamePatches = new List<string>();
+			//if (info.CCEF)
+				//gameSettings.EnabledGamePatches.Add("")
 		}
 	}
 }
