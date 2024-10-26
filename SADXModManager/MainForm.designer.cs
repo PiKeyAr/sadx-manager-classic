@@ -552,7 +552,7 @@
             this.buttonRefreshModList.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonRefreshModList.AutoSize = true;
             this.buttonRefreshModList.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonRefreshModList.Location = new System.Drawing.Point(437, 248);
+            this.buttonRefreshModList.Location = new System.Drawing.Point(439, 248);
             this.buttonRefreshModList.Name = "buttonRefreshModList";
             this.buttonRefreshModList.Size = new System.Drawing.Size(33, 29);
             this.buttonRefreshModList.TabIndex = 7;
@@ -567,7 +567,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.labelModDescription.Location = new System.Drawing.Point(3, 358);
             this.labelModDescription.Name = "labelModDescription";
-            this.labelModDescription.Size = new System.Drawing.Size(467, 60);
+            this.labelModDescription.Size = new System.Drawing.Size(469, 60);
             this.labelModDescription.TabIndex = 6;
             this.labelModDescription.Text = "Description: No mod selected.";
             // 
@@ -587,7 +587,7 @@
             this.listViewMods.HideSelection = false;
             this.listViewMods.Location = new System.Drawing.Point(3, 3);
             this.listViewMods.Name = "listViewMods";
-            this.listViewMods.Size = new System.Drawing.Size(430, 317);
+            this.listViewMods.Size = new System.Drawing.Size(432, 317);
             this.listViewMods.TabIndex = 0;
             this.listViewMods.UseCompatibleStateImageBehavior = false;
             this.listViewMods.View = System.Windows.Forms.View.Details;
@@ -673,7 +673,7 @@
             this.tabControlMain.Margin = new System.Windows.Forms.Padding(0, 0, 0, 3);
             this.tabControlMain.Name = "tabControlMain";
             this.tabControlMain.SelectedIndex = 0;
-            this.tabControlMain.Size = new System.Drawing.Size(484, 447);
+            this.tabControlMain.Size = new System.Drawing.Size(486, 447);
             this.tabControlMain.TabIndex = 0;
             // 
             // tabPageMods
@@ -699,7 +699,7 @@
             this.tabPageMods.Location = new System.Drawing.Point(4, 22);
             this.tabPageMods.Name = "tabPageMods";
             this.tabPageMods.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageMods.Size = new System.Drawing.Size(476, 421);
+            this.tabPageMods.Size = new System.Drawing.Size(478, 421);
             this.tabPageMods.TabIndex = 0;
             this.tabPageMods.Text = "Mods";
             // 
@@ -709,7 +709,7 @@
             this.checkBoxSearchMod.Appearance = System.Windows.Forms.Appearance.Button;
             this.checkBoxSearchMod.AutoSize = true;
             this.checkBoxSearchMod.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.checkBoxSearchMod.Location = new System.Drawing.Point(437, 283);
+            this.checkBoxSearchMod.Location = new System.Drawing.Point(439, 283);
             this.checkBoxSearchMod.MinimumSize = new System.Drawing.Size(33, 29);
             this.checkBoxSearchMod.Name = "checkBoxSearchMod";
             this.checkBoxSearchMod.Size = new System.Drawing.Size(33, 29);
@@ -724,7 +724,7 @@
             // 
             this.labelModProfile.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.labelModProfile.AutoSize = true;
-            this.labelModProfile.Location = new System.Drawing.Point(206, 331);
+            this.labelModProfile.Location = new System.Drawing.Point(208, 331);
             this.labelModProfile.Name = "labelModProfile";
             this.labelModProfile.Size = new System.Drawing.Size(39, 13);
             this.labelModProfile.TabIndex = 12;
@@ -734,7 +734,7 @@
             // 
             this.buttonSaveProfile.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonSaveProfile.Enabled = false;
-            this.buttonSaveProfile.Location = new System.Drawing.Point(416, 326);
+            this.buttonSaveProfile.Location = new System.Drawing.Point(418, 326);
             this.buttonSaveProfile.Name = "buttonSaveProfile";
             this.buttonSaveProfile.Size = new System.Drawing.Size(54, 23);
             this.buttonSaveProfile.TabIndex = 13;
@@ -746,7 +746,7 @@
             // textBoxSearchMod
             // 
             this.textBoxSearchMod.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.textBoxSearchMod.Location = new System.Drawing.Point(279, 328);
+            this.textBoxSearchMod.Location = new System.Drawing.Point(281, 328);
             this.textBoxSearchMod.Name = "textBoxSearchMod";
             this.textBoxSearchMod.Size = new System.Drawing.Size(191, 20);
             this.textBoxSearchMod.TabIndex = 14;
@@ -758,7 +758,7 @@
             // 
             this.buttonLoadProfile.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonLoadProfile.Enabled = false;
-            this.buttonLoadProfile.Location = new System.Drawing.Point(356, 326);
+            this.buttonLoadProfile.Location = new System.Drawing.Point(358, 326);
             this.buttonLoadProfile.Name = "buttonLoadProfile";
             this.buttonLoadProfile.Size = new System.Drawing.Size(54, 23);
             this.buttonLoadProfile.TabIndex = 12;
@@ -772,7 +772,7 @@
             this.buttonCheckModUpdates.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonCheckModUpdates.AutoSize = true;
             this.buttonCheckModUpdates.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonCheckModUpdates.Location = new System.Drawing.Point(437, 213);
+            this.buttonCheckModUpdates.Location = new System.Drawing.Point(439, 213);
             this.buttonCheckModUpdates.Name = "buttonCheckModUpdates";
             this.buttonCheckModUpdates.Size = new System.Drawing.Size(33, 29);
             this.buttonCheckModUpdates.TabIndex = 6;
@@ -787,7 +787,7 @@
             this.textBoxProfileName.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.Suggest;
             this.textBoxProfileName.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.textBoxProfileName.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.textBoxProfileName.Location = new System.Drawing.Point(251, 328);
+            this.textBoxProfileName.Location = new System.Drawing.Point(253, 328);
             this.textBoxProfileName.Name = "textBoxProfileName";
             this.textBoxProfileName.Size = new System.Drawing.Size(99, 21);
             this.textBoxProfileName.TabIndex = 11;
@@ -802,7 +802,7 @@
             this.buttonSelectAllMods.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonSelectAllMods.AutoSize = true;
             this.buttonSelectAllMods.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonSelectAllMods.Location = new System.Drawing.Point(437, 178);
+            this.buttonSelectAllMods.Location = new System.Drawing.Point(439, 178);
             this.buttonSelectAllMods.Name = "buttonSelectAllMods";
             this.buttonSelectAllMods.Size = new System.Drawing.Size(33, 29);
             this.buttonSelectAllMods.TabIndex = 5;
@@ -818,7 +818,7 @@
             this.buttonModConfigure.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.buttonModConfigure.Location = new System.Drawing.Point(6, 326);
             this.buttonModConfigure.Name = "buttonModConfigure";
-            this.buttonModConfigure.Size = new System.Drawing.Size(75, 23);
+            this.buttonModConfigure.Size = new System.Drawing.Size(112, 23);
             this.buttonModConfigure.TabIndex = 9;
             this.buttonModConfigure.Text = "Configure...";
             this.buttonModConfigure.UseVisualStyleBackColor = true;
@@ -830,7 +830,7 @@
             this.buttonModBottom.AutoSize = true;
             this.buttonModBottom.Enabled = false;
             this.buttonModBottom.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonModBottom.Location = new System.Drawing.Point(437, 114);
+            this.buttonModBottom.Location = new System.Drawing.Point(439, 114);
             this.buttonModBottom.Name = "buttonModBottom";
             this.buttonModBottom.Size = new System.Drawing.Size(33, 29);
             this.buttonModBottom.TabIndex = 4;
@@ -845,7 +845,7 @@
             this.buttonModTop.AutoSize = true;
             this.buttonModTop.Enabled = false;
             this.buttonModTop.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonModTop.Location = new System.Drawing.Point(437, 6);
+            this.buttonModTop.Location = new System.Drawing.Point(439, 6);
             this.buttonModTop.Name = "buttonModTop";
             this.buttonModTop.Size = new System.Drawing.Size(33, 29);
             this.buttonModTop.TabIndex = 1;
@@ -858,7 +858,7 @@
             // 
             this.buttonModAdd.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.buttonModAdd.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonModAdd.Location = new System.Drawing.Point(87, 326);
+            this.buttonModAdd.Location = new System.Drawing.Point(124, 326);
             this.buttonModAdd.Name = "buttonModAdd";
             this.buttonModAdd.Size = new System.Drawing.Size(76, 23);
             this.buttonModAdd.TabIndex = 10;
@@ -872,7 +872,7 @@
             this.buttonModDown.AutoSize = true;
             this.buttonModDown.Enabled = false;
             this.buttonModDown.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonModDown.Location = new System.Drawing.Point(437, 78);
+            this.buttonModDown.Location = new System.Drawing.Point(439, 78);
             this.buttonModDown.Name = "buttonModDown";
             this.buttonModDown.Size = new System.Drawing.Size(33, 29);
             this.buttonModDown.TabIndex = 3;
@@ -887,7 +887,7 @@
             this.buttonModUp.AutoSize = true;
             this.buttonModUp.Enabled = false;
             this.buttonModUp.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonModUp.Location = new System.Drawing.Point(437, 42);
+            this.buttonModUp.Location = new System.Drawing.Point(439, 42);
             this.buttonModUp.Name = "buttonModUp";
             this.buttonModUp.Size = new System.Drawing.Size(33, 29);
             this.buttonModUp.TabIndex = 2;
@@ -3098,7 +3098,7 @@
             this.newModToolStripMenuItem});
             this.contextMenuStripAddMod.Name = "contextMenuStripAddMod";
             this.contextMenuStripAddMod.ShowImageMargin = false;
-            this.contextMenuStripAddMod.Size = new System.Drawing.Size(153, 76);
+            this.contextMenuStripAddMod.Size = new System.Drawing.Size(156, 98);
             this.contextMenuStripAddMod.Text = "From Archive...";
             // 
             // addModArchivetoolStripMenuItem
@@ -3110,10 +3110,11 @@
             // 
             // fromURLToolStripMenuItem
             // 
-            this.fromURLToolStripMenuItem.Enabled = false;
             this.fromURLToolStripMenuItem.Name = "fromURLToolStripMenuItem";
-            this.fromURLToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.fromURLToolStripMenuItem.Size = new System.Drawing.Size(155, 22);
             this.fromURLToolStripMenuItem.Text = "Add from URL...";
+            this.fromURLToolStripMenuItem.ToolTipText = "Install one or more mods using links to compatible resources";
+            this.fromURLToolStripMenuItem.Click += new System.EventHandler(this.fromURLToolStripMenuItem_Click);
             // 
             // toolStripSeparator2
             // 
@@ -3123,8 +3124,9 @@
             // newModToolStripMenuItem
             // 
             this.newModToolStripMenuItem.Name = "newModToolStripMenuItem";
-            this.newModToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.newModToolStripMenuItem.Size = new System.Drawing.Size(155, 22);
             this.newModToolStripMenuItem.Text = "New Mod...";
+            this.newModToolStripMenuItem.ToolTipText = "Create a new mod";
             this.newModToolStripMenuItem.Click += new System.EventHandler(this.newModToolStripMenuItem_Click);
             // 
             // statusStripManager
@@ -3136,7 +3138,7 @@
             this.toolStripStatusLabelGameFolder});
             this.statusStripManager.Location = new System.Drawing.Point(0, 478);
             this.statusStripManager.Name = "statusStripManager";
-            this.statusStripManager.Size = new System.Drawing.Size(482, 22);
+            this.statusStripManager.Size = new System.Drawing.Size(484, 22);
             this.statusStripManager.SizingGrip = false;
             this.statusStripManager.TabIndex = 12;
             this.statusStripManager.Text = "statusStrip1";
@@ -3151,7 +3153,7 @@
             // 
             this.toolStripStatusLabelGameFolder.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.toolStripStatusLabelGameFolder.Name = "toolStripStatusLabelGameFolder";
-            this.toolStripStatusLabelGameFolder.Size = new System.Drawing.Size(329, 17);
+            this.toolStripStatusLabelGameFolder.Size = new System.Drawing.Size(331, 17);
             this.toolStripStatusLabelGameFolder.Spring = true;
             this.toolStripStatusLabelGameFolder.Text = "Game location will be displayed here.";
             this.toolStripStatusLabelGameFolder.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
@@ -3176,14 +3178,14 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(482, 503);
+            this.ClientSize = new System.Drawing.Size(484, 503);
             this.Controls.Add(this.statusStripManager);
             this.Controls.Add(this.tabControlMain);
             this.Controls.Add(this.buttonInstallLoader);
             this.Controls.Add(this.buttonSaveAndPlay);
             this.Controls.Add(this.buttonSave);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.MinimumSize = new System.Drawing.Size(418, 483);
+            this.MinimumSize = new System.Drawing.Size(500, 483);
             this.Name = "MainForm";
             this.Padding = new System.Windows.Forms.Padding(0, 0, 0, 3);
             this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Show;

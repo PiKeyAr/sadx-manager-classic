@@ -1,7 +1,6 @@
 ﻿using ModManagerCommon;
 using System;
 using System.Collections.Generic;
-using System.Windows.Forms;
 
 // Downloads for the 'Updates are available' dialog
 
@@ -57,7 +56,6 @@ namespace SADXModManager.DataClasses
 			DownloadSize = modDownload.Size;
 			FileCount = modDownload.FilesToDownload;
 			HomepageUrl = !string.IsNullOrEmpty(modDownload.HomePage) ? modDownload.HomePage : modDownload.ReleaseUrl;
-			MessageBox.Show(modDownload.HomePage);
 			DownloadUrl = modDownload.Url;
 			ReleaseName = modDownload.Name;
 			ReleaseTag = !string.IsNullOrEmpty(modDownload.ReleaseUrl) ? modDownload.Version : "";

@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
-using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Microsoft.Win32;
+using ModManagerCommon;
 using Newtonsoft.Json;
 using SADXModManager.DataClasses;
 using static SADXModManager.Variables;
@@ -14,6 +18,21 @@ namespace SADXModManager
 {
 	public static class Utils
 	{
+		private enum OneClickType
+		{
+			DirectLink,
+			GitHub, // Welp, can't fetch it directly from the repo without knowing the asset name
+			GameBanana,
+		}
+
+		private static Dictionary<string, string> GameBananaItemTypes = new Dictionary<string, string>()
+		{
+			{  "mods", "Mod" },
+			{  "wips", "Wip" },
+			{  "tools", "Tool" },
+			{  "sounds", "Sound" }
+		};
+
 		/// <summary>Retrieves a value from a registry subkey.</summary>
 		public static RegistryKey GetRegistryKey(string key)
 		{
@@ -96,7 +115,7 @@ namespace SADXModManager
 					DateTime modifiedDate = GetDownloadDate((HttpWebResponse)resp);
 					return new DownloadItem()
 					{
-						Name = "Mod Loader",
+						Name = "SADX Mod Loader",
 						Authors = "MainMemory && x-hax",
 						Version = targetver,
 						ReleaseDate = modifiedDate,
@@ -138,7 +157,7 @@ namespace SADXModManager
 			try
 			{
 				// Get request
-				WebRequest req = WebRequest.Create(loaderUpdateUrl);
+				WebRequest req = WebRequest.Create(launcherUpdateUrl);
 				req.Method = "HEAD";
 				using (WebResponse resp = req.GetResponse())
 				{
@@ -212,7 +231,7 @@ namespace SADXModManager
 					}
 					return new DownloadItem()
 					{
-						Name = "Mod Manager Classic",
+						Name = "SADX Mod Manager Classic",
 						Authors = "PkR",
 						Version = msg_remote,
 						ReleaseDate = modifiedDate,
@@ -383,7 +402,7 @@ namespace SADXModManager
 				ReleaseName = "",
 				ReleaseTag = "",
 				Description = "These runtimes are required for C++ programs and DLLs compiled with Visual Studio. You need them for mods to work.",
-				Files = new List<Tuple<string, string, long>> { new Tuple<string, string, long>("Download", "vcredist_x86.exe", size) },
+				Files = new List<Tuple<string, string, long>> { new Tuple<string, string, long>("Download", GetFilenameFromUrl(downloadUrl), size) },
 				Changelog = "",
 				Type = DownloadItem.DownloadItemType.VisualCppRuntime
 			};
@@ -443,66 +462,321 @@ namespace SADXModManager
 			};
 		}
 
-		public static void HtmlToRtf(string html, RichTextBox rtbTemp)
+		/// <summary>Retrieves the name of the file from a link.</summary>
+		public static string GetFilenameFromUrl(string url)
 		{
-			html = html.Replace("&nbsp;", " ");
-			StringBuilder result = new StringBuilder();
-			result.Append(@"{\rtf1\ansi ");
-			for (int c = 0; c < html.Length; c++)
+			Uri uri = new Uri(url);
+			string result = uri.Segments.Last();
+			if (result.Contains("."))
+				return result;
+			else
+				return string.Empty;
+		}
+
+		/// <summary>Extracts .gz streams.</summary>
+		public static void ExtractGz(byte[] data, string path)
+		{
+			MemoryStream sourceFileStream = new MemoryStream(data);
+			FileStream destFileStream = File.Create(path);
+
+			GZipStream decompressingStream = new GZipStream(sourceFileStream,
+				CompressionMode.Decompress);
+			int byteRead;
+			while ((byteRead = decompressingStream.ReadByte()) != -1)
 			{
-				if (html[c] != '<')
-					result.Append(html[c]);
-				else
-				{
-					StringBuilder stringBuilder = new StringBuilder();
-					for (int i = c; i < html.Length; i++)
+				destFileStream.WriteByte((byte)byteRead);
+			}
+
+			decompressingStream.Close();
+			sourceFileStream.Close();
+			destFileStream.Close();
+		}
+
+		/// <summary>Returns a 1-click download type from an URL.</summary>
+		private static OneClickType GetOneClickDownloadType(string url)
+		{
+			if (url.Contains("github.com"))
+				return OneClickType.GitHub;
+			if (url.Contains("gamebanana.com"))
+				return OneClickType.GameBanana;
+			return OneClickType.DirectLink;
+		}
+
+		/// <summary>Parses an URL and returns a DownloadItem for a mod (null if invalid).</summary>
+		/// <param name="uri">URL to parse</param>
+		/// <param name="parent">Form where URL parsing takes place</param>
+		public static DownloadItem HandleUri(string uri, Form parent)
+		{
+			// Variables used to create the mod download
+			string name = "";
+			string author = "";
+			string info = "";
+			string desc = "";
+			long size = 0; // Download size
+			DateTime date = DateTime.Now; // Upload date
+			Uri url; // Temporary link
+			ModInfo dummyInfo; // ModInfo for download
+			string dummyPath; // Destination mod folder
+			ModDownload download;
+
+			// Activate original form if it's out of focus
+			if (parent.WindowState == FormWindowState.Minimized)
+				parent.WindowState = FormWindowState.Normal;
+			parent.Activate();
+
+			// Split the URL
+			string[] split;
+			if (uri.Contains("sadxmm:"))
+				split = uri.Substring("sadxmm:".Length).Split(',');
+			else
+				split = uri.Split(',');
+			url = new Uri(split[0]);
+			Dictionary<string, string> fields = new Dictionary<string, string>(split.Length - 1);
+			for (int i = 1; i < split.Length; i++)
+			{
+				int ind = split[i].IndexOf(':');
+				fields.Add(split[i].Substring(0, ind).ToLowerInvariant(), split[i].Substring(ind + 1));
+			}			
+			// Get link type
+			OneClickType linkType = GetOneClickDownloadType(uri);
+
+			// Parse link
+			switch (linkType)
+			{
+				case OneClickType.GameBanana:
+					GameBananaItem gbi;
+					string itemType = "";
+					long itemId = 0;
+					try
 					{
-						if (html[i] != '>')
-							stringBuilder.Append(html[i]);
+						if (fields.ContainsKey("gb_itemtype") && fields.ContainsKey("gb_itemid"))
+						{
+							itemType = fields["gb_itemtype"];
+							itemId = long.Parse(fields["gb_itemid"]);
+						}
 						else
 						{
-							stringBuilder.Append(html[i]);
-							c = i;
-							//MessageBox.Show(stringBuilder.ToString());
-							break;
+							bool found = false;
+							foreach (KeyValuePair<string, string> pair in GameBananaItemTypes)
+							{
+								if (uri.Contains(pair.Key))
+								{
+									string[] uriparts = uri.TrimEnd('/').Split('/');
+									itemType = pair.Value;
+									itemId = long.Parse(uriparts[uriparts.Length - 1]);
+									found = true;
+									break;
+								}
+							}
+							if (!found)
+							{
+								MessageBox.Show(parent,
+										$"Unable to find a compatible GameBanana item type for URI: \"{uri}\"",
+										"URI Parse Failure",
+										MessageBoxButtons.OK,
+										MessageBoxIcon.Error);
+								return null;
+							}
+						}
+						if (string.IsNullOrEmpty(itemType) || itemId == 0)
+						{
+							MessageBox.Show(parent,
+										$"Unable to get GameBanana item type or ID for URI: \"{uri}\"",
+										"URI Parse Failure",
+										MessageBoxButtons.OK,
+										MessageBoxIcon.Error);
+							return null;
+						}
+						gbi = GameBananaItem.Load(itemType, itemId);
+						if (gbi is null)
+							throw new Exception("GameBananaItem was unexpectedly null");
+						name = gbi.Name;
+						author = gbi.OwnerName;
+						info = gbi.Body;
+						desc = gbi.Subtitle;
+						url = new Uri(gbi.Files.First().Value.DownloadUrl);
+					}
+					catch (Exception ex)
+					{
+						MessageBox.Show(parent,
+										$"Malformed One-Click Install URI \"{uri}\" caused parse failure:\n{ex.Message}",
+										"URI Parse Failure",
+										MessageBoxButtons.OK,
+										MessageBoxIcon.Error);
+						return null;
+					}
+					break;
+				case OneClickType.GitHub:
+					string assetName = GetFilenameFromUrl(uri);
+					string repoName = string.Empty;
+					string[] githubsplit = uri.Replace("sadxmm:", "").Split('/');
+					if (githubsplit.Length >= 5 && githubsplit[2].Contains("github.com"))
+						repoName = githubsplit[3] + "/" + githubsplit[4];
+					else
+						throw new Exception("Unable to retrieve GitHub info from link: " + uri);
 
+					List<GitHubRelease> releases;
+					// Get name and author
+					string url_repo = "https://api.github.com/repos/" + repoName;
+					string url_releases = "https://api.github.com/repos/" + repoName + "/releases";
+					string text_repo = string.Empty;
+					string text_releases = string.Empty;
+					try
+					{
+						text_repo = webClient.DownloadString(url_repo);
+						text_releases = webClient.DownloadString(url_releases);
+					}
+					catch (Exception e)
+					{
+						MessageBox.Show(parent, string.Format("Error downloading GitHub repo data from\n`{0}`.\n{1}\n\nIf this is a 403 error, you may be hitting a rate limit. Wait a while and try again.", url_repo, e.Message.ToString()), "SADX Mod Manager Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+						return null;
+					}
+					GitHubRepo repo = JsonConvert.DeserializeObject<GitHubRepo>(text_repo);
+					name = repo.Name;
+					author = repo.Owner.Name;
+					desc = repo.Description;
+
+					// Override name/author if they are specified in the URL
+					if (fields.ContainsKey("name") && fields.ContainsKey("author"))
+					{
+						name = Uri.UnescapeDataString(fields["name"]);
+						author = Uri.UnescapeDataString(fields["author"]);
+					}
+
+					releases = JsonConvert.DeserializeObject<List<GitHubRelease>>(text_releases)
+					.Where(x => !x.Draft && !x.PreRelease).ToList();
+					if (releases == null || releases.Count == 0)
+						throw new Exception("No GitHub releases found for URL " + uri);
+
+					GitHubRelease latestRelease = null;
+					GitHubAsset latestAsset = null;
+
+					DateTime dateCheck = DateTime.MinValue;
+
+					foreach (GitHubRelease release in releases)
+					{
+						GitHubAsset asset;
+						if (string.IsNullOrEmpty(assetName) || release.Assets.Length == 1)
+							asset = release.Assets[0];
+						else asset = release.Assets
+							.FirstOrDefault(x => x.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase));
+
+						if (asset == null)
+							continue;
+
+						DateTime uploaded = DateTime.Parse(asset.Uploaded, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal);
+						if (uploaded > dateCheck)
+						{
+							latestRelease = release;
+							latestAsset = asset;
+							dateCheck = uploaded;
 						}
 					}
-					string tag = stringBuilder.ToString();
-					switch (tag)
-					{
-						case "<b>":
-							result.Append(@"\b ");
-							break;
-						case "</b>":
-							result.Append(@"\b0");
-							break;
-						case "<br>":
-						case "<p>":
-							result.Append(@"\line ");
-							break;
-						case "<hr>":
-							result.Append("--------");
-							break;
-						default:
-							if (tag.Contains("<li"))
-								result.Append(@"\line \bullet ");
-							else if (tag.Contains("<a href="))
-							{
-								string url = tag.Replace("<a href=", "").Replace("<", "").Replace(">", "").Replace("\"", "").Replace("target=_blank","");
-								result.Append(" (LINK: " + url + ") ");
-							}
-							else if (tag.Contains("<img src="))
-							{
-								string url = tag.Replace("<img src=", "").Replace("<", "").Replace(">", "").Replace("\"", "").Replace("target=_blank", "");
-								result.Append(" (IMAGE: " + url + ") ");
-							}
-							break;
-					}
-				}
 
+					if (latestRelease == null || latestAsset == null)
+					{
+						throw new Exception("No releases with matching asset could be found in release(s).");
+					}
+
+					string body = Regex.Replace(latestRelease.Body, "(?<!\r)\n", "\r\n");
+
+					dummyInfo = new ModInfo
+					{
+						Name = name,
+						Author = author,
+						Description = desc
+					};
+
+					dummyPath = dummyInfo.Name;
+
+					if (fields.ContainsKey("folder"))
+						dummyPath = fields["folder"];
+
+					foreach (char c in Path.GetInvalidFileNameChars())
+					{
+						dummyPath = dummyPath.Replace(c, '_');
+					}
+
+					dummyPath = Path.Combine("mods", dummyPath);
+
+					download = new ModDownload(dummyInfo, dummyPath, latestAsset.DownloadUrl, info, size);
+
+					DownloadItem item = new DownloadItem(download);
+					item.HomepageUrl = "https://github.com/" + repoName;
+					item.ReleaseTag = latestRelease.TagName;
+					item.Version = latestRelease.TagName;
+					item.ReleaseDate = DateTime.Parse(latestRelease.Published, DateTimeFormatInfo.InvariantInfo);
+					item.UploadDate = DateTime.Parse(latestAsset.Uploaded, DateTimeFormatInfo.InvariantInfo);
+					item.DownloadSize = latestAsset.Size;
+					item.Changelog = latestRelease.Body;
+					return item;
+				case OneClickType.DirectLink:
+				default:
+					// Add name/author if they are included in the URI
+					if (fields.ContainsKey("name") && fields.ContainsKey("author"))
+					{
+						name = Uri.UnescapeDataString(fields["name"]);
+						author = Uri.UnescapeDataString(fields["author"]);
+					}
+					// If not, the direct link can't be processed
+					if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(author))
+					{
+						MessageBox.Show(parent,
+										$"One-Click Install direct link \"{uri}\" did not contain 'name' and/or 'author' fields.",
+										"URI Parse Failure",
+										MessageBoxButtons.OK,
+										MessageBoxIcon.Error);
+						return null;
+					}
+					break;
 			}
-			rtbTemp.Rtf = result.ToString();
+
+			dummyInfo = new ModInfo
+			{
+				Name = name,
+				Author = author,
+			};
+
+			dummyPath = dummyInfo.Name;
+
+			if (fields.ContainsKey("folder"))
+				dummyPath = fields["folder"];
+
+			foreach (char c in Path.GetInvalidFileNameChars())
+			{
+				dummyPath = dummyPath.Replace(c, '_');
+			}
+
+			dummyPath = Path.Combine("mods", dummyPath);
+
+			try
+			{
+				// Get request
+				WebRequest req = WebRequest.Create(url.AbsoluteUri);
+				req.Method = "HEAD";
+
+				using (WebResponse resp = req.GetResponse())
+				{
+					size = GetDownloadSize(resp);
+					date = GetDownloadDate(resp);
+				}
+				download = new ModDownload(dummyInfo, dummyPath, url.AbsoluteUri, info, size);
+
+				DownloadItem item = new DownloadItem(download);
+				item.GameBanana = linkType == OneClickType.GameBanana;
+				item.UploadDate = date;
+				item.Description = desc;
+				return item;
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(parent,
+									$"1-click download failed:\n{ex.Message}",
+									"SADX Mod Manager",
+									MessageBoxButtons.OK,
+									MessageBoxIcon.Error);
+				return null;
+			}
 		}
 
 		/// <summary>Imports settings from SADXModLoader.ini.</summary>

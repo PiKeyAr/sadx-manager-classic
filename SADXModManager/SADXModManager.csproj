@@ -16,6 +16,7 @@
     <FileAlignment>512</FileAlignment>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -28,7 +29,6 @@
     <MapFileExtensions>true</MapFileExtensions>
     <ApplicationRevision>0</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -67,6 +67,12 @@
     <Reference Include="Crc32.NET, Version=1.0.0.0, Culture=neutral, PublicKeyToken=dc0b95cf99bf4e99, processorArchitecture=MSIL">
       <HintPath>..\packages\Crc32.NET.1.2.0\lib\net20\Crc32.NET.dll</HintPath>
     </Reference>
+    <Reference Include="HtmlRenderer, Version=1.5.0.6, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\HtmlRenderer.Core.1.5.0.6\lib\net40-client\HtmlRenderer.dll</HintPath>
+    </Reference>
+    <Reference Include="HtmlRenderer.WinForms, Version=1.5.0.6, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\HtmlRenderer.WinForms.1.5.0.6\lib\net40-client\HtmlRenderer.WinForms.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -98,6 +104,9 @@
     <Compile Include="DataClasses\ProfilesListJson.cs" />
     <Compile Include="DataClasses\sonicDxIni.cs" />
     <Compile Include="DataClasses\SadxModLoaderIni.cs" />
+    <Compile Include="DataClasses\UpdateChecker.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Forms\ErrorDialog.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -109,6 +118,12 @@
     </Compile>
     <Compile Include="Forms\InstallationWizard.Designer.cs">
       <DependentUpon>InstallationWizard.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\ModUrlDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\ModUrlDialog.Designer.cs">
+      <DependentUpon>ModUrlDialog.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\SaveProfileDialog.cs">
       <SubType>Form</SubType>
@@ -153,6 +168,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\InstallationWizard.resx">
       <DependentUpon>InstallationWizard.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\ModUrlDialog.resx">
+      <DependentUpon>ModUrlDialog.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\SaveProfileDialog.resx">
       <DependentUpon>SaveProfileDialog.cs</DependentUpon>

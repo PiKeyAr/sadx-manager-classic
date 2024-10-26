@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Net;
+using ModManagerCommon;
 using Newtonsoft.Json;
 using SADXModManager.DataClasses;
 
@@ -38,7 +39,7 @@ namespace SADXModManager
 		public static readonly JsonSerializer jsonSerializer = new JsonSerializer() { Culture = System.Globalization.CultureInfo.InvariantCulture, Formatting = Formatting.Indented, NullValueHandling = NullValueHandling.Ignore, };
 
 		/// <summary>WebClient instance</summary>
-		public static readonly WebClient webClient = new WebClient();
+		public static readonly UpdaterWebClient webClient = new UpdaterWebClient();
 
 		// Serializable structs
 		/// <summary>Deserialized profile containing mod list, game settings etc.</summary>

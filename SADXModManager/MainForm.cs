@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Threading;
@@ -25,10 +24,10 @@ using System.Text;
 
 // TODO for first release
 // Import SADXModLoader.ini
+// Rework updates system
 
 // TODO for second release:
 // Add mods from URL
-// Improved 1-click install dialog
 // Mod dependencies
 // Reset to optimal/failsafe settings
 // SDL Configuration
@@ -565,9 +564,20 @@ namespace SADXModManager
 
 			List<string> uris = Program.UriQueue.GetUris();
 
+			List<DownloadItem> uriDownloads = new List<DownloadItem>();
+
 			foreach (string str in uris)
 			{
-				HandleUri(str);
+				DownloadItem item = HandleUri(str, this);
+				if (item != null)
+					uriDownloads.Add(item);
+			}
+
+			if (uriDownloads.Count > 0)
+			{
+				UpdatesAvailableDialog upd = new UpdatesAvailableDialog(uriDownloads, updatesTempPath);
+				if (upd.ShowDialog() == DialogResult.OK)
+					LoadModList();
 			}
 
 			Program.UriQueue.UriEnqueued += UriQueueOnUriEnqueued;
@@ -843,16 +853,7 @@ namespace SADXModManager
 
 		private void buttonNewMod_Click(object sender, EventArgs e)
 		{
-			// Remove after adding mods is implemented
-			using (var ModDialog = new NewModDialog(managerConfig.ModAuthor))
-			{
-				if (ModDialog.ShowDialog() == DialogResult.OK)
-				{
-					managerConfig.ModAuthor = ModDialog.ModAuthor;
-					LoadModList();
-				}
-			}
-			//contextMenuStripAddMod.Show(buttonModAdd, buttonModAdd.Width, 0);
+			contextMenuStripAddMod.Show(buttonModAdd, buttonModAdd.Width, 0);
 		}
 
 		private void codesCheckedListBox_ItemCheck(object sender, ItemCheckEventArgs e)
@@ -1321,153 +1322,6 @@ namespace SADXModManager
 			}
 		}
 
-		private DownloadItem HandleUri(string uri)
-		{
-			
-			if (WindowState == FormWindowState.Minimized)
-			{
-				WindowState = FormWindowState.Normal;
-			}
-
-			Activate();
-
-			Uri url;
-			string name;
-			string author;
-			string info = "No changelog available";
-			string[] split = uri.Substring("sadxmm:".Length).Split(',');
-			url = new Uri(split[0]);
-			Dictionary<string, string> fields = new Dictionary<string, string>(split.Length - 1);
-			for (int i = 1; i < split.Length; i++)
-			{
-				int ind = split[i].IndexOf(':');
-				fields.Add(split[i].Substring(0, ind).ToLowerInvariant(), split[i].Substring(ind + 1));
-			}
-			if (fields.ContainsKey("gb_itemtype") && fields.ContainsKey("gb_itemid"))
-			{
-				string itemType;
-				long itemId;
-
-				try
-				{
-					itemType = fields["gb_itemtype"];
-					itemId = long.Parse(fields["gb_itemid"]);
-				}
-				catch (Exception ex)
-				{
-					MessageBox.Show(this,
-									$"Malformed One-Click Install URI \"{uri}\" caused parse failure:\n{ex.Message}",
-									"URI Parse Failure",
-									MessageBoxButtons.OK,
-									MessageBoxIcon.Error);
-
-					return null;
-				}
-
-				GameBananaItem gbi;
-
-				try
-				{
-					gbi = GameBananaItem.Load(itemType, itemId);
-
-					if (gbi is null)
-					{
-						throw new Exception("GameBananaItem was unexpectedly null");
-					}
-				}
-				catch (Exception ex)
-				{
-					MessageBox.Show(this,
-									$"GameBanana API query failed:\n{ex.Message}",
-									"GameBanana API Failure",
-									MessageBoxButtons.OK,
-									MessageBoxIcon.Error);
-
-					return null;
-				}
-				name = gbi.Name;
-				author = gbi.OwnerName;
-				info = gbi.Body;
-			}
-			else if (fields.ContainsKey("name") && fields.ContainsKey("author"))
-			{
-				name = Uri.UnescapeDataString(fields["name"]);
-				author = Uri.UnescapeDataString(fields["author"]);
-			}
-			else
-			{
-				MessageBox.Show(this,
-								$"One-Click Install URI \"{uri}\" did not contain required fields.",
-								"URI Parse Failure",
-								MessageBoxButtons.OK,
-								MessageBoxIcon.Error);
-
-				return null;
-			}
-
-			var dummyInfo = new ModInfo
-			{
-				Name = name,
-				Author = author,
-			};
-
-			string dummyPath = dummyInfo.Name;
-
-			if (fields.ContainsKey("folder"))
-				dummyPath = fields["folder"];
-
-			foreach (char c in Path.GetInvalidFileNameChars())
-			{
-				dummyPath = dummyPath.Replace(c, '_');
-			}
-
-			dummyPath = Path.Combine("mods", dummyPath);			
-
-			long size = 0;
-			DateTime date = DateTime.Now;
-
-			// Get request
-			WebRequest req = WebRequest.Create(url.AbsoluteUri);
-			req.Method = "HEAD";
-			
-			using (WebResponse resp = req.GetResponse())
-			{
-				size = GetDownloadSize(resp);
-				date = GetDownloadDate(resp);
-			}
-			ModDownload download = new ModDownload(dummyInfo, dummyPath, url.AbsoluteUri, info, size);
-
-			DownloadItem item = new DownloadItem(download);
-			item.UploadDate = date;
-
-			return item;
-			/*
-			if (result != DialogResult.OK)
-			{
-				return;
-			}
-
-			do
-			{
-				try
-				{
-					result = DialogResult.Cancel;
-					Directory.Delete(updatesTempPath, true);
-				}
-				catch (Exception ex)
-				{
-					result = MessageBox.Show(this,
-											 "Failed to remove temporary update directory:\n" +
-											 ex.Message +
-											 "\n\nWould you like to retry? You can remove the directory manually later.",
-											 "Directory Deletion Failed",
-											 MessageBoxButtons.RetryCancel);
-				}
-			} while (result == DialogResult.Retry);
-			*/
-			LoadModList();
-		}
-
 		private void UriQueueOnUriEnqueued(object sender, OnUriEnqueuedArgs args)
 		{
 			args.Handled = true;
@@ -1478,7 +1332,18 @@ namespace SADXModManager
 				return;
 			}
 
-			HandleUri(args.Uri);
+			List<DownloadItem> uriDownloads = new List<DownloadItem>();
+
+			DownloadItem item = HandleUri(args.Uri, this);
+			if (item != null)
+				uriDownloads.Add(item);
+
+			if (uriDownloads.Count > 0)
+			{
+				UpdatesAvailableDialog upd = new UpdatesAvailableDialog(uriDownloads, updatesTempPath);
+				if (upd.ShowDialog() == DialogResult.OK)
+					LoadModList();
+			}
 		}
 
 		private void InitializeWorker()
@@ -1488,7 +1353,7 @@ namespace SADXModManager
 				return;
 			}
 
-			updateChecker = new BackgroundWorker { WorkerSupportsCancellation = true };
+			updateChecker = new UpdateChecker { WorkerSupportsCancellation = true };
 			updateChecker.DoWork += UpdateChecker_DoWork;
 			updateChecker.RunWorkerCompleted += UpdateChecker_RunWorkerCompleted;
 		}
@@ -1677,50 +1542,47 @@ namespace SADXModManager
 			List<DownloadItem> items = new List<DownloadItem>();
 			var errors = new List<string>();
 
-			using (var client = new UpdaterWebClient())
+			foreach (Tuple<string, ModInfo, List<ModManifestDiff>> info in updatableMods)
 			{
-				foreach (Tuple<string, ModInfo, List<ModManifestDiff>> info in updatableMods)
+				if (worker.CancellationPending)
 				{
-					if (worker.CancellationPending)
+					e.Cancel = true;
+					break;
+				}
+
+				ModInfo mod = info.Item2;
+				if (!string.IsNullOrEmpty(mod.GitHubRepo))
+				{
+					if (string.IsNullOrEmpty(mod.GitHubAsset))
 					{
-						e.Cancel = true;
-						break;
+						errors.Add($"[{mod.Name}] GitHubRepo specified, but GitHubAsset is missing.");
+						continue;
 					}
 
-					ModInfo mod = info.Item2;
-					if (!string.IsNullOrEmpty(mod.GitHubRepo))
+					ModDownload d = modUpdater.GetGitHubReleases(mod, info.Item1, webClient, errors);
+					if (d != null)
 					{
-						if (string.IsNullOrEmpty(mod.GitHubAsset))
-						{
-							errors.Add($"[{mod.Name}] GitHubRepo specified, but GitHubAsset is missing.");
-							continue;
-						}
-
-						ModDownload d = modUpdater.GetGitHubReleases(mod, info.Item1, client, errors);
-						if (d != null)
-						{
-							updates.Add(d);
-						}
+						updates.Add(d);
 					}
-					else if (!string.IsNullOrEmpty(mod.GameBananaItemType) && mod.GameBananaItemId.HasValue)
+				}
+				else if (!string.IsNullOrEmpty(mod.GameBananaItemType) && mod.GameBananaItemId.HasValue)
+				{
+					ModDownload d = modUpdater.GetGameBananaReleases(mod, info.Item1, errors);
+					if (d != null)
 					{
-						ModDownload d = modUpdater.GetGameBananaReleases(mod, info.Item1, errors);
-						if (d != null)
-						{
-							updates.Add(d);
-						}
+						updates.Add(d);
 					}
-					else if (!string.IsNullOrEmpty(mod.UpdateUrl))
-					{
-						List<ModManifestEntry> localManifest = info.Item3
-							.Where(x => x.State == ModManifestState.Unchanged)
-							.Select(x => x.Current).ToList();
+				}
+				else if (!string.IsNullOrEmpty(mod.UpdateUrl))
+				{
+					List<ModManifestEntry> localManifest = info.Item3
+						.Where(x => x.State == ModManifestState.Unchanged)
+						.Select(x => x.Current).ToList();
 
-						ModDownload d = modUpdater.CheckModularVersion(mod, info.Item1, localManifest, client, errors);
-						if (d != null)
-						{
-							updates.Add(d);
-						}
+					ModDownload d = modUpdater.CheckModularVersion(mod, info.Item1, localManifest, webClient, errors);
+					if (d != null)
+					{
+						updates.Add(d);
 					}
 				}
 			}
@@ -3007,6 +2869,24 @@ namespace SADXModManager
 		private void configureToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			configureModButton_Click(sender, e);
+		}
+
+		private void fromURLToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			using (ModUrlDialog dialog = new ModUrlDialog())
+			{
+				if (dialog.ShowDialog() == DialogResult.OK)
+				{
+					if (dialog.Downloads.Count > 0)
+					{
+						using (UpdatesAvailableDialog avd = new UpdatesAvailableDialog(dialog.Downloads, updatesTempPath))
+						{
+							if (avd.ShowDialog() == DialogResult.OK)
+								LoadModList();
+						}
+					}
+				}
+			}
 		}
 	}
 }

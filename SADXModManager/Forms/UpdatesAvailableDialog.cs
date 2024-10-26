@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -14,7 +14,6 @@ using System.Windows.Forms;
 using ModManagerCommon;
 using SADXModManager.DataClasses;
 using SADXModManager.Properties;
-using static SADXModManager.Utils;
 
 namespace SADXModManager.Forms
 {
@@ -63,7 +62,7 @@ namespace SADXModManager.Forms
 			}
 
 			SetDoubleBuffered(tabControlUpdateDetails, true);
-			SetDoubleBuffered(tableLayoutPanelDownload, true);
+			SetDoubleBuffered(tableLayoutPanelDownloadInfo, true);
 			this.updatePath = updatePath;
 			this.CancelEvent += OnCancelEvent;
 			Items = items;
@@ -79,7 +78,7 @@ namespace SADXModManager.Forms
 					});
 				}
 			}
-			ClearDownloadDetails();
+			listViewUpdateFiles.Items.Clear();
 			listViewUpdates.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent); // Update name
 			listViewUpdates.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent); // Update size
 			if (listViewUpdates.Items.Count > 0)
@@ -122,36 +121,6 @@ namespace SADXModManager.Forms
 			tokenSource.Cancel();
 		}
 
-		/// <summary>Retrieves the name of the file from a link.</summary>
-		private string GetFilenameFromUrl(string url)
-		{
-			Uri uri = new Uri(url);
-			string result = uri.Segments.Last();
-			if (result.Contains("."))
-				return result;
-			else
-				return "";
-		}
-
-		/// <summary>Extracts .gz streams.</summary>
-		private void ExtractGz(byte[] data, string path)
-		{
-			MemoryStream sourceFileStream = new MemoryStream(data);
-			FileStream destFileStream = File.Create(path);
-
-			GZipStream decompressingStream = new GZipStream(sourceFileStream,
-				CompressionMode.Decompress);
-			int byteRead;
-			while ((byteRead = decompressingStream.ReadByte()) != -1)
-			{
-				destFileStream.WriteByte((byte)byteRead);
-			}
-
-			decompressingStream.Close();
-			sourceFileStream.Close();
-			destFileStream.Close();
-		}
-
 		/// <summary>Starts the update process.</summary>
 		private void BeginUpdate()
 		{
@@ -192,9 +161,9 @@ namespace SADXModManager.Forms
 
 			// Set up paths and 7z.exe
 			if (!File.Exists(Path.Combine(updatePath, "7z.exe")))
-				ExtractGz(Resources._7z_exe, Path.Combine(updatePath, "7z.exe"));
+				Utils.ExtractGz(Resources._7z_exe, Path.Combine(updatePath, "7z.exe"));
 			if (!File.Exists(Path.Combine(updatePath, "7z.dll")))
-				ExtractGz(Resources._7z_dll, Path.Combine(updatePath, "7z.dll"));
+				Utils.ExtractGz(Resources._7z_dll, Path.Combine(updatePath, "7z.dll"));
 			System.Environment.SetEnvironmentVariable("PATH", updatePath);
 
 			// Set total items
@@ -461,7 +430,7 @@ namespace SADXModManager.Forms
 							{
 								ae.Handle(ex =>
 								{
-									result = MessageBox.Show(this, $"Failed to update mod {update.Info.Name}:\r\n{ex.Message}"
+									result = MessageBox.Show(this, $"Failed to update mod {update.Info.Name}:\r\n{ex}"
 										+ "\r\n\r\nPress Retry to try again, or Cancel to skip this mod.",
 										"Update Failed", MessageBoxButtons.RetryCancel, MessageBoxIcon.Error);
 									return true;
@@ -479,12 +448,25 @@ namespace SADXModManager.Forms
 			}
 		}
 		
-		private void SetUpdateControlInfo(Control labelValue, Control labelLabel, string value)
+		private void SetUpdateControlInfo(Control labelValue, Control labelLabel, string value, bool link = false)
 		{
 			if (!string.IsNullOrEmpty(value))
 			{
+				tableLayoutPanelDownloadInfo.RowCount++;
+				tableLayoutPanelDownloadInfo.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+				tableLayoutPanelDownloadInfo.Controls.Add(labelLabel, 0, tableLayoutPanelDownloadInfo.RowCount - 1);
+				tableLayoutPanelDownloadInfo.Controls.Add(labelValue, 1, tableLayoutPanelDownloadInfo.RowCount - 1);
 				labelLabel.Visible = labelValue.Visible = true;
-				labelValue.Text = value;
+				if (link)
+				{
+					LinkLabel linkLabel = (LinkLabel)labelValue;
+					linkLabel.Links.Clear();
+					linkLabel.Links.Add(new LinkLabel.Link(0, value.Length, value));
+					linkLabel.Text = "Open";
+				}
+				else
+					labelValue.Text = value;
+
 			}
 			else
 				labelLabel.Visible = labelValue.Visible = false;
@@ -496,42 +478,52 @@ namespace SADXModManager.Forms
 			// Remove File and Information tabs
 			tabControlUpdateDetails.TabPages.Remove(tabPageUpdateInformation);
 			tabControlUpdateDetails.TabPages.Remove(tabPageUpdateFiles);
+			tabControlUpdateDetails.TabPages.Remove(tabPageUpdateChangelog);
+			tabControlUpdateDetails.TabPages.Remove(tabPageUpdateInformation);
 			// Set data for the Details tab
-			tableLayoutPanelDownload.SuspendLayout();
+			tableLayoutPanelDownloadInfo.SuspendLayout();
+			tableLayoutPanelDownloadInfo.Controls.Clear();
+			tableLayoutPanelDownloadInfo.RowCount = 0;
+			// Name
 			labelUpdateName.Text = item.Name;
+			// Author
 			labelUpdateAuthor.Text = item.Authors;
 			// Version
 			SetUpdateControlInfo(labelUpdateVersion, labelD3Version, item.Version);
 			// Upload Date
-			labelUploadDate.Text = item.UploadDate.ToString(CultureInfo.CurrentCulture);
+			SetUpdateControlInfo(labelUploadDate, labelD5UploadDate, item.UploadDate.ToString(CultureInfo.CurrentCulture));
 			// Upload Date vs Release Date
 			if (item.UploadDate != item.ReleaseDate && item.ReleaseDate.Year >= 2004)
 				SetUpdateControlInfo(labelReleaseDate, labelD4ReleaseDate, item.ReleaseDate.ToString(CultureInfo.CurrentCulture));
 			else
 				SetUpdateControlInfo(labelReleaseDate, labelD4ReleaseDate, "");
 			// Download Size
-			labelDownloadSize.Text = SizeSuffix.GetSizeSuffix(item.DownloadSize);
+			SetUpdateControlInfo(labelDownloadSize, labelD6DownloadSize, SizeSuffix.GetSizeSuffix(item.DownloadSize));
 			// File Count
-			labelDownloadFileCount.Text = item.FileCount.ToString();
+			SetUpdateControlInfo(labelDownloadFileCount, labelD7FileCount, item.FileCount.ToString());
 			// Homepage
-			SetUpdateControlInfo(labelHomepage, labelD8Homepage, item.HomepageUrl);
+			SetUpdateControlInfo(labelHomepage, labelD8Homepage, item.HomepageUrl, true);
 			// Download Link
-			labelDownloadLink.Text = item.DownloadUrl;
+			SetUpdateControlInfo(labelDownloadLink, labelD9DownloadLink, item.DownloadUrl, true);
 			// Release Name
 			SetUpdateControlInfo(labelReleaseName, labelD9ReleaseName, item.ReleaseName);
 			// Release Tag
 			SetUpdateControlInfo(labelReleaseTag, labelD10ReleaseTag, item.ReleaseTag);
 			// Description
 			textBoxUpdateDescription.Text = "Description: " + item.Description;
-			// Set data for the Changelog tab
+			// Set data for the Information or Changelog tabs
 			if (!string.IsNullOrEmpty(item.Changelog))
 			{
-				tabControlUpdateDetails.TabPages.Add(tabPageUpdateInformation);
-				// Convert HTML tags if there's a GameBanana description
 				if (item.GameBanana)
-					HtmlToRtf(item.Changelog, textBoxChangelog);
+				{
+					tabControlUpdateDetails.TabPages.Add(tabPageUpdateInformation);
+					htmlPanelModInformation.Text = "<p style=\"color:" + Color.Transparent + ";\">" + item.Changelog + "</p>";
+				}
 				else
+				{
+					tabControlUpdateDetails.TabPages.Add(tabPageUpdateChangelog);
 					textBoxChangelog.Text = item.Changelog;
+				}
 			}
 			// Set data for the Files tab
 			if (item.Files != null && item.Files.Count > 0)
@@ -541,20 +533,14 @@ namespace SADXModManager.Forms
 				listViewUpdateFiles.Items.Clear();
 				foreach (var file in item.Files)
 				{
-					listViewUpdateFiles.Items.Add(new ListViewItem(new[] { file.Item1, file.Item2, SizeSuffix.GetSizeSuffix(file.Item3) }));
+					listViewUpdateFiles.Items.Add(new ListViewItem(new[] { file.Item1, SizeSuffix.GetSizeSuffix(file.Item3), file.Item2 }));
 				}
 				listViewUpdateFiles.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.HeaderSize);
-				listViewUpdateFiles.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.ColumnContent);
 				listViewUpdateFiles.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent);
+				listViewUpdateFiles.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.ColumnContent);
 				listViewUpdateFiles.EndUpdate();
 			}
-			tableLayoutPanelDownload.ResumeLayout();
-		}
-
-		/// <summary>Erases download info in UI.</summary>
-		private void ClearDownloadDetails()
-		{
-			listViewUpdateFiles.Items.Clear();
+			tableLayoutPanelDownloadInfo.ResumeLayout();
 		}
 
 		private void listViewUpdates_ItemCheck(object sender, ItemCheckEventArgs e)
@@ -569,7 +555,7 @@ namespace SADXModManager.Forms
 			var items = listViewUpdates.SelectedItems;
 			if (items.Count > 1 || items.Count == 0)
 			{
-				ClearDownloadDetails();
+				listViewUpdateFiles.Items.Clear();
 			}
 			else
 			{
@@ -578,12 +564,20 @@ namespace SADXModManager.Forms
 			}
 		}
 
-		/// <summary>Clicking links in release info.</summary>
+		/// <summary>Clicking Homepage link in release info.</summary>
 		private void labelReleasePageValue_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
 		{
-			if (labelHomepage.Text == "N/A")
+			if (labelHomepage.Links == null || labelHomepage.Links.Count == 0)
 				return;
-			Process.Start(new ProcessStartInfo(labelHomepage.Text) { UseShellExecute = true });
+			Process.Start(new ProcessStartInfo(labelHomepage.Links[0].LinkData.ToString()) { UseShellExecute = true });
+		}
+
+		/// <summary>Clicking Download link in release info.</summary>
+		private void labelDownloadLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+		{
+			if (labelDownloadLink.Links == null || labelDownloadLink.Links.Count == 0)
+				return;
+			Process.Start(new ProcessStartInfo(labelDownloadLink.Links[0].LinkData.ToString()) { UseShellExecute = true });
 		}
 
 		/// <summary>Clicking links in the changelog.</summary>
@@ -661,13 +655,6 @@ namespace SADXModManager.Forms
 						break;
 				}
 			}	
-		}
-
-		private void labelDownloadLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-		{
-			if (labelDownloadLink.Text == "N/A")
-				return;
-			Process.Start(new ProcessStartInfo(labelDownloadLink.Text) { UseShellExecute = true });
 		}
 	}
 }
