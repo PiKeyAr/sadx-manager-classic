@@ -23,20 +23,19 @@ using static SADXModManager.Utils;
 using System.Text;
 
 // TODO for first release
+// Clean up old Manager files
 // Import SADXModLoader.ini
-// Rework updates system
 
 // TODO for second release:
-// Add mods from URL
+// Add mods from archive
 // Mod dependencies
 // Reset to optimal/failsafe settings
 // SDL Configuration
-// Clean up
+// Clean up code
 // SA Manager switch
 // Game Health Check
 
 // TODO for third release:
-// Add mods from archive
 // AA and AF settings
 
 namespace SADXModManager
@@ -57,16 +56,6 @@ namespace SADXModManager
 		public string patchdatpath;
 		/// <summary>Path to Patches.json</summary>
 		public string patchesJsonPath;
-
-		// Stuff used for BackgroundWorker
-		/// <summary>True if the Mod Loader update check is underway</summary>
-		bool CheckLoader;
-		/// <summary>True if the Mod Manager update check is underway</summary>
-		bool CheckManager;
-		/// <summary>True if the Steam Launcher update check is underway</summary>
-		bool CheckLauncher;
-		/// <summary>True if mods update check is underway</summary>
-		bool CheckMods;
 
 		// Controller
 		/// <summary>DirectInput object</summary>
@@ -90,7 +79,9 @@ namespace SADXModManager
 		/// <summary>Class used for mod update checks</summary>
 		readonly ModUpdater modUpdater = new ModUpdater();
 		/// <summary>Background check for updates</summary>
-		BackgroundWorker updateChecker;
+		BackgroundWorker updateWorker;
+		/// <summary>"Updates available" form</summary>
+		Form updatesAvailableWindow;
 		/// <summary>Drag and drop identifier</summary>
 		static readonly string moddropname = "Mod" + Process.GetCurrentProcess().Id;
 		/// <summary>Class to sort ListView by column</summary>
@@ -148,6 +139,7 @@ namespace SADXModManager
 			new Size(1280, 720), // 720p
 			new Size(1920, 1080), // 1080p
 			new Size(3840, 2160), // 4K
+			new Size(7680, 4320) // 8K
 		};
 		#endregion
 
@@ -186,6 +178,7 @@ namespace SADXModManager
 			Application.ThreadException += Application_ThreadException;
 			this.Font = SystemFonts.MessageBoxFont;
 			InitializeComponent();
+			UpdateChecker.OneClickLinks = new List<string>();
 			Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
 			// ListView stuff
 			lvwColumnSorter = new ListViewColumnSorter();
@@ -250,6 +243,9 @@ namespace SADXModManager
 			// Create a new profile if it doesn't exist
 			if (gameSettings == null)
 				gameSettings = new GameSettings();
+			// Set current game folder
+			if (Directory.Exists(Path.Combine(managerExePath, "mods")))
+				gameSettings.GamePath = managerExePath;
 			// Populate save list
 			if (!Directory.Exists(Path.Combine(gameSettings.GamePath, "savedata")))
 				Directory.CreateDirectory(Path.Combine(gameSettings.GamePath, "savedata"));
@@ -282,7 +278,6 @@ namespace SADXModManager
 
 		private void MainForm_Load(object sender, EventArgs e)
 		{
-
 			// Set debugger thing
 			if (!Debugger.IsAttached)
 				Environment.CurrentDirectory = Application.StartupPath;
@@ -564,25 +559,25 @@ namespace SADXModManager
 
 			List<string> uris = Program.UriQueue.GetUris();
 
-			List<DownloadItem> uriDownloads = new List<DownloadItem>();
-
-			foreach (string str in uris)
-			{
-				DownloadItem item = HandleUri(str, this);
-				if (item != null)
-					uriDownloads.Add(item);
-			}
-
-			if (uriDownloads.Count > 0)
-			{
-				UpdatesAvailableDialog upd = new UpdatesAvailableDialog(uriDownloads, updatesTempPath);
-				if (upd.ShowDialog() == DialogResult.OK)
-					LoadModList();
-			}
-
 			Program.UriQueue.UriEnqueued += UriQueueOnUriEnqueued;
 
-			AutoUpdate(true, false, checkBoxCheckLoaderUpdatesStartup.Checked, checkBoxCheckManagerUpdateStartup.Checked, checkBoxCheckManagerUpdateStartup.Checked, checkBoxCheckUpdateModsStartup.Checked);
+			// Update check
+			InitializeWorker();
+			UpdateChecker.CheckMode = UpdateChecker.UpdateMode.Startup;
+			UpdateChecker.UpdateItems items = UpdateChecker.UpdateItems.None;
+			if (checkBoxCheckLoaderUpdatesStartup.Checked)
+				items |= UpdateChecker.UpdateItems.Loader;
+			if (checkBoxCheckManagerUpdateStartup.Checked)
+				items |= UpdateChecker.UpdateItems.Manager;
+			if (checkBoxCheckUpdateModsStartup.Checked)
+				items |= UpdateChecker.UpdateItems.Mods;
+			if (uris != null && uris.Count > 0)
+			{
+				UpdateChecker.OneClickLinks = uris;
+				items |= UpdateChecker.UpdateItems.OneClick;
+			}
+			UpdateChecker.ItemsToCheck = items;
+			AutoUpdate();
 
 			// If we've checked for updates, save the modified
 			// last update times without requiring the user to
@@ -593,27 +588,41 @@ namespace SADXModManager
 			}
 		}
 
-		private void AutoUpdate(bool startup, bool force, bool loader, bool manager, bool launcher, bool cmods, bool oneclick = false)
+		private void InitializeWorker()
 		{
-			// Automatic
-			if (!force && !startup && !UpdateTimeElapsed(managerConfig.UpdateUnit, managerConfig.UpdateFrequency, DateTime.FromFileTimeUtc(managerConfig.ModUpdateTime)))
+			if (updateWorker != null)
+			{
+				return;
+			}
+
+			updateWorker = new BackgroundWorker { WorkerSupportsCancellation = true };
+			updateWorker.DoWork += UpdateChecker_DoWork;
+			updateWorker.RunWorkerCompleted += UpdateChecker_RunWorkerCompleted;
+		}
+
+		private void AutoUpdate()
+		{
+			// Periodic update check but not enough time has passed since last check
+			if (UpdateChecker.CheckMode == UpdateChecker.UpdateMode.Scheduled && !UpdateTimeElapsed(managerConfig.UpdateUnit, managerConfig.UpdateFrequency, DateTime.FromFileTimeUtc(managerConfig.ModUpdateTime)))
 				return;
 
-			// User initiated
-			CheckLoader = loader;
-			CheckManager = manager;
-			CheckLauncher = launcher;
-			CheckMods = cmods;
-
-			if (!CheckLoader && !CheckMods && !CheckManager && !CheckLauncher && !oneclick)
+			// Nothing to check
+			if (UpdateChecker.ItemsToCheck == UpdateChecker.UpdateItems.None)
 				return;
+
+			if (updateWorker.IsBusy)
+			{
+				MessageBox.Show(this, "An update check is already taking place. Please wait a while and try again.", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+			}
 
 			InitializeWorker();
 
 			toolStripStatusLabel.Text = "Checking for updates...";
-			if (oneclick)
+			if (UpdateChecker.ItemsToCheck.HasFlag(UpdateChecker.UpdateItems.OneClick))
+			{
 				toolStripStatusLabel.Text = "Parsing URLs...";
-			if (cmods)
+			}
+			if (UpdateChecker.ItemsToCheck.HasFlag(UpdateChecker.UpdateItems.Mods) && (UpdateChecker.CheckMode == UpdateChecker.UpdateMode.Startup || UpdateChecker.CheckMode == UpdateChecker.UpdateMode.Scheduled))
 			{
 				checkedForUpdates = true;
 				managerConfig.ModUpdateTime = DateTime.UtcNow.ToFileTimeUtc();
@@ -624,7 +633,7 @@ namespace SADXModManager
 				if (!managerConfig.IgnoredModUpdates.Contains(mod.Key))
 					infoNew.Add(mod.Key, mod.Value);
 			}
-			updateChecker.RunWorkerAsync(infoNew.Select(x => new KeyValuePair<string, ModInfo>(x.Key, x.Value)).ToList());
+			updateWorker.RunWorkerAsync(infoNew.Select(x => new KeyValuePair<string, ModInfo>(x.Key, x.Value)).ToList());
 			buttonCheckForUpdatesNow.Enabled = buttonCheckModUpdates.Enabled = false;
 		}
 
@@ -1224,7 +1233,7 @@ namespace SADXModManager
 
 		private void saveAndPlayButton_Click(object sender, EventArgs e)
 		{
-			if (updateChecker?.IsBusy == true)
+			if (updateWorker?.IsBusy == true)
 			{
 				var result = MessageBox.Show(this, "Mods are still being checked for updates. Continue anyway?",
 					"Busy", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
@@ -1236,8 +1245,8 @@ namespace SADXModManager
 
 				Enabled = false;
 
-				updateChecker.CancelAsync();
-				while (updateChecker.IsBusy)
+				updateWorker.CancelAsync();
+				while (updateWorker.IsBusy)
 				{
 					Application.DoEvents();
 				}
@@ -1332,30 +1341,13 @@ namespace SADXModManager
 				return;
 			}
 
-			List<DownloadItem> uriDownloads = new List<DownloadItem>();
-
-			DownloadItem item = HandleUri(args.Uri, this);
-			if (item != null)
-				uriDownloads.Add(item);
-
-			if (uriDownloads.Count > 0)
+			if (args.Uri != null && !string.IsNullOrEmpty(args.Uri))
 			{
-				UpdatesAvailableDialog upd = new UpdatesAvailableDialog(uriDownloads, updatesTempPath);
-				if (upd.ShowDialog() == DialogResult.OK)
-					LoadModList();
-			}
-		}
-
-		private void InitializeWorker()
-		{
-			if (updateChecker != null)
-			{
-				return;
+				UpdateChecker.ItemsToCheck |= UpdateChecker.UpdateItems.OneClick;
+				UpdateChecker.OneClickLinks.Add(args.Uri);
+				AutoUpdate();
 			}
 
-			updateChecker = new UpdateChecker { WorkerSupportsCancellation = true };
-			updateChecker.DoWork += UpdateChecker_DoWork;
-			updateChecker.RunWorkerCompleted += UpdateChecker_RunWorkerCompleted;
 		}
 
 		private void UpdateChecker_EnableControls()
@@ -1374,8 +1366,8 @@ namespace SADXModManager
 			if (modUpdater.ForceUpdate)
 			{
 				toolStripStatusLabel.Text = "Update check completed.";
-				updateChecker?.Dispose();
-				updateChecker = null;
+				updateWorker?.Dispose();
+				updateWorker = null;
 				modUpdater.ForceUpdate = false;
 				modUpdater.Clear();
 			}
@@ -1430,13 +1422,20 @@ namespace SADXModManager
 				}
 			} while (result == DialogResult.Retry);
 
-			using (var dialog = new UpdatesAvailableDialog(items, updatesTempPath))
+			if (updatesAvailableWindow != null)
 			{
-				if (dialog.ShowDialog(this) == DialogResult.OK)
-					toolStripStatusLabel.Text = "Mods updated successfully.";
-				else
-					toolStripStatusLabel.Text = "Mod update cancelled.";
+				MessageBox.Show(this, "The update check has been interrupted with another one. The dialog will be recreated to include new items.", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+				updatesAvailableWindow.Close();
+				updatesAvailableWindow.Dispose();
+				updatesAvailableWindow = null;
 			}
+			updatesAvailableWindow = new UpdatesAvailableDialog(items, updatesTempPath);
+
+			DialogResult res = updatesAvailableWindow.ShowDialog(this);
+			if (res == DialogResult.OK)
+				toolStripStatusLabel.Text = "Mods updated successfully.";
+			else
+				toolStripStatusLabel.Text = "Mod update cancelled.";
 
 			// Delete temporary folder
 			do
@@ -1444,7 +1443,8 @@ namespace SADXModManager
 				try
 				{
 					result = DialogResult.Cancel;
-					Directory.Delete(updatesTempPath, true);
+					if (Directory.Exists(updatesTempPath))
+						Directory.Delete(updatesTempPath, true);
 				}
 				catch (Exception ex)
 				{
@@ -1479,53 +1479,74 @@ namespace SADXModManager
 			List<DownloadItem> items = new List<DownloadItem>();
 			List<string> errors = new List<string>();
 
-			if (CheckMods)
+			// Mods (1-click)
+			if (UpdateChecker.ItemsToCheck.HasFlag(UpdateChecker.UpdateItems.OneClick))
+			{
+				foreach (string str in UpdateChecker.OneClickLinks)
+				{
+					DownloadItem item = HandleUri(str, this);
+					if (item != null)
+						items.Add(item);
+				}
+			}
+
+			// Mods
+			if (UpdateChecker.ItemsToCheck.HasFlag(UpdateChecker.UpdateItems.Mods))
 			{
 				var updatableMods = e.Argument as List<KeyValuePair<string, ModInfo>>;
-				List<ModDownload> updates = null;
 
-				var tokenSource = new CancellationTokenSource();
-				CancellationToken token = tokenSource.Token;
-
-				using (var task = new Task(() => modUpdater.GetModUpdates(updatableMods, out updates, out errors, token), token))
+				if (updatableMods.Count > 0)
 				{
-					task.Start();
 
-					while (!task.IsCompleted && !task.IsCanceled)
+					List<ModDownload> updates = null;
+
+					var tokenSource = new CancellationTokenSource();
+					CancellationToken token = tokenSource.Token;
+
+					using (var task = new Task(() => modUpdater.GetModUpdates(updatableMods, out updates, out errors, token), token))
 					{
-						Application.DoEvents();
+						task.Start();
 
-						if (worker.CancellationPending)
+						while (!task.IsCompleted && !task.IsCanceled)
 						{
-							tokenSource.Cancel();
-						}
-					}
+							Application.DoEvents();
 
-					task.Wait(token);
+							if (worker.CancellationPending)
+							{
+								tokenSource.Cancel();
+							}
+						}
+
+						task.Wait(token);
+					}
+					// Mod updates
+					if (updates != null && updates.Count > 0)
+						foreach (var upd in updates)
+							items.Add(new DownloadItem(upd));
 				}
-				// Mod updates
-				if (updates != null && updates.Count > 0)
-					foreach (var upd in updates)
-						items.Add(new DownloadItem(upd));
 			}
 
 			// Loader update
-			DownloadItem loaderItem = CheckLoaderUpdates(this);
-			if (loaderItem != null)
-				items.Add(loaderItem);
-			// Launcher update
-			DownloadItem launcherItem = CheckLauncherUpdates(this);
-			if (launcherItem != null)
-				items.Add(launcherItem);
-			// Manager update
-			DownloadItem managerItem = CheckManagerUpdates(this);
-			if (managerItem != null)
-				items.Add(managerItem);
-
+			if (UpdateChecker.ItemsToCheck.HasFlag(UpdateChecker.UpdateItems.Loader))
+			{
+				DownloadItem loaderItem = CheckLoaderUpdates(this);
+				if (loaderItem != null)
+					items.Add(loaderItem);
+			}
+			if (UpdateChecker.ItemsToCheck.HasFlag(UpdateChecker.UpdateItems.Manager))
+			{
+				// Launcher update
+				DownloadItem launcherItem = CheckLauncherUpdates(this);
+				if (launcherItem != null)
+					items.Add(launcherItem);
+				// Manager update
+				DownloadItem managerItem = CheckManagerUpdates(this);
+				if (managerItem != null)
+					items.Add(managerItem);
+			}
 			e.Result = new Tuple<List<DownloadItem>, List<string>>(items, errors);
 		}
 
-		// TODO: merge with ^
 		private void UpdateChecker_DoWorkForced(object sender, DoWorkEventArgs e)
 		{
 			if (!(sender is BackgroundWorker worker))
@@ -1591,19 +1612,7 @@ namespace SADXModManager
 			if (updates != null && updates.Count > 0)
 				foreach (var upd in updates)
 					items.Add(new DownloadItem(upd));
-			// Loader update
-			DownloadItem loaderItem = CheckLoaderUpdates(this);
-			if (loaderItem != null)
-				items.Add(loaderItem);
-			// Launcher update
-			DownloadItem launcherItem = CheckLauncherUpdates(this);
-			if (launcherItem != null)
-				items.Add(launcherItem);
-			// Manager update
-			DownloadItem managerItem = CheckManagerUpdates(this);
-			if (managerItem != null)
-				items.Add(managerItem);
-
+			
 			if (items.Count == 0)
 				items = null;
 
@@ -1742,8 +1751,9 @@ namespace SADXModManager
 		private void UpdateSelectedMods()
 		{
 			InitializeWorker();
-			CheckManager = CheckLoader = CheckLauncher = false;
-			CheckMods = true;
+			UpdateChecker.CheckMode = UpdateChecker.UpdateMode.User;
+			UpdateChecker.ItemsToCheck = UpdateChecker.UpdateItems.Mods;
+
 			List<KeyValuePair<string, ModInfo>> selected = listViewMods.SelectedItems.Cast<ListViewItem>()
 				.Select(x => (string)x.Tag)
 				.Select(x => new KeyValuePair<string, ModInfo>(x, mods[x]))
@@ -1754,7 +1764,7 @@ namespace SADXModManager
 				if (!managerConfig.IgnoredModUpdates.Contains(mod.Key))
 					infoNew.Add(mod);
 			}
-			updateChecker?.RunWorkerAsync(infoNew);
+			updateWorker?.RunWorkerAsync(infoNew);
 		}
 
 		private void checkForUpdatesToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1820,11 +1830,13 @@ namespace SADXModManager
 
 					InitializeWorker();
 
-					updateChecker.DoWork -= UpdateChecker_DoWork;
-					updateChecker.DoWork += UpdateChecker_DoWorkForced;
+					updateWorker.DoWork -= UpdateChecker_DoWork;
+					updateWorker.DoWork += UpdateChecker_DoWorkForced;
 
-					CheckManager = CheckLoader = CheckLauncher = false;
-					updateChecker.RunWorkerAsync(failed);
+					UpdateChecker.CheckMode = UpdateChecker.UpdateMode.User;
+					UpdateChecker.ItemsToCheck = UpdateChecker.UpdateItems.Mods;
+
+					updateWorker.RunWorkerAsync(failed);
 
 					modUpdater.ForceUpdate = true;
 					buttonCheckForUpdatesNow.Enabled = false;
@@ -1842,8 +1854,10 @@ namespace SADXModManager
 		{
 			buttonCheckForUpdatesNow.Enabled = false;
 			buttonCheckModUpdates.Enabled = false;
-			AutoUpdate(false, true, true, true, true, true);
-			UpdateChecker_EnableControls();
+			InitializeWorker();
+			UpdateChecker.CheckMode = UpdateChecker.UpdateMode.User;
+			UpdateChecker.ItemsToCheck = (UpdateChecker.UpdateItems.Mods | UpdateChecker.UpdateItems.Loader | UpdateChecker.UpdateItems.Manager | UpdateChecker.UpdateItems.Launcher);
+			AutoUpdate();
 		}
 
 		private void installURLHandlerButton_Click(object sender, EventArgs e)
@@ -2647,7 +2661,9 @@ namespace SADXModManager
 
 		private void buttonCheckModUpdates_Click(object sender, EventArgs e)
 		{
-			AutoUpdate(false, true, false, false, false, true);
+			UpdateChecker.ItemsToCheck = UpdateChecker.UpdateItems.Mods;
+			UpdateChecker.CheckMode = UpdateChecker.UpdateMode.User;
+			AutoUpdate();
 		}
 
 		private void newModToolStripMenuItem_Click(object sender, EventArgs e)

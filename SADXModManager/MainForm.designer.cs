@@ -1439,7 +1439,8 @@
             "2x Native",
             "720p",
             "1080p",
-            "4K"});
+            "4K",
+			"8K"});
             this.comboBoxResolutionPreset.Location = new System.Drawing.Point(276, 76);
             this.comboBoxResolutionPreset.Name = "comboBoxResolutionPreset";
             this.comboBoxResolutionPreset.Size = new System.Drawing.Size(84, 21);
