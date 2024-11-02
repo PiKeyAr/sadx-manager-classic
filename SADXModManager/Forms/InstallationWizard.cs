@@ -200,6 +200,7 @@ namespace SADXModManager.Forms
 			// Create a new configuration			
 			Directory.CreateDirectory(managerAppDataPath);
 			managerConfig = new DataClasses.ClassicManagerJson();
+			managerConfig.UseLoaderMirror = Environment.OSVersion.Version.Major <= 5;
 			profilesJson = new DataClasses.ProfilesJson();
 			profilesJson.ProfilesList.Add(new ProfileData { Name = "Default", Filename = "Default.json" });
 			if (gameSettings == null)
@@ -220,7 +221,7 @@ namespace SADXModManager.Forms
 			if (checkBoxDirectX.Checked)
 				items.Add(GetDirectXDownload(this));
 			items.Add(CheckSteamToolUpdates(this));
-			items.Add(CheckLoaderUpdates(this, Environment.OSVersion.Version.Major <= 5));
+			items.Add(CheckLoaderUpdates(this, managerConfig.UseLoaderMirror));
 			items.Add(CheckLauncherUpdates(this));
 			DownloadItem manager = CheckManagerUpdates(this);
 			bool isManager = manager != null; // Manager has been downloaded
