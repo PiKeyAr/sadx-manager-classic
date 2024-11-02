@@ -255,6 +255,8 @@
             this.toolStripStatusLabelGameFolder = new System.Windows.Forms.ToolStripStatusLabel();
             this.contextMenuStripProfile = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.toolStripMenuItemDeleteProfile = new System.Windows.Forms.ToolStripMenuItem();
+            this.labelLoaderUpdateChannel = new System.Windows.Forms.Label();
+            this.comboBoxLoaderUpdate = new System.Windows.Forms.ComboBox();
             labelGameScreen = new System.Windows.Forms.Label();
             label1 = new System.Windows.Forms.Label();
             label2 = new System.Windows.Forms.Label();
@@ -484,7 +486,7 @@
             "All Screens"});
             this.comboBoxScreenNumber.Location = new System.Drawing.Point(87, 19);
             this.comboBoxScreenNumber.Name = "comboBoxScreenNumber";
-            this.comboBoxScreenNumber.Size = new System.Drawing.Size(350, 21);
+            this.comboBoxScreenNumber.Size = new System.Drawing.Size(352, 21);
             this.comboBoxScreenNumber.TabIndex = 0;
             this.toolTip.SetToolTip(this.comboBoxScreenNumber, "The screen to put the game on.");
             this.comboBoxScreenNumber.SelectedIndexChanged += new System.EventHandler(this.screenNumComboBox_SelectedIndexChanged);
@@ -903,7 +905,7 @@
             this.tabPageCodes.Controls.Add(this.listViewCodes);
             this.tabPageCodes.Location = new System.Drawing.Point(4, 22);
             this.tabPageCodes.Name = "tabPageCodes";
-            this.tabPageCodes.Size = new System.Drawing.Size(476, 421);
+            this.tabPageCodes.Size = new System.Drawing.Size(478, 421);
             this.tabPageCodes.TabIndex = 1;
             this.tabPageCodes.Text = "Codes";
             // 
@@ -963,7 +965,7 @@
             this.tabPageGameConfig.Location = new System.Drawing.Point(4, 22);
             this.tabPageGameConfig.Name = "tabPageGameConfig";
             this.tabPageGameConfig.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageGameConfig.Size = new System.Drawing.Size(476, 421);
+            this.tabPageGameConfig.Size = new System.Drawing.Size(478, 421);
             this.tabPageGameConfig.TabIndex = 7;
             this.tabPageGameConfig.Text = "Game Settings";
             this.tabPageGameConfig.UseVisualStyleBackColor = true;
@@ -980,7 +982,7 @@
             this.tabControlGameConfig.Location = new System.Drawing.Point(3, 3);
             this.tabControlGameConfig.Name = "tabControlGameConfig";
             this.tabControlGameConfig.SelectedIndex = 0;
-            this.tabControlGameConfig.Size = new System.Drawing.Size(470, 415);
+            this.tabControlGameConfig.Size = new System.Drawing.Size(472, 415);
             this.tabControlGameConfig.TabIndex = 0;
             // 
             // tabPageGraphics
@@ -993,7 +995,7 @@
             this.tabPageGraphics.Location = new System.Drawing.Point(4, 22);
             this.tabPageGraphics.Name = "tabPageGraphics";
             this.tabPageGraphics.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageGraphics.Size = new System.Drawing.Size(462, 389);
+            this.tabPageGraphics.Size = new System.Drawing.Size(464, 389);
             this.tabPageGraphics.TabIndex = 2;
             this.tabPageGraphics.Text = "Graphics";
             // 
@@ -1009,7 +1011,7 @@
             this.groupBoxGraphicsOther.Controls.Add(this.labelBgFillMode);
             this.groupBoxGraphicsOther.Location = new System.Drawing.Point(7, 271);
             this.groupBoxGraphicsOther.Name = "groupBoxGraphicsOther";
-            this.groupBoxGraphicsOther.Size = new System.Drawing.Size(450, 75);
+            this.groupBoxGraphicsOther.Size = new System.Drawing.Size(452, 75);
             this.groupBoxGraphicsOther.TabIndex = 2;
             this.groupBoxGraphicsOther.TabStop = false;
             this.groupBoxGraphicsOther.Text = "Other Settings";
@@ -1106,7 +1108,7 @@
             this.groupBoxVisuals.Controls.Add(this.checkBoxForceTextureFilter);
             this.groupBoxVisuals.Location = new System.Drawing.Point(6, 148);
             this.groupBoxVisuals.Name = "groupBoxVisuals";
-            this.groupBoxVisuals.Size = new System.Drawing.Size(450, 117);
+            this.groupBoxVisuals.Size = new System.Drawing.Size(452, 117);
             this.groupBoxVisuals.TabIndex = 1;
             this.groupBoxVisuals.TabStop = false;
             this.groupBoxVisuals.Text = "Visuals";
@@ -1314,7 +1316,7 @@
             this.groupBoxDisplay.Controls.Add(this.numericUpDownVerticalResolution);
             this.groupBoxDisplay.Location = new System.Drawing.Point(6, 6);
             this.groupBoxDisplay.Name = "groupBoxDisplay";
-            this.groupBoxDisplay.Size = new System.Drawing.Size(450, 136);
+            this.groupBoxDisplay.Size = new System.Drawing.Size(452, 136);
             this.groupBoxDisplay.TabIndex = 0;
             this.groupBoxDisplay.TabStop = false;
             this.groupBoxDisplay.Text = "Display";
@@ -1440,7 +1442,7 @@
             "720p",
             "1080p",
             "4K",
-			"8K"});
+            "8K"});
             this.comboBoxResolutionPreset.Location = new System.Drawing.Point(276, 76);
             this.comboBoxResolutionPreset.Name = "comboBoxResolutionPreset";
             this.comboBoxResolutionPreset.Size = new System.Drawing.Size(84, 21);
@@ -2277,7 +2279,7 @@
             this.tabPageDebug.Location = new System.Drawing.Point(4, 22);
             this.tabPageDebug.Margin = new System.Windows.Forms.Padding(2);
             this.tabPageDebug.Name = "tabPageDebug";
-            this.tabPageDebug.Size = new System.Drawing.Size(476, 421);
+            this.tabPageDebug.Size = new System.Drawing.Size(478, 421);
             this.tabPageDebug.TabIndex = 5;
             this.tabPageDebug.Text = "Debug";
             // 
@@ -2814,7 +2816,7 @@
             this.tabPageManagerConfig.Location = new System.Drawing.Point(4, 22);
             this.tabPageManagerConfig.Name = "tabPageManagerConfig";
             this.tabPageManagerConfig.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageManagerConfig.Size = new System.Drawing.Size(476, 421);
+            this.tabPageManagerConfig.Size = new System.Drawing.Size(478, 421);
             this.tabPageManagerConfig.TabIndex = 8;
             this.tabPageManagerConfig.Text = "Options";
             this.tabPageManagerConfig.UseVisualStyleBackColor = true;
@@ -2862,6 +2864,8 @@
             // 
             this.groupBoxUpdates.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBoxUpdates.Controls.Add(this.comboBoxLoaderUpdate);
+            this.groupBoxUpdates.Controls.Add(this.labelLoaderUpdateChannel);
             this.groupBoxUpdates.Controls.Add(this.buttonSwitchToSAManager);
             this.groupBoxUpdates.Controls.Add(this.checkBoxCheckLoaderUpdatesStartup);
             this.groupBoxUpdates.Controls.Add(this.buttonCheckForUpdatesNow);
@@ -2872,7 +2876,7 @@
             this.groupBoxUpdates.Controls.Add(this.checkBoxCheckManagerUpdateStartup);
             this.groupBoxUpdates.Location = new System.Drawing.Point(6, 115);
             this.groupBoxUpdates.Name = "groupBoxUpdates";
-            this.groupBoxUpdates.Size = new System.Drawing.Size(461, 121);
+            this.groupBoxUpdates.Size = new System.Drawing.Size(461, 180);
             this.groupBoxUpdates.TabIndex = 1;
             this.groupBoxUpdates.TabStop = false;
             this.groupBoxUpdates.Text = "Updates";
@@ -3099,7 +3103,7 @@
             this.newModToolStripMenuItem});
             this.contextMenuStripAddMod.Name = "contextMenuStripAddMod";
             this.contextMenuStripAddMod.ShowImageMargin = false;
-            this.contextMenuStripAddMod.Size = new System.Drawing.Size(156, 98);
+            this.contextMenuStripAddMod.Size = new System.Drawing.Size(153, 76);
             this.contextMenuStripAddMod.Text = "From Archive...";
             // 
             // addModArchivetoolStripMenuItem
@@ -3112,7 +3116,7 @@
             // fromURLToolStripMenuItem
             // 
             this.fromURLToolStripMenuItem.Name = "fromURLToolStripMenuItem";
-            this.fromURLToolStripMenuItem.Size = new System.Drawing.Size(155, 22);
+            this.fromURLToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.fromURLToolStripMenuItem.Text = "Add from URL...";
             this.fromURLToolStripMenuItem.ToolTipText = "Install one or more mods using links to compatible resources";
             this.fromURLToolStripMenuItem.Click += new System.EventHandler(this.fromURLToolStripMenuItem_Click);
@@ -3125,7 +3129,7 @@
             // newModToolStripMenuItem
             // 
             this.newModToolStripMenuItem.Name = "newModToolStripMenuItem";
-            this.newModToolStripMenuItem.Size = new System.Drawing.Size(155, 22);
+            this.newModToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.newModToolStripMenuItem.Text = "New Mod...";
             this.newModToolStripMenuItem.ToolTipText = "Create a new mod";
             this.newModToolStripMenuItem.Click += new System.EventHandler(this.newModToolStripMenuItem_Click);
@@ -3174,6 +3178,28 @@
             this.toolStripMenuItemDeleteProfile.Size = new System.Drawing.Size(119, 22);
             this.toolStripMenuItemDeleteProfile.Text = "Delete Profile";
             this.toolStripMenuItemDeleteProfile.Click += new System.EventHandler(this.toolStripMenuItemDeleteProfile_Click);
+            // 
+            // labelLoaderUpdateChannel
+            // 
+            this.labelLoaderUpdateChannel.AutoSize = true;
+            this.labelLoaderUpdateChannel.Location = new System.Drawing.Point(6, 118);
+            this.labelLoaderUpdateChannel.Name = "labelLoaderUpdateChannel";
+            this.labelLoaderUpdateChannel.Size = new System.Drawing.Size(123, 13);
+            this.labelLoaderUpdateChannel.TabIndex = 7;
+            this.labelLoaderUpdateChannel.Text = "Loader Update Channel:";
+            // 
+            // comboBoxLoaderUpdate
+            // 
+            this.comboBoxLoaderUpdate.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBoxLoaderUpdate.FormattingEnabled = true;
+            this.comboBoxLoaderUpdate.Items.AddRange(new object[] {
+            "PkR\'s mirror",
+            "Official"});
+            this.comboBoxLoaderUpdate.Location = new System.Drawing.Point(9, 135);
+            this.comboBoxLoaderUpdate.Name = "comboBoxLoaderUpdate";
+            this.comboBoxLoaderUpdate.Size = new System.Drawing.Size(118, 21);
+            this.comboBoxLoaderUpdate.TabIndex = 7;
+            this.toolTip.SetToolTip(this.comboBoxLoaderUpdate, resources.GetString("comboBoxLoaderUpdate.ToolTip"));
             // 
             // MainForm
             // 
@@ -3490,5 +3516,7 @@
 		private System.Windows.Forms.CheckBox checkBoxSingleProfile;
 		private System.Windows.Forms.ToolStripMenuItem configureToolStripMenuItem;
 		private System.Windows.Forms.ToolStripSeparator toolStripMenuItem2Separator2;
+		private System.Windows.Forms.ComboBox comboBoxLoaderUpdate;
+		private System.Windows.Forms.Label labelLoaderUpdateChannel;
 	}
 }

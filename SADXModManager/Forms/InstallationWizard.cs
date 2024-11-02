@@ -220,7 +220,7 @@ namespace SADXModManager.Forms
 			if (checkBoxDirectX.Checked)
 				items.Add(GetDirectXDownload(this));
 			items.Add(CheckSteamToolUpdates(this));
-			items.Add(CheckLoaderUpdates(this));
+			items.Add(CheckLoaderUpdates(this, Environment.OSVersion.Version.Major <= 5));
 			items.Add(CheckLauncherUpdates(this));
 			DownloadItem manager = CheckManagerUpdates(this);
 			bool isManager = manager != null; // Manager has been downloaded

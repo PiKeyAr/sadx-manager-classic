@@ -87,8 +87,9 @@ namespace SADXModManager
 		}
 
 		/// <summary>Retrieves a download for an update for SADX Mod Loader from direct links (null if no update).</summary>
-		public static DownloadItem CheckLoaderUpdates(Form parent)
+		public static DownloadItem CheckLoaderUpdates(Form parent, bool xp)
 		{
+			string loaderUpdateUrl = xp ? loaderUpdatePkRUrl : loaderUpdateOriginalUrl;
 			string mlverfile = Path.Combine(managerAppDataPath, "sadxmlver.txt");
 			try
 			{

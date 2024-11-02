@@ -50,8 +50,10 @@ namespace SADXModManager
 		public static ProfilesJson profilesJson;
 
 		// URLs
-		/// <summary>URL of SADX Mod Loader 7z</summary>
-		public static string loaderUpdateUrl = "https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/sadx-manager-classic/SADXModLoader.7z";
+		/// <summary>URL of SADX Mod Loader DLL (PkR's mirror)</summary>
+		public static string loaderUpdatePkRUrl = "https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/Setup/data/SADXModLoaderXP.7z";
+		/// <summary>URL of SADX Mod Loader DLL (Original)</summary>
+		public static string loaderUpdateOriginalUrl = "https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/Setup/data/SADXModLoader.7z";		
 		/// <summary>URL of SADX Mod Manager EXE</summary>
 		public static string managerUpdateUrl = "https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/sadx-manager-classic/SADXModManager.exe";
 		/// <summary>URL of SADX Mod Manager changelog</summary>
