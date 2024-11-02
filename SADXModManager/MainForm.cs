@@ -1009,12 +1009,14 @@ namespace SADXModManager
 			// Save codes
 			List<Code> selectedCodes = new List<Code>();
 			List<Code> selectedCodePatches = new List<Code>();
+			gameSettings.EnabledCodes.Clear();
 			foreach (Code item in listViewCodes.CheckedIndices.OfType<int>().Select(a => codes[a]))
 			{
 				if (item.Patch)
 					selectedCodePatches.Add(item);
 				else
 					selectedCodes.Add(item);
+				gameSettings.EnabledCodes.Add(item.Name);
 			}
 			CodeList.WriteDatFile(patchdatpath, selectedCodePatches);
 			CodeList.WriteDatFile(codedatpath, selectedCodes);

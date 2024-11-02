@@ -3193,8 +3193,8 @@
             this.comboBoxLoaderUpdate.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBoxLoaderUpdate.FormattingEnabled = true;
             this.comboBoxLoaderUpdate.Items.AddRange(new object[] {
-            "PkR\'s mirror",
-            "Official"});
+			"Official",
+			"PkR\'s mirror"});
             this.comboBoxLoaderUpdate.Location = new System.Drawing.Point(9, 135);
             this.comboBoxLoaderUpdate.Name = "comboBoxLoaderUpdate";
             this.comboBoxLoaderUpdate.Size = new System.Drawing.Size(118, 21);
