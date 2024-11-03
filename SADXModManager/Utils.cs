@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Microsoft.Win32;
@@ -94,9 +95,12 @@ namespace SADXModManager
 			string assetName = "SADXModLoader.7z";
 			string mlverfile = Path.Combine(managerAppDataPath, "sadxmlver.txt");
 			string currentTagName = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "605";
-
+			uint currentID = 604;
+			if (!uint.TryParse(currentTagName, out currentID))
+				currentID = 604;
 			try
 			{
+				StringBuilder changelog = new StringBuilder();
 				List<GitHubRelease> releases;
 				try
 				{
@@ -127,6 +131,15 @@ namespace SADXModManager
 					if (asset == null)
 						continue;
 
+					uint releaseID = 0;
+					if (uint.TryParse(release.TagName, out releaseID))
+					{
+						if (releaseID > currentID)
+						{
+							changelog.AppendLine(string.Format("Revision {0}\n{1}\n", release.TagName, release.Body));
+						}
+					}
+
 					DateTime uploaded = DateTime.Parse(asset.Uploaded, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal);
 					if (uploaded > dateCheck)
 					{
@@ -143,7 +156,7 @@ namespace SADXModManager
 				
 				if (latestRelease.TagName != currentTagName)
 				{
-					string body = Regex.Replace(latestRelease.Body, "(?<!\r)\n", "\r\n");
+					string body = Regex.Replace(changelog.ToString(), "(?<!\r)\n", "\r\n");
 
 					return new DownloadItem()
 					{
@@ -161,7 +174,7 @@ namespace SADXModManager
 						ReleaseDate = DateTime.Parse(latestRelease.Published, DateTimeFormatInfo.InvariantInfo),
 						UploadDate = DateTime.Parse(latestAsset.Uploaded, DateTimeFormatInfo.InvariantInfo),
 						DownloadSize = latestAsset.Size,
-						Changelog = latestRelease.Body,
+						Changelog = body.TrimEnd(),
 					};
 				}
 				else
