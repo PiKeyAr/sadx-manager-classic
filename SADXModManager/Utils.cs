@@ -87,52 +87,85 @@ namespace SADXModManager
 		}
 
 		/// <summary>Retrieves a download for an update for SADX Mod Loader from direct links (null if no update).</summary>
-		public static DownloadItem CheckLoaderUpdates(Form parent, bool xp)
+		public static DownloadItem CheckLoaderUpdates(Form parent)
 		{
-			string loaderUpdateUrl = xp ? loaderUpdatePkRUrl : loaderUpdateOriginalUrl;
+			string url_releases = "https://api.github.com/repos/x-hax/sadx-mod-loader/releases";
+			string text_releases = string.Empty;
+			string assetName = "SADXModLoader.7z";
 			string mlverfile = Path.Combine(managerAppDataPath, "sadxmlver.txt");
+			string currentTagName = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "605";
+
 			try
 			{
-				// Read version info
-				string msg = webClient.DownloadString("http://mm.reimuhakurei.net/toolchangelog.php?tool=sadxml&rev=" + (File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "590"));
-				// If there's no info, there's no update
-				if (msg.Length == 0 && File.Exists(Path.Combine(gameSettings.GamePath, "mods", "SADXModLoader.dll")))
-					return null;
-				string targetver = msg[12] == ' ' ? msg.Substring(9, 3) : msg.Substring(9, 4);
-				// Get request
-				WebRequest req = WebRequest.Create(loaderUpdateUrl);
-				req.Method = "HEAD";
-				using (WebResponse resp = req.GetResponse())
+				List<GitHubRelease> releases;
+				try
 				{
-					// Get size
-					long size = GetDownloadSize(resp);
-					// If the URL doesn't work, output an error
-					if (size == 0)
+					text_releases = webClient.DownloadString(url_releases);
+				}
+				catch (Exception e)
+				{
+					MessageBox.Show(parent, string.Format("Error downloading Mod Loader GitHub repo data from\n`{0}`.\n{1}\n\nIf this is a 403 error, you may be hitting a rate limit. Wait a while and try again.", url_releases, e.Message.ToString()), "SADX Mod Manager Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					return null;
+				}
+				
+				releases = JsonConvert.DeserializeObject<List<GitHubRelease>>(text_releases)
+				.Where(x => !x.Draft && !x.PreRelease).ToList();
+				if (releases == null || releases.Count == 0)
+					throw new Exception("No GitHub releases found for URL " + url_releases);
+
+				GitHubRelease latestRelease = null;
+				GitHubAsset latestAsset = null;
+
+				DateTime dateCheck = DateTime.MinValue;
+
+				foreach (GitHubRelease release in releases)
+				{
+					GitHubAsset asset;
+					asset = release.Assets
+						.FirstOrDefault(x => x.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase));
+
+					if (asset == null)
+						continue;
+
+					DateTime uploaded = DateTime.Parse(asset.Uploaded, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal);
+					if (uploaded > dateCheck)
 					{
-						MessageBox.Show(parent, "Could not retrieve SADX Mod Loader update information: size is 0", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
-						return null;
+						latestRelease = release;
+						latestAsset = asset;
+						dateCheck = uploaded;
 					}
-					// Get last modified date
-					DateTime modifiedDate = GetDownloadDate((HttpWebResponse)resp);
+				}
+
+				if (latestRelease == null || latestAsset == null)
+				{
+					return null;
+				}
+				
+				if (latestRelease.TagName != currentTagName)
+				{
+					string body = Regex.Replace(latestRelease.Body, "(?<!\r)\n", "\r\n");
+
 					return new DownloadItem()
 					{
+						Type = DownloadItem.DownloadItemType.Loader,
 						Name = "SADX Mod Loader",
 						Authors = "MainMemory && x-hax",
-						Version = targetver,
-						ReleaseDate = modifiedDate,
-						UploadDate = modifiedDate,
-						DownloadSize = size,
 						FileCount = 1,
-						HomepageUrl = "https://github.com/X-Hax/sadx-mod-loader",
-						DownloadUrl = loaderUpdateUrl,
-						ReleaseName = "Revision " + targetver,
-						ReleaseTag = "",
+						DownloadUrl = latestAsset.DownloadUrl,
+						ReleaseName = "Revision " + latestRelease.TagName,
 						Description = "The main tool that makes modding possible. Always keep it up to date.",
-						Files = new List<Tuple<string, string, long>> { new Tuple<string, string, long>("Download", "SADXModLoader.7z", size) },
-						Changelog = msg.Replace("\n", "\r\n"),
-						Type = DownloadItem.DownloadItemType.Loader
+						Files = new List<Tuple<string, string, long>> { new Tuple<string, string, long>("Download", "SADXModLoader.7z", latestAsset.Size) },
+						HomepageUrl = "https://github.com/x-hax/sadx-mod-loader",
+						ReleaseTag = latestRelease.TagName,
+						Version = latestRelease.TagName,
+						ReleaseDate = DateTime.Parse(latestRelease.Published, DateTimeFormatInfo.InvariantInfo),
+						UploadDate = DateTime.Parse(latestAsset.Uploaded, DateTimeFormatInfo.InvariantInfo),
+						DownloadSize = latestAsset.Size,
+						Changelog = latestRelease.Body,
 					};
 				}
+				else
+					return null;
 			}
 			catch (Exception ex)
 			{

@@ -523,7 +523,6 @@ namespace SADXModManager
 			// Load Options/Manager settings
 			checkBoxKeepManagerOpen.Checked = managerConfig.KeepManagerOpen;
 			checkBoxSingleProfile.Checked = managerConfig.SingleProfileMode;
-			comboBoxLoaderUpdate.SelectedIndex = managerConfig.UseLoaderMirror ? 1 : 0;
 			suppressEvent = false;
 		}
 
@@ -1128,7 +1127,6 @@ namespace SADXModManager
 				managerConfig.WindowPosition = Location;
 				managerConfig.WindowSize = Size;
 			}
-			managerConfig.UseLoaderMirror = comboBoxLoaderUpdate.SelectedIndex == 0 ? false : true;
 			// Serialize JSONs and sonicDX.ini
 			if (!saveProfile && checkBoxSingleProfile.Checked)
 				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", "Default.json");
@@ -1533,7 +1531,7 @@ namespace SADXModManager
 			// Loader update
 			if (UpdateChecker.ItemsToCheck.HasFlag(UpdateChecker.UpdateItems.Loader))
 			{
-				DownloadItem loaderItem = CheckLoaderUpdates(this, comboBoxLoaderUpdate.SelectedIndex == 1);
+				DownloadItem loaderItem = CheckLoaderUpdates(this);
 				if (loaderItem != null)
 					items.Add(loaderItem);
 			}

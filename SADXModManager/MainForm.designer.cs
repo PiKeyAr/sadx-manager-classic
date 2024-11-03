@@ -255,8 +255,6 @@
             this.toolStripStatusLabelGameFolder = new System.Windows.Forms.ToolStripStatusLabel();
             this.contextMenuStripProfile = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.toolStripMenuItemDeleteProfile = new System.Windows.Forms.ToolStripMenuItem();
-            this.labelLoaderUpdateChannel = new System.Windows.Forms.Label();
-            this.comboBoxLoaderUpdate = new System.Windows.Forms.ComboBox();
             labelGameScreen = new System.Windows.Forms.Label();
             label1 = new System.Windows.Forms.Label();
             label2 = new System.Windows.Forms.Label();
@@ -2864,8 +2862,6 @@
             // 
             this.groupBoxUpdates.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.groupBoxUpdates.Controls.Add(this.comboBoxLoaderUpdate);
-            this.groupBoxUpdates.Controls.Add(this.labelLoaderUpdateChannel);
             this.groupBoxUpdates.Controls.Add(this.buttonSwitchToSAManager);
             this.groupBoxUpdates.Controls.Add(this.checkBoxCheckLoaderUpdatesStartup);
             this.groupBoxUpdates.Controls.Add(this.buttonCheckForUpdatesNow);
@@ -3177,29 +3173,7 @@
             this.toolStripMenuItemDeleteProfile.Name = "toolStripMenuItemDeleteProfile";
             this.toolStripMenuItemDeleteProfile.Size = new System.Drawing.Size(119, 22);
             this.toolStripMenuItemDeleteProfile.Text = "Delete Profile";
-            this.toolStripMenuItemDeleteProfile.Click += new System.EventHandler(this.toolStripMenuItemDeleteProfile_Click);
-            // 
-            // labelLoaderUpdateChannel
-            // 
-            this.labelLoaderUpdateChannel.AutoSize = true;
-            this.labelLoaderUpdateChannel.Location = new System.Drawing.Point(6, 118);
-            this.labelLoaderUpdateChannel.Name = "labelLoaderUpdateChannel";
-            this.labelLoaderUpdateChannel.Size = new System.Drawing.Size(123, 13);
-            this.labelLoaderUpdateChannel.TabIndex = 7;
-            this.labelLoaderUpdateChannel.Text = "Loader Update Channel:";
-            // 
-            // comboBoxLoaderUpdate
-            // 
-            this.comboBoxLoaderUpdate.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.comboBoxLoaderUpdate.FormattingEnabled = true;
-            this.comboBoxLoaderUpdate.Items.AddRange(new object[] {
-			"Official",
-			"PkR\'s mirror"});
-            this.comboBoxLoaderUpdate.Location = new System.Drawing.Point(9, 135);
-            this.comboBoxLoaderUpdate.Name = "comboBoxLoaderUpdate";
-            this.comboBoxLoaderUpdate.Size = new System.Drawing.Size(118, 21);
-            this.comboBoxLoaderUpdate.TabIndex = 7;
-            this.toolTip.SetToolTip(this.comboBoxLoaderUpdate, resources.GetString("comboBoxLoaderUpdate.ToolTip"));
+            this.toolStripMenuItemDeleteProfile.Click += new System.EventHandler(this.toolStripMenuItemDeleteProfile_Click);            
             // 
             // MainForm
             // 
@@ -3516,7 +3490,5 @@
 		private System.Windows.Forms.CheckBox checkBoxSingleProfile;
 		private System.Windows.Forms.ToolStripMenuItem configureToolStripMenuItem;
 		private System.Windows.Forms.ToolStripSeparator toolStripMenuItem2Separator2;
-		private System.Windows.Forms.ComboBox comboBoxLoaderUpdate;
-		private System.Windows.Forms.Label labelLoaderUpdateChannel;
 	}
 }

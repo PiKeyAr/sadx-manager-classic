@@ -18,7 +18,6 @@ namespace SADXModManager.DataClasses
 		public bool AngleHex { get; set; }
 		public bool AngleDeg { get; set; }
 		public bool SingleProfileMode { get; set; }
-		public bool UseLoaderMirror { get; set; }
 		public List<string> IgnoredModUpdates { get; set; }
 	}
 }
