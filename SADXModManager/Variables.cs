@@ -94,7 +94,6 @@ namespace SADXModManager
 			"ModManagerCommon.pdb",
 			"sadxmlver.txt",
 			"Newtonsoft.Json.dll",
-			"SADXModManager.pdb",
 			"SADXModManager.exe.config",
 			"SharpDX.DirectInput.dll",
 			"SharpDX.DirectInput.xml",
