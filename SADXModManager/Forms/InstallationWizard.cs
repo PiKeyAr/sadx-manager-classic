@@ -10,7 +10,6 @@ using SADXModManager.Properties;
 using SADXModManager.DataClasses;
 using static SADXModManager.Variables;
 using static SADXModManager.Utils;
-using IniFile;
 
 namespace SADXModManager.Forms
 {
@@ -154,6 +153,8 @@ namespace SADXModManager.Forms
 								{
 									// Copy Manager.exe
 									File.Copy(Application.ExecutablePath, Path.Combine(gamePath, "SADXModManager.exe"), true);
+									// Delete old Loader/Manager files if they exist
+									DeleteOldFiles(this, gamePath);
 									// Copy sadxmanagerver.txt
 									File.WriteAllText(Path.Combine(managerAppDataPath, "sadxmanagerver.txt"), Resources.VersionString);
 									// Run the manager from the new location
@@ -176,26 +177,11 @@ namespace SADXModManager.Forms
 				}
 			}
 			// Check if SADXModLoader.ini exists and prompt to reuse it
-			if (Directory.Exists(Path.Combine(gamePath, "mods")))
+			bool cancelled = CheckOldLoaderSettings(this, gamePath);
+			if (cancelled)
 			{
-				if (File.Exists(Path.Combine(gamePath, "mods", "SADXModLoader.ini")))
-				{
-					DialogResult useOld = MessageBox.Show(this, string.Format("Setup has found a legacy Mod Loader configuration in {0}. Would you like to reuse it?", Path.Combine(gamePath, "mods", "SADXModLoader.ini")), "SADX Mod Manager", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation);
-					switch (useOld)
-					{
-						case DialogResult.Cancel:
-						default:
-							buttonInstall.Enabled = true;
-							return;
-						case DialogResult.Yes:
-							SADXLoaderInfo oldConfig = IniSerializer.Deserialize<SADXLoaderInfo>(Path.Combine(gamePath, "mods", "SADXModLoader.ini"));
-							gameSettings = new GameSettings { GamePath = gamePath };
-
-							break;
-						case DialogResult.No:
-							break;
-					}
-				}
+				buttonInstall.Enabled = true;
+				return;
 			}
 			// Create a new configuration			
 			Directory.CreateDirectory(managerAppDataPath);

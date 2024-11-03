@@ -22,9 +22,6 @@ using static SADXModManager.Variables;
 using static SADXModManager.Utils;
 using System.Text;
 
-// TODO for first release
-// Import SADXModLoader.ini
-
 // TODO for second release:
 // Add mods from archive
 // Mod dependencies
@@ -35,7 +32,7 @@ using System.Text;
 // Game Health Check
 
 // TODO for third release:
-// AA and AF settings
+// AA and AF settings?
 
 namespace SADXModManager
 {
@@ -245,9 +242,19 @@ namespace SADXModManager
 			// Set current game folder
 			if (Directory.Exists(Path.Combine(managerExePath, "mods")))
 				gameSettings.GamePath = managerExePath;
-			// Delete old version files
-			DeleteOldFiles(managerExePath);
-			DeleteOldFiles(gameSettings.GamePath);
+			// Import old settings if they exist
+			if (!File.Exists(currentProfileJsonPath))
+			{
+				bool cancel = CheckOldLoaderSettings(this, gameSettings.GamePath);
+				if (cancel)
+					System.Environment.Exit(0);
+				else
+				{
+					JsonSerialize(gameSettings, currentProfileJsonPath);
+					JsonSerialize(managerConfig, managerConfigJsonPath);
+					JsonSerialize(profilesJson, profilesListJsonPath);
+				}
+			}
 			// Populate save list
 			if (!Directory.Exists(Path.Combine(gameSettings.GamePath, "savedata")))
 				Directory.CreateDirectory(Path.Combine(gameSettings.GamePath, "savedata"));
@@ -530,6 +537,11 @@ namespace SADXModManager
 
 		private void MainForm_Shown(object sender, EventArgs e)
 		{
+			// Check and delete old version files
+			if (managerExePath != gameSettings.GamePath) // This check needs to be done because the DLLs will be in use
+				DeleteOldFiles(this, gameSettings.GamePath);
+			else
+				CheckOldFilesCritical(this, gameSettings.GamePath);
 			if (!File.Exists(datadllpath))
 			{
 				MessageBox.Show(this, "CHRMODELS.dll could not be found.\n\n" +
@@ -2898,22 +2910,6 @@ namespace SADXModManager
 						}
 					}
 				}
-			}
-		}
-
-		private void DeleteOldFiles(string managerFolder)
-		{
-			try
-			{
-				foreach (string file in Variables.cleanupFilesToDelete)
-				{
-					if (File.Exists(Path.Combine(managerFolder, file)))
-						File.Delete(Path.Combine(managerFolder, file));
-				}
-			}
-			catch (Exception ex)
-			{
-				MessageBox.Show(this, "Unable to clean up old version files:\n" + ex.Message, "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 	}

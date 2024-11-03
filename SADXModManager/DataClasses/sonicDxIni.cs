@@ -5,7 +5,7 @@ using IniFile;
 
 namespace SADXModManager
 {
-	enum FrameRate
+	public enum FrameRate
 	{
 		Invalid,
 		High,
@@ -13,7 +13,7 @@ namespace SADXModManager
 		Low
 	}
 
-	class ControllerConfig
+	public class ControllerConfig
 	{
 		[IniName("buttons")]
 		public int ButtonCount { get; set; }
@@ -22,13 +22,13 @@ namespace SADXModManager
 		public int[] ButtonSettings { get; set; }
 	}
 
-	class ControllerConfigInternal
+	public class ControllerConfigInternal
 	{
 		public string Name { get; set; }
 		public int[] Buttons { get; set; }
 	}
 
-	class SonicDxIni
+	public class SonicDxIni
 	{
 		[IniName("sonicDX")]
 		public GameConfig GameConfig { get; set; }
@@ -36,7 +36,7 @@ namespace SADXModManager
 		public Dictionary<string, ControllerConfig> Controllers { get; set; }
 	}
 
-	class GameConfig
+	public class GameConfig
 	{
 		[IniName("framerate")]
 		public int FrameRate { get; set; }

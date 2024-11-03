@@ -84,6 +84,8 @@ namespace SADXModManager
 						string finalpath = args[1].Replace("\"", "");
 						// Copy Manager.exe
 						File.Copy(Application.ExecutablePath, Path.Combine(finalpath, "SADXModManager.exe"), true);
+						// Delete old Loader/Manager files if they exist
+						Utils.DeleteOldFiles(null, finalpath);
 						// Get path to sadxmanagerver.txt
 						string destAppDataPath = Path.GetFullPath(Directory.Exists(Path.Combine(finalpath, "SAManager")) ? Path.Combine(finalpath, "SAManager") : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SAManager"));
 						// Copy sadxmanagerver.txt
@@ -169,7 +171,8 @@ namespace SADXModManager
 			// Locate the manager data folder (portable mode or otherwise)
 			bool portable = Directory.Exists(Path.Combine(exePath, "SAManager"));
 			bool appdata = Directory.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SAManager"));
-			if (!portable && !appdata)
+			bool legacy = File.Exists(Path.Combine(exePath, "mods", "SADXModLoader.ini"));
+			if (!portable && !appdata && !legacy)
 				primaryForm = new InstallationWizard();
 			else
 				primaryForm = new MainForm();

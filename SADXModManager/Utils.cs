@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -9,10 +10,12 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using IniFile;
 using Microsoft.Win32;
 using ModManagerCommon;
 using Newtonsoft.Json;
 using SADXModManager.DataClasses;
+using static SADXModManager.GraphicsSettings;
 using static SADXModManager.Variables;
 
 namespace SADXModManager
@@ -826,39 +829,171 @@ namespace SADXModManager
 			}
 		}
 
-		/// <summary>Imports settings from SADXModLoader.ini.</summary>
-		public static void ImportOldLoaderSettings(SADXLoaderInfo info)
+		/// <summary>Checks if old Mod Manager DLL dependencies are in the same folder as the Manager EXE and prompts the user to delete them.</summary>
+		public static void CheckOldFilesCritical(Form parent, string managerFolder)
 		{
-			// Debug settings
-			gameSettings.DebugSettings.EnableDebugScreen = info.DebugScreen;
-			gameSettings.DebugSettings.EnableDebugCrashLog = info.DebugCrashLog;
-			gameSettings.DebugSettings.EnableDebugConsole = info.DebugConsole;
-			gameSettings.DebugSettings.EnableDebugFile = info.DebugFile;
-			// Test Spawn settings
-			gameSettings.TestSpawn.UseCharacter = info.TestSpawnCharacter != -1;
-			gameSettings.TestSpawn.UseSave = info.TestSpawnSaveID != -1;
-			gameSettings.TestSpawn.UseGameMode = info.TestSpawnGameMode != -1;
-			gameSettings.TestSpawn.ActIndex = info.TestSpawnAct;
-			gameSettings.TestSpawn.LevelIndex = info.TestSpawnLevel;
-			gameSettings.TestSpawn.CharacterIndex = info.TestSpawnCharacter;
-			gameSettings.TestSpawn.GameTextLanguage = info.TextLanguage;
-			gameSettings.TestSpawn.GameVoiceLanguage = info.VoiceLanguage;
-			gameSettings.TestSpawn.GameModeIndex = info.TestSpawnGameMode;
-			gameSettings.TestSpawn.EventIndex = info.TestSpawnEvent;
-			gameSettings.TestSpawn.Rotation = info.TestSpawnRotation;
-			managerConfig.AngleHex = info.TestSpawnRotationHex;
-			gameSettings.TestSpawn.SaveIndex = info.TestSpawnSaveID;
-			gameSettings.TestSpawn.XPosition = (float)info.TestSpawnX;
-			gameSettings.TestSpawn.YPosition = (float)info.TestSpawnY;
-			gameSettings.TestSpawn.ZPosition = (float)info.TestSpawnZ;
-			// Mods
-			gameSettings.EnabledMods = info.Mods;
-			// Codes
-			gameSettings.EnabledCodes = info.EnabledCodes;
-			// Patches
-			gameSettings.EnabledGamePatches = new List<string>();
-			//if (info.CCEF)
-				//gameSettings.EnabledGamePatches.Add("")
+			int count = 0;
+			StringBuilder sb = new StringBuilder();
+			List<string> files = new List<string>()
+			{
+				"ModManagerCommon.dll",
+				"Newtonsoft.Json.dll",
+				"SharpDX.DirectInput.dll",
+				"SharpDX.dll",
+			};
+			foreach (string file in files)
+				if (File.Exists(Path.Combine(managerFolder, file)))
+				{
+					sb.AppendLine(file);
+					count++;
+				}
+			if (count > 0)
+			{
+				MessageBox.Show(parent, string.Format("SADX Mod Manager has found the following old DLL files in {0}:\n\n{1}" +
+					"\nThese files must be deleted for the Mod Manager to work correctly, but they are currently in use. Please delete them manually.",
+					managerFolder, sb.ToString()), "SADX Mod Manager Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				Process.Start(managerFolder);
+				System.Environment.Exit(0);
+			}
+		}
+
+		/// <summary>Deletes old Loader and Manager files.</summary>
+		public static void DeleteOldFiles(Form parent, string managerFolder)
+		{
+			try
+			{
+				foreach (string file in Variables.cleanupFilesToDelete)
+				{
+					if (File.Exists(Path.Combine(managerFolder, file)))
+						File.Delete(Path.Combine(managerFolder, file));
+				}
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(parent, "Unable to clean up old version files:\n" + ex.Message, "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+		/// <summary>Checks and imports settings from SADXModLoader.ini and sonicDX.ini. Returns false on finish, true on cancel.</summary>
+		public static bool CheckOldLoaderSettings(Form parent, string gamePath)
+		{
+			if (Directory.Exists(Path.Combine(gameSettings.GamePath, "mods")))
+			{
+				if (File.Exists(Path.Combine(gameSettings.GamePath, "mods", "SADXModLoader.ini")))
+				{
+					DialogResult useOld = MessageBox.Show(parent, string.Format("Setup has found a legacy Mod Loader configuration in {0}. Would you like to reuse it?", Path.Combine(gamePath, "mods", "SADXModLoader.ini")), "SADX Mod Manager", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation);
+					switch (useOld)
+					{
+						case DialogResult.Cancel:
+						default:
+							return true;
+						case DialogResult.No:
+							return false;
+						case DialogResult.Yes:
+							// Load SADXModLoader.ini
+							SADXLoaderInfo info = IniSerializer.Deserialize<SADXLoaderInfo>(Path.Combine(gamePath, "mods", "SADXModLoader.ini"));
+							gameSettings = new GameSettings { GamePath = gamePath };
+							// Load sonicDX.ini
+							SonicDxIni ini = File.Exists(Path.Combine(gamePath, "sonicDX.ini")) ? IniSerializer.Deserialize<SonicDxIni>(Path.Combine(gamePath, "sonicDX.ini")) : new SonicDxIni();
+							// Import settings
+							// Graphics settings
+							gameSettings.Graphics.EnableUIScaling = info.ScaleHud;
+							gameSettings.Graphics.HorizontalResolution = info.HorizontalResolution;
+							gameSettings.Graphics.VerticalResolution = info.VerticalResolution;
+							gameSettings.Graphics.DisableBorderImage = false;
+							gameSettings.Graphics.Enable43ResolutionRatio = info.ForceAspectRatio;
+							gameSettings.Graphics.EnableForcedMipmapping = info.AutoMipmap;
+							gameSettings.Graphics.EnableForcedTextureFilter = info.TextureFilter;
+							gameSettings.Graphics.EnableKeepResolutionRatio = info.MaintainWindowAspectRatio;
+							gameSettings.Graphics.EnablePauseOnInactive = info.PauseWhenInactive;
+							gameSettings.Graphics.EnableResizableWindow = info.ResizableWindow;
+							gameSettings.Graphics.EnableVsync = info.EnableVsync;
+							gameSettings.Graphics.FillModeBackground = info.BackgroundFillMode;
+							gameSettings.Graphics.FillModeFMV = info.FmvFillMode;
+							if (ini.GameConfig.FullScreen == 1)
+								gameSettings.Graphics.ScreenMode = info.WindowedFullscreen ? (int)DisplayMode.Borderless : (int)DisplayMode.Fullscreen;
+							else
+								gameSettings.Graphics.ScreenMode = info.CustomWindowSize ? (int)DisplayMode.CustomWindow : (int)DisplayMode.Windowed;
+							gameSettings.Graphics.SelectedScreen = info.ScreenNum;
+							gameSettings.Graphics.ShowMouseInFullscreen = false;
+							gameSettings.Graphics.CustomWindowWidth = info.WindowWidth;
+							gameSettings.Graphics.CustomWindowHeight = info.WindowHeight;
+							// Sound settings
+							gameSettings.Sound.SEVolume = info.SEVolume;
+							gameSettings.Sound.EnableBassMusic = info.EnableBassMusic;
+							gameSettings.Sound.EnableBassSFX = info.EnableBassSFX;
+							// Debug settings
+							gameSettings.DebugSettings.EnableDebugScreen = info.DebugScreen;
+							gameSettings.DebugSettings.EnableDebugCrashLog = info.DebugCrashLog;
+							gameSettings.DebugSettings.EnableDebugConsole = info.DebugConsole;
+							gameSettings.DebugSettings.EnableDebugFile = info.DebugFile;
+							// Test Spawn settings
+							gameSettings.TestSpawn.UseCharacter = info.TestSpawnCharacter != -1;
+							gameSettings.TestSpawn.UseSave = info.TestSpawnSaveID != -1;
+							gameSettings.TestSpawn.UseGameMode = info.TestSpawnGameMode != -1;
+							gameSettings.TestSpawn.ActIndex = info.TestSpawnAct;
+							gameSettings.TestSpawn.LevelIndex = info.TestSpawnLevel;
+							gameSettings.TestSpawn.CharacterIndex = info.TestSpawnCharacter;
+							gameSettings.TestSpawn.GameTextLanguage = info.TextLanguage;
+							gameSettings.TestSpawn.GameVoiceLanguage = info.VoiceLanguage;
+							gameSettings.TestSpawn.GameModeIndex = info.TestSpawnGameMode;
+							gameSettings.TestSpawn.EventIndex = info.TestSpawnEvent;
+							gameSettings.TestSpawn.Rotation = info.TestSpawnRotation;
+							managerConfig.AngleHex = info.TestSpawnRotationHex;
+							gameSettings.TestSpawn.SaveIndex = info.TestSpawnSaveID;
+							gameSettings.TestSpawn.XPosition = (float)info.TestSpawnX;
+							gameSettings.TestSpawn.YPosition = (float)info.TestSpawnY;
+							gameSettings.TestSpawn.ZPosition = (float)info.TestSpawnZ;
+							// Mods
+							gameSettings.EnabledMods = info.Mods;
+							// Codes
+							gameSettings.EnabledCodes = info.EnabledCodes;
+							// Patches
+							gameSettings.EnabledGamePatches = new List<string>();
+							if (info.HRTFSound)
+								gameSettings.EnabledGamePatches.Add("HRTFSound");
+							if (info.CCEF)
+								gameSettings.EnabledGamePatches.Add("KeepCamSettings");
+							if (info.PolyBuff)
+								gameSettings.EnabledGamePatches.Add("FixVertexColorRendering");
+							if (info.MaterialColorFix || !info.DisableMaterialColorFix)
+								gameSettings.EnabledGamePatches.Add("MaterialColorFix");
+							if (info.NodeLimit || !info.DisableInterpolationFix)
+								gameSettings.EnabledGamePatches.Add("NodeLimit");
+							if (info.FovFix)
+								gameSettings.EnabledGamePatches.Add("FOVFix");
+							if (info.SCFix)
+								gameSettings.EnabledGamePatches.Add("SkyChaseResolutionFix");
+							if (info.Chaos2CrashFix)
+								gameSettings.EnabledGamePatches.Add("Chaos2CrashFix");
+							if (info.ChunkSpecFix)
+								gameSettings.EnabledGamePatches.Add("ChunkSpecularFix");
+							if (info.E102PolyFix)
+								gameSettings.EnabledGamePatches.Add("E102NGonFix");
+							if (info.ChaoPanelFix)
+								gameSettings.EnabledGamePatches.Add("ChaoPanelFix");
+							if (info.PixelOffSetFix)
+								gameSettings.EnabledGamePatches.Add("PixelOffSetFix");
+							if (info.LightFix)
+								gameSettings.EnabledGamePatches.Add("LightFix");
+							if (info.KillGbix)
+								gameSettings.EnabledGamePatches.Add("KillGBIX");
+							if (info.DisableCDCheck)
+								gameSettings.EnabledGamePatches.Add("DisableCDCheck");
+							if (info.ExtendedSaveSupport)
+								gameSettings.EnabledGamePatches.Add("ExtendedSaveSupport");
+							if (info.CrashGuard)
+								gameSettings.EnabledGamePatches.Add("CrashGuard");
+							if (info.XInputFix)
+								gameSettings.EnabledGamePatches.Add("XInputFix");
+							// Delete SADXModLoader.ini
+							File.Delete(Path.Combine(gamePath, "mods", "SADXModLoader.ini"));
+							return false;
+					}
+				}
+			}
+			// If the folder doesn't exist, nothing to be done
+			return false;
 		}
 	}
 }

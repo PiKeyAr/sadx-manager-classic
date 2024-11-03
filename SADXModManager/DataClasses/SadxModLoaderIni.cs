@@ -94,6 +94,11 @@ namespace SADXModManager
 		[DefaultValue(100)]
 		public int SEVolume { get; set; } = 100;
 
+		[DefaultValue(false)]
+		public bool DisableMaterialColorFix { get; set; }
+		[DefaultValue(false)]
+		public bool DisableInterpolationFix { get; set; }
+
 		#region Manager Settings
 		public int Theme { get; set; } = 0;
 		[DefaultValue(0)]
