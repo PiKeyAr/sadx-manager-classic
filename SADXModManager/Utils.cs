@@ -855,6 +855,8 @@ namespace SADXModManager
 				Process.Start(managerFolder);
 				System.Environment.Exit(0);
 			}
+			else
+				DeleteOldFiles(parent, managerFolder);
 		}
 
 		/// <summary>Deletes old Loader and Manager files.</summary>
@@ -877,9 +879,9 @@ namespace SADXModManager
 		/// <summary>Checks and imports settings from SADXModLoader.ini and sonicDX.ini. Returns false on finish, true on cancel.</summary>
 		public static bool CheckOldLoaderSettings(Form parent, string gamePath)
 		{
-			if (Directory.Exists(Path.Combine(gameSettings.GamePath, "mods")))
+			if (Directory.Exists(Path.Combine(gamePath, "mods")))
 			{
-				if (File.Exists(Path.Combine(gameSettings.GamePath, "mods", "SADXModLoader.ini")))
+				if (File.Exists(Path.Combine(gamePath, "mods", "SADXModLoader.ini")))
 				{
 					DialogResult useOld = MessageBox.Show(parent, string.Format("Setup has found a legacy Mod Loader configuration in {0}. Would you like to reuse it?", Path.Combine(gamePath, "mods", "SADXModLoader.ini")), "SADX Mod Manager", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation);
 					switch (useOld)

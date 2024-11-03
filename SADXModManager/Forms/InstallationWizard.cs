@@ -17,6 +17,7 @@ namespace SADXModManager.Forms
 	{
 		public InstallationWizard()
 		{
+			managerExePath = AppDomain.CurrentDomain.BaseDirectory;
 			InitializeComponent();
 			Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
 			pictureBoxManagerIcon.Image = Icon.ToBitmap();
@@ -33,6 +34,9 @@ namespace SADXModManager.Forms
 			string result = "";
 			
 			RegistryKey key;
+			// Current game folder
+			if (File.Exists(Path.Combine(managerExePath, "sonic.exe")) || File.Exists(Path.Combine(managerExePath, "Sonic Adventure DX.exe")))
+				return managerExePath;
 			// Steam
 			key = GetRegistryKey("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 71250");
 			if (key != null)
@@ -127,11 +131,16 @@ namespace SADXModManager.Forms
 			MessageBox.Show(this, "Ты пидор.");
 		}
 
+		private string NormalizePath(string path)
+		{
+			path = path.Replace('/', '\\');
+			return path.TrimEnd('\\');
+		}
+
 		private void buttonInstall_Click(object sender, EventArgs e)
 		{
 			buttonInstall.Enabled = false;
-			string gamePath = textBoxGameFolder.Text;
-			managerExePath = AppDomain.CurrentDomain.BaseDirectory;
+			string gamePath = NormalizePath(textBoxGameFolder.Text);
 			managerAppDataPath = Path.GetFullPath(radioButtonGameFolder.Checked ? Path.Combine(gamePath, "SAManager") : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SAManager"));
 			// Reuse an existing configuration
 			if (Directory.Exists(managerAppDataPath))
@@ -152,7 +161,8 @@ namespace SADXModManager.Forms
 								try
 								{
 									// Copy Manager.exe
-									File.Copy(Application.ExecutablePath, Path.Combine(gamePath, "SADXModManager.exe"), true);
+									if (managerExePath != gamePath)
+										File.Copy(Application.ExecutablePath, Path.Combine(gamePath, "SADXModManager.exe"), true);
 									// Delete old Loader/Manager files if they exist
 									DeleteOldFiles(this, gamePath);
 									// Copy sadxmanagerver.txt
