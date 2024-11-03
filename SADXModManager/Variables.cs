@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Net;
 using ModManagerCommon;
 using Newtonsoft.Json;
 using SADXModManager.DataClasses;
@@ -62,6 +61,47 @@ namespace SADXModManager
 		public static string launcherUpdateUrl = "https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/Setup/data/AppLauncher.7z";
 		/// <summary>URL of Steam conversion tools archive</summary>
 		public static string steamToolsUpdateUrl = "https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/Setup/data/steam_tools.7z";
+
+		// Lists
+		/// <summary>List of files to delete from old Loader/Manager versions</summary>
+		public static List<string> cleanupFilesToDelete = new List<string>()
+		{
+			"7z.dll",
+			"7z.exe",
+			"7za.exe",
+			"avcodec-vgmstream-58.dll",
+			"avformat-vgmstream-58.dll",
+			"avutil-vgmstream-56.dll",
+			"bass.dll",
+			"bass_vgmstream.dll",
+			"COPYING_BASS_VGMSTREAM",
+			"COPYING_D3D8TO9",
+			"COPYING_VGMSTREAM",
+			"d3d8m.dll",
+			"jansson.dll",
+			"libatrac9.dll",
+			"libcelt-0061.dll",
+			"libcelt-0110.dll",
+			"libg719_decode.dll",
+			"libg7221_decode.dll",
+			"libmpg123-0.dll",
+			"libogg.dll",
+			"libspeex.dll",
+			"libvorbis.dll",
+			"libvorbisfile.dll",
+			"loader.manifest",
+			"ModManagerCommon.dll",
+			"ModManagerCommon.pdb",
+			"sadxmlver.txt",
+			"Newtonsoft.Json.dll",
+			"SADXModManager.pdb",
+			"SADXModManager.exe.config",
+			"SharpDX.DirectInput.dll",
+			"SharpDX.DirectInput.xml",
+			"SharpDX.dll",
+			"swresample-vgmstream-3.dll",
+			"SDL2.dll"
+		};
 
 		// Strings
 		public static string generateManifestWarning = "This can cause MOD USER DATA (SAVE FILES, CONFIG FILES) TO BE LOST upon next update! To prevent this, you should never run this on mods you did not develop.\r\n\r\nAre you sure you wish to continue?";

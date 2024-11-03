@@ -23,7 +23,6 @@ using static SADXModManager.Utils;
 using System.Text;
 
 // TODO for first release
-// Clean up old Manager files
 // Import SADXModLoader.ini
 
 // TODO for second release:
@@ -246,6 +245,9 @@ namespace SADXModManager
 			// Set current game folder
 			if (Directory.Exists(Path.Combine(managerExePath, "mods")))
 				gameSettings.GamePath = managerExePath;
+			// Delete old version files
+			DeleteOldFiles(managerExePath);
+			DeleteOldFiles(gameSettings.GamePath);
 			// Populate save list
 			if (!Directory.Exists(Path.Combine(gameSettings.GamePath, "savedata")))
 				Directory.CreateDirectory(Path.Combine(gameSettings.GamePath, "savedata"));
@@ -1923,14 +1925,6 @@ namespace SADXModManager
 			suppressEvent = false;
 		}
 
-		private void customWindowSizeCheckBox_CheckedChanged(object sender, EventArgs e)
-		{
-			//maintainWindowAspectRatioCheckBox.Enabled = customWindowSizeCheckBox.Checked;
-			//windowHeight.Enabled = customWindowSizeCheckBox.Checked;
-			//checkWindowResize.Enabled = !customWindowSizeCheckBox.Checked;
-			//windowWidth.Enabled = customWindowSizeCheckBox.Checked && !maintainWindowAspectRatioCheckBox.Checked;
-		}
-
 		private void maintainWindowAspectRatioCheckBox_CheckedChanged(object sender, EventArgs e)
 		{
 			if (checkBoxWindowMaintainAspect.Checked)
@@ -2904,6 +2898,22 @@ namespace SADXModManager
 						}
 					}
 				}
+			}
+		}
+
+		private void DeleteOldFiles(string managerFolder)
+		{
+			try
+			{
+				foreach (string file in Variables.cleanupFilesToDelete)
+				{
+					if (File.Exists(Path.Combine(managerFolder, file)))
+						File.Delete(Path.Combine(managerFolder, file));
+				}
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(this, "Unable to clean up old version files:\n" + ex.Message, "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 	}
