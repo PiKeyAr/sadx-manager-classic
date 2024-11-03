@@ -449,7 +449,7 @@ namespace SADXModManager
 			result.Add(CheckVisualCppRuntimeUpdate(parent, "SOFTWARE\\Microsoft\\VisualStudio\\10.0\\VC\\VCRedist\\x86", "https://download.microsoft.com/download/C/6/D/C6D0FD4E-9E53-4897-9B91-836EBA2AACD3/vcredist_x86.exe", "2010 SP1"));
 			result.Add(CheckVisualCppRuntimeUpdate(parent, "SOFTWARE\\Microsoft\\VisualStudio\\11.0\\VC\\Runtimes\\x86", "https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe", "2012"));
 			result.Add(CheckVisualCppRuntimeUpdate(parent, "SOFTWARE\\Microsoft\\VisualStudio\\12.0\\VC\\Runtimes\\x86", "http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x86.exe", "2013"));
-			result.Add(CheckVisualCppRuntimeUpdate(parent, "SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x86", "https://aka.ms/vs/17/release/vc_redist.x86.exe", "2015-2022"));
+			result.Add(CheckVisualCppRuntimeUpdate(parent, "SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x86", Environment.OSVersion.Version.Major <= 5 ? "https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/Setup/data/VC1719_redist.XPx86.exe" : "https://aka.ms/vs/17/release/vc_redist.x86.exe", "2015-2022"));
 			return result;
 		}
 
