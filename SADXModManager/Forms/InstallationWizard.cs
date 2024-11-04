@@ -240,7 +240,10 @@ namespace SADXModManager.Forms
 						if (!isManager)
 						{
 							if (File.Exists(Path.Combine(managerExePath, "SADXModManager.exe")))
+							{
+								DeleteOldFiles(this, managerExePath);
 								Process.Start(Path.Combine(managerExePath, "SADXModManager.exe"));
+							}
 						}
 						Close();
 						Application.Exit();
@@ -250,7 +253,10 @@ namespace SADXModManager.Forms
 						if (!isManager)
 						{
 							if (File.Exists(Path.Combine(managerExePath, "SADXModManager.exe")))
+							{
+								DeleteOldFiles(this, managerExePath);
 								Process.Start(Path.Combine(managerExePath, "SADXModManager.exe"));
+							}
 							Close();
 							Application.Exit();
 						}
