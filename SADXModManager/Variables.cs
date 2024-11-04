@@ -61,6 +61,8 @@ namespace SADXModManager
 		public static string launcherUpdateUrl = "https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/Setup/data/AppLauncher.7z";
 		/// <summary>URL of Steam conversion tools archive</summary>
 		public static string steamToolsUpdateUrl = "https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/Setup/data/steam_tools.7z";
+		/// <summary>URL of 2004 conversion tools archive</summary>
+		public static string dx2004ToolsUpdateUrl = "https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/Setup/data/2004_tools.7z";
 
 		// Lists
 		/// <summary>List of files to delete from old Loader/Manager versions</summary>

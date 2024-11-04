@@ -309,6 +309,7 @@ namespace SADXModManager
 		/// <summary>Retrieves a download for an update for the Steam conversion tools from a direct link (null if not requred).</summary>
 		public static DownloadItem CheckSteamToolUpdates(Form parent)
 		{
+			bool steam = false;
 			long size = 0;
 			DateTime modifiedDate = DateTime.Now;
 			MD5 md5 = MD5.Create();
@@ -327,6 +328,7 @@ namespace SADXModManager
 					criticalError = true;
 					return null;
 				}
+				steam = true;
 			}
 			// Not Steam
 			else
@@ -352,6 +354,11 @@ namespace SADXModManager
 						case "57f987014504e0f0dcfc154dfd48fead": // EU Best Buy
 						case "9c1184502ad6d1bed8b2833822e3a477": // EU Sonic PC Collection
 						case "6b3c7a0013cbfd9b12c3765e9ba3a73e": // KR
+							steam = false;
+							// Check for incomplete conversion
+							if (!File.Exists(Path.Combine(gameSettings.GamePath, "system", "SA1.MPG")) && 
+								 File.Exists(Path.Combine(gameSettings.GamePath, "system", "SA1.SFD")))
+								steam = true;
 							break;
 						case "6e2e64ebf62787af47ed813221040898": // JP
 						case "1b65b196137b5a853d781ba93a3046a2": // Sold Out
@@ -372,7 +379,7 @@ namespace SADXModManager
 			try
 			{
 				// Get request
-				WebRequest req = WebRequest.Create(steamToolsUpdateUrl);
+				WebRequest req = WebRequest.Create(steam ? steamToolsUpdateUrl : dx2004ToolsUpdateUrl);
 				req.Method = "HEAD";
 				using (WebResponse resp = req.GetResponse())
 				{
@@ -399,7 +406,7 @@ namespace SADXModManager
 				DownloadSize = size,
 				FileCount = 1,
 				HomepageUrl = "https://sadxmodinstaller.unreliable.network/index.php/tools/",
-				DownloadUrl = steamToolsUpdateUrl,
+				DownloadUrl = steam ? steamToolsUpdateUrl : dx2004ToolsUpdateUrl,
 				ReleaseName = "",
 				ReleaseTag = "",
 				Description = "These tools will convert your SADX installation for Mod Loader compatibility.",
@@ -855,7 +862,7 @@ namespace SADXModManager
 				Process.Start(managerFolder);
 				System.Environment.Exit(0);
 			}
-			else
+			else if (parent != null)
 				DeleteOldFiles(parent, managerFolder);
 		}
 

@@ -29,6 +29,7 @@ namespace SADXModManager
 		[STAThread]
 		static void Main(string[] args)
 		{
+			Utils.CheckOldFilesCritical(null, System.Environment.CurrentDirectory);
 			Init();
 			RealMain(args); // Needed to split for assembly resolving
 		}
