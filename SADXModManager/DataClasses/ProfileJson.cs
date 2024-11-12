@@ -87,6 +87,12 @@ namespace SADXModManager
 
 		[DefaultValue(false)]
 		public bool DisableBorderImage { get; set; }
+
+		[DefaultValue(0)]
+		public int Antialiasing { get; set; }
+
+		[DefaultValue(0)]
+		public int Anisotropic { get; set; }
 	}
 
 	public class ControllerSettings

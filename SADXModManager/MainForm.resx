@@ -144,10 +144,9 @@
   <metadata name="toolTip.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>17, 17</value>
   </metadata>
-  <data name="comboBoxLoaderUpdate.ToolTip" xml:space="preserve">
-    <value>The Official mirror uses builds from MainMemory's build bot, which provides the latest version which may not work on Windows XP.
-PkR's mirror provides an alternative version, which is updated less frequently but is compatible with Windows XP.</value>
-  </data>
+  <metadata name="toolTip.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+    <value>17, 17</value>
+  </metadata>
   <data name="comboBoxBackgroundFill.ToolTip" xml:space="preserve">
     <value>Sets the scaling mode for backgrounds.
 Stretch: The backgrounds will be stretched without maintaining the aspect ratio.
@@ -178,6 +177,9 @@ Other profiles will be modified only when you save them using the 'Save...' butt
   </metadata>
   <metadata name="contextMenuStripProfile.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>638, 17</value>
+  </metadata>
+  <metadata name="contextMenuStripResetGameSettings.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+    <value>820, 17</value>
   </metadata>
   <metadata name="$this.TrayHeight" type="System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
     <value>33</value>

@@ -83,6 +83,7 @@
             this.tabPageGameConfig = new System.Windows.Forms.TabPage();
             this.tabControlGameConfig = new System.Windows.Forms.TabControl();
             this.tabPageGraphics = new System.Windows.Forms.TabPage();
+            this.buttonResetGameSettings = new System.Windows.Forms.Button();
             this.groupBoxGraphicsOther = new System.Windows.Forms.GroupBox();
             this.checkBoxShowMouse = new System.Windows.Forms.CheckBox();
             this.checkBoxScaleHud = new System.Windows.Forms.CheckBox();
@@ -255,6 +256,9 @@
             this.toolStripStatusLabelGameFolder = new System.Windows.Forms.ToolStripStatusLabel();
             this.contextMenuStripProfile = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.toolStripMenuItemDeleteProfile = new System.Windows.Forms.ToolStripMenuItem();
+            this.contextMenuStripResetGameSettings = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.toolStripMenuItemResetOptimal = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItemResetSafe = new System.Windows.Forms.ToolStripMenuItem();
             labelGameScreen = new System.Windows.Forms.Label();
             label1 = new System.Windows.Forms.Label();
             label2 = new System.Windows.Forms.Label();
@@ -313,6 +317,7 @@
             this.contextMenuStripAddMod.SuspendLayout();
             this.statusStripManager.SuspendLayout();
             this.contextMenuStripProfile.SuspendLayout();
+            this.contextMenuStripResetGameSettings.SuspendLayout();
             this.SuspendLayout();
             // 
             // labelGameScreen
@@ -380,7 +385,7 @@
             groupBoxMiscOptions.Controls.Add(this.checkBoxPauseWhenInactive);
             groupBoxMiscOptions.Location = new System.Drawing.Point(6, 6);
             groupBoxMiscOptions.Name = "groupBoxMiscOptions";
-            groupBoxMiscOptions.Size = new System.Drawing.Size(450, 104);
+            groupBoxMiscOptions.Size = new System.Drawing.Size(452, 104);
             groupBoxMiscOptions.TabIndex = 0;
             groupBoxMiscOptions.TabStop = false;
             groupBoxMiscOptions.Text = "Miscellaneous Game Options";
@@ -987,6 +992,7 @@
             // 
             this.tabPageGraphics.AutoScroll = true;
             this.tabPageGraphics.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.tabPageGraphics.Controls.Add(this.buttonResetGameSettings);
             this.tabPageGraphics.Controls.Add(this.groupBoxGraphicsOther);
             this.tabPageGraphics.Controls.Add(this.groupBoxVisuals);
             this.tabPageGraphics.Controls.Add(this.groupBoxDisplay);
@@ -996,6 +1002,16 @@
             this.tabPageGraphics.Size = new System.Drawing.Size(464, 389);
             this.tabPageGraphics.TabIndex = 2;
             this.tabPageGraphics.Text = "Graphics";
+            // 
+            // buttonResetGameSettings
+            // 
+            this.buttonResetGameSettings.Location = new System.Drawing.Point(6, 352);
+            this.buttonResetGameSettings.Name = "buttonResetGameSettings";
+            this.buttonResetGameSettings.Size = new System.Drawing.Size(75, 22);
+            this.buttonResetGameSettings.TabIndex = 3;
+            this.buttonResetGameSettings.Text = "Reset...";
+            this.buttonResetGameSettings.UseVisualStyleBackColor = true;
+            this.buttonResetGameSettings.Click += new System.EventHandler(this.buttonResetGameSettings_Click);
             // 
             // groupBoxGraphicsOther
             // 
@@ -1009,7 +1025,7 @@
             this.groupBoxGraphicsOther.Controls.Add(this.labelBgFillMode);
             this.groupBoxGraphicsOther.Location = new System.Drawing.Point(7, 271);
             this.groupBoxGraphicsOther.Name = "groupBoxGraphicsOther";
-            this.groupBoxGraphicsOther.Size = new System.Drawing.Size(452, 75);
+            this.groupBoxGraphicsOther.Size = new System.Drawing.Size(469, 75);
             this.groupBoxGraphicsOther.TabIndex = 2;
             this.groupBoxGraphicsOther.TabStop = false;
             this.groupBoxGraphicsOther.Text = "Other Settings";
@@ -1106,7 +1122,7 @@
             this.groupBoxVisuals.Controls.Add(this.checkBoxForceTextureFilter);
             this.groupBoxVisuals.Location = new System.Drawing.Point(6, 148);
             this.groupBoxVisuals.Name = "groupBoxVisuals";
-            this.groupBoxVisuals.Size = new System.Drawing.Size(452, 117);
+            this.groupBoxVisuals.Size = new System.Drawing.Size(469, 117);
             this.groupBoxVisuals.TabIndex = 1;
             this.groupBoxVisuals.TabStop = false;
             this.groupBoxVisuals.Text = "Visuals";
@@ -1117,16 +1133,15 @@
             this.comboBoxAntialiasing.FormattingEnabled = true;
             this.comboBoxAntialiasing.Items.AddRange(new object[] {
             "None",
-            "1x",
             "2x",
             "4x",
             "8x",
-            "Max"});
+            "16x"});
             this.comboBoxAntialiasing.Location = new System.Drawing.Point(217, 82);
             this.comboBoxAntialiasing.Name = "comboBoxAntialiasing";
             this.comboBoxAntialiasing.Size = new System.Drawing.Size(52, 21);
             this.comboBoxAntialiasing.TabIndex = 7;
-            this.comboBoxAntialiasing.Visible = false;
+            this.toolTip.SetToolTip(this.comboBoxAntialiasing, "Make polygons look less jagged. May cause stuttering.");
             // 
             // comboBoxAnisotropic
             // 
@@ -1143,7 +1158,7 @@
             this.comboBoxAnisotropic.Name = "comboBoxAnisotropic";
             this.comboBoxAnisotropic.Size = new System.Drawing.Size(51, 21);
             this.comboBoxAnisotropic.TabIndex = 8;
-            this.comboBoxAnisotropic.Visible = false;
+            this.toolTip.SetToolTip(this.comboBoxAnisotropic, "Make textures look smoother. 16x is recommended.");
             // 
             // labelAnisotropic
             // 
@@ -1153,7 +1168,6 @@
             this.labelAnisotropic.Size = new System.Drawing.Size(101, 13);
             this.labelAnisotropic.TabIndex = 27;
             this.labelAnisotropic.Text = "Anisotropic Filtering:";
-            this.labelAnisotropic.Visible = false;
             // 
             // labelAntiAliasing
             // 
@@ -1163,7 +1177,6 @@
             this.labelAntiAliasing.Size = new System.Drawing.Size(67, 13);
             this.labelAntiAliasing.TabIndex = 26;
             this.labelAntiAliasing.Text = "Anti-Aliasing:";
-            this.labelAntiAliasing.Visible = false;
             // 
             // checkBoxEnableD3D9
             // 
@@ -1314,7 +1327,7 @@
             this.groupBoxDisplay.Controls.Add(this.numericUpDownVerticalResolution);
             this.groupBoxDisplay.Location = new System.Drawing.Point(6, 6);
             this.groupBoxDisplay.Name = "groupBoxDisplay";
-            this.groupBoxDisplay.Size = new System.Drawing.Size(452, 136);
+            this.groupBoxDisplay.Size = new System.Drawing.Size(469, 136);
             this.groupBoxDisplay.TabIndex = 0;
             this.groupBoxDisplay.TabStop = false;
             this.groupBoxDisplay.Text = "Display";
@@ -1467,7 +1480,7 @@
             this.tabPageInput.Controls.Add(this.groupBoxMouseMode);
             this.tabPageInput.Location = new System.Drawing.Point(4, 22);
             this.tabPageInput.Name = "tabPageInput";
-            this.tabPageInput.Size = new System.Drawing.Size(462, 389);
+            this.tabPageInput.Size = new System.Drawing.Size(464, 366);
             this.tabPageInput.TabIndex = 8;
             this.tabPageInput.Text = "Input";
             this.tabPageInput.UseVisualStyleBackColor = true;
@@ -1485,7 +1498,7 @@
             this.groupBoxControllerDInput.Controls.Add(this.buttonControllerProfileRemove);
             this.groupBoxControllerDInput.Location = new System.Drawing.Point(3, 129);
             this.groupBoxControllerDInput.Name = "groupBoxControllerDInput";
-            this.groupBoxControllerDInput.Size = new System.Drawing.Size(456, 265);
+            this.groupBoxControllerDInput.Size = new System.Drawing.Size(458, 265);
             this.groupBoxControllerDInput.TabIndex = 2;
             this.groupBoxControllerDInput.TabStop = false;
             this.groupBoxControllerDInput.Text = "Controller (DirectInput)";
@@ -1561,7 +1574,7 @@
             this.groupBoxInputMode.Controls.Add(this.radioButtonDInput);
             this.groupBoxInputMode.Location = new System.Drawing.Point(4, 4);
             this.groupBoxInputMode.Name = "groupBoxInputMode";
-            this.groupBoxInputMode.Size = new System.Drawing.Size(455, 44);
+            this.groupBoxInputMode.Size = new System.Drawing.Size(457, 44);
             this.groupBoxInputMode.TabIndex = 0;
             this.groupBoxInputMode.TabStop = false;
             this.groupBoxInputMode.Text = "Input Mode";
@@ -1606,7 +1619,7 @@
             this.groupBoxMouseMode.Controls.Add(this.labelMouseAction);
             this.groupBoxMouseMode.Location = new System.Drawing.Point(4, 54);
             this.groupBoxMouseMode.Name = "groupBoxMouseMode";
-            this.groupBoxMouseMode.Size = new System.Drawing.Size(455, 69);
+            this.groupBoxMouseMode.Size = new System.Drawing.Size(457, 69);
             this.groupBoxMouseMode.TabIndex = 1;
             this.groupBoxMouseMode.TabStop = false;
             this.groupBoxMouseMode.Text = "Mouse";
@@ -1707,7 +1720,7 @@
             this.tabPageController.Location = new System.Drawing.Point(4, 22);
             this.tabPageController.Name = "tabPageController";
             this.tabPageController.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageController.Size = new System.Drawing.Size(462, 389);
+            this.tabPageController.Size = new System.Drawing.Size(464, 366);
             this.tabPageController.TabIndex = 9;
             this.tabPageController.Text = "Controls";
             this.tabPageController.UseVisualStyleBackColor = true;
@@ -1987,7 +2000,7 @@
             this.tabPageSound.Location = new System.Drawing.Point(4, 22);
             this.tabPageSound.Name = "tabPageSound";
             this.tabPageSound.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageSound.Size = new System.Drawing.Size(462, 389);
+            this.tabPageSound.Size = new System.Drawing.Size(464, 366);
             this.tabPageSound.TabIndex = 4;
             this.tabPageSound.Text = "Sound";
             // 
@@ -2006,7 +2019,7 @@
             this.groupBoxSoundVolume.Controls.Add(this.labelVoiceVolume);
             this.groupBoxSoundVolume.Location = new System.Drawing.Point(6, 77);
             this.groupBoxSoundVolume.Name = "groupBoxSoundVolume";
-            this.groupBoxSoundVolume.Size = new System.Drawing.Size(450, 171);
+            this.groupBoxSoundVolume.Size = new System.Drawing.Size(452, 171);
             this.groupBoxSoundVolume.TabIndex = 1;
             this.groupBoxSoundVolume.TabStop = false;
             this.groupBoxSoundVolume.Text = "Volume";
@@ -2016,7 +2029,7 @@
             this.labelSEVol.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.labelSEVol.AutoSize = true;
             this.labelSEVol.Enabled = false;
-            this.labelSEVol.Location = new System.Drawing.Point(418, 116);
+            this.labelSEVol.Location = new System.Drawing.Point(420, 116);
             this.labelSEVol.Name = "labelSEVol";
             this.labelSEVol.Size = new System.Drawing.Size(25, 13);
             this.labelSEVol.TabIndex = 10;
@@ -2032,7 +2045,7 @@
             this.trackBarSEVol.Margin = new System.Windows.Forms.Padding(0);
             this.trackBarSEVol.Maximum = 100;
             this.trackBarSEVol.Name = "trackBarSEVol";
-            this.trackBarSEVol.Size = new System.Drawing.Size(327, 45);
+            this.trackBarSEVol.Size = new System.Drawing.Size(329, 45);
             this.trackBarSEVol.TabIndex = 2;
             this.trackBarSEVol.TickFrequency = 10;
             this.trackBarSEVol.Value = 100;
@@ -2052,7 +2065,7 @@
             // 
             this.labelVoiceVol.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.labelVoiceVol.AutoSize = true;
-            this.labelVoiceVol.Location = new System.Drawing.Point(418, 70);
+            this.labelVoiceVol.Location = new System.Drawing.Point(420, 70);
             this.labelVoiceVol.Name = "labelVoiceVol";
             this.labelVoiceVol.Size = new System.Drawing.Size(25, 13);
             this.labelVoiceVol.TabIndex = 7;
@@ -2062,7 +2075,7 @@
             // 
             this.labelMusicVol.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.labelMusicVol.AutoSize = true;
-            this.labelMusicVol.Location = new System.Drawing.Point(418, 24);
+            this.labelMusicVol.Location = new System.Drawing.Point(420, 24);
             this.labelMusicVol.Name = "labelMusicVol";
             this.labelMusicVol.Size = new System.Drawing.Size(25, 13);
             this.labelMusicVol.TabIndex = 6;
@@ -2077,7 +2090,7 @@
             this.trackBarVoiceVol.Margin = new System.Windows.Forms.Padding(0);
             this.trackBarVoiceVol.Maximum = 100;
             this.trackBarVoiceVol.Name = "trackBarVoiceVol";
-            this.trackBarVoiceVol.Size = new System.Drawing.Size(327, 45);
+            this.trackBarVoiceVol.Size = new System.Drawing.Size(329, 45);
             this.trackBarVoiceVol.TabIndex = 1;
             this.trackBarVoiceVol.TickFrequency = 10;
             this.trackBarVoiceVol.Value = 100;
@@ -2102,7 +2115,7 @@
             this.trackBarMusicVol.Margin = new System.Windows.Forms.Padding(0);
             this.trackBarMusicVol.Maximum = 100;
             this.trackBarMusicVol.Name = "trackBarMusicVol";
-            this.trackBarMusicVol.Size = new System.Drawing.Size(327, 45);
+            this.trackBarMusicVol.Size = new System.Drawing.Size(329, 45);
             this.trackBarMusicVol.TabIndex = 0;
             this.trackBarMusicVol.TickFrequency = 10;
             this.trackBarMusicVol.Value = 100;
@@ -2128,7 +2141,7 @@
             this.groupBoxSound.Controls.Add(this.checkBoxEnable3DSound);
             this.groupBoxSound.Location = new System.Drawing.Point(6, 6);
             this.groupBoxSound.Name = "groupBoxSound";
-            this.groupBoxSound.Size = new System.Drawing.Size(450, 65);
+            this.groupBoxSound.Size = new System.Drawing.Size(452, 65);
             this.groupBoxSound.TabIndex = 0;
             this.groupBoxSound.TabStop = false;
             this.groupBoxSound.Text = "Sound";
@@ -2202,7 +2215,7 @@
             this.tabPagePatches.Location = new System.Drawing.Point(4, 22);
             this.tabPagePatches.Name = "tabPagePatches";
             this.tabPagePatches.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPagePatches.Size = new System.Drawing.Size(462, 389);
+            this.tabPagePatches.Size = new System.Drawing.Size(464, 366);
             this.tabPagePatches.TabIndex = 7;
             this.tabPagePatches.Text = "Patches";
             this.tabPagePatches.UseVisualStyleBackColor = true;
@@ -2211,9 +2224,9 @@
             // 
             this.labelPatchDescription.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.labelPatchDescription.Location = new System.Drawing.Point(6, 329);
+            this.labelPatchDescription.Location = new System.Drawing.Point(6, 304);
             this.labelPatchDescription.Name = "labelPatchDescription";
-            this.labelPatchDescription.Size = new System.Drawing.Size(450, 49);
+            this.labelPatchDescription.Size = new System.Drawing.Size(452, 49);
             this.labelPatchDescription.TabIndex = 1;
             this.labelPatchDescription.Text = "Description: None";
             // 
@@ -2235,7 +2248,7 @@
             this.listViewPatches.MultiSelect = false;
             this.listViewPatches.Name = "listViewPatches";
             this.listViewPatches.ShowGroups = false;
-            this.listViewPatches.Size = new System.Drawing.Size(454, 320);
+            this.listViewPatches.Size = new System.Drawing.Size(456, 295);
             this.listViewPatches.TabIndex = 0;
             this.listViewPatches.UseCompatibleStateImageBehavior = false;
             this.listViewPatches.View = System.Windows.Forms.View.Details;
@@ -2264,7 +2277,7 @@
             this.tabPageGameOptions.Location = new System.Drawing.Point(4, 22);
             this.tabPageGameOptions.Name = "tabPageGameOptions";
             this.tabPageGameOptions.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageGameOptions.Size = new System.Drawing.Size(462, 389);
+            this.tabPageGameOptions.Size = new System.Drawing.Size(464, 366);
             this.tabPageGameOptions.TabIndex = 10;
             this.tabPageGameOptions.Text = "Options";
             this.tabPageGameOptions.UseVisualStyleBackColor = true;
@@ -3173,7 +3186,31 @@
             this.toolStripMenuItemDeleteProfile.Name = "toolStripMenuItemDeleteProfile";
             this.toolStripMenuItemDeleteProfile.Size = new System.Drawing.Size(119, 22);
             this.toolStripMenuItemDeleteProfile.Text = "Delete Profile";
-            this.toolStripMenuItemDeleteProfile.Click += new System.EventHandler(this.toolStripMenuItemDeleteProfile_Click);            
+            this.toolStripMenuItemDeleteProfile.Click += new System.EventHandler(this.toolStripMenuItemDeleteProfile_Click);
+            // 
+            // contextMenuStripResetGameSettings
+            // 
+            this.contextMenuStripResetGameSettings.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.toolStripMenuItemResetOptimal,
+            this.toolStripMenuItemResetSafe});
+            this.contextMenuStripResetGameSettings.Name = "contextMenuStripResetGameSettings";
+            this.contextMenuStripResetGameSettings.Size = new System.Drawing.Size(208, 48);
+            // 
+            // toolStripMenuItemResetOptimal
+            // 
+            this.toolStripMenuItemResetOptimal.Name = "toolStripMenuItemResetOptimal";
+            this.toolStripMenuItemResetOptimal.Size = new System.Drawing.Size(207, 22);
+            this.toolStripMenuItemResetOptimal.Text = "Reset to Optimal Settings";
+            this.toolStripMenuItemResetOptimal.ToolTipText = "Apply the settings for best visuals on current hardware.";
+            this.toolStripMenuItemResetOptimal.Click += new System.EventHandler(this.toolStripMenuItemResetOptimal_Click);
+            // 
+            // toolStripMenuItemResetSafe
+            // 
+            this.toolStripMenuItemResetSafe.Name = "toolStripMenuItemResetSafe";
+            this.toolStripMenuItemResetSafe.Size = new System.Drawing.Size(207, 22);
+            this.toolStripMenuItemResetSafe.Text = "Reset to Safe Settings";
+            this.toolStripMenuItemResetSafe.ToolTipText = "If the game fails to start, try using this option.";
+            this.toolStripMenuItemResetSafe.Click += new System.EventHandler(this.toolStripMenuItemResetSafe_Click);
             // 
             // MainForm
             // 
@@ -3265,6 +3302,7 @@
             this.statusStripManager.ResumeLayout(false);
             this.statusStripManager.PerformLayout();
             this.contextMenuStripProfile.ResumeLayout(false);
+            this.contextMenuStripResetGameSettings.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -3490,5 +3528,9 @@
 		private System.Windows.Forms.CheckBox checkBoxSingleProfile;
 		private System.Windows.Forms.ToolStripMenuItem configureToolStripMenuItem;
 		private System.Windows.Forms.ToolStripSeparator toolStripMenuItem2Separator2;
+		private System.Windows.Forms.Button buttonResetGameSettings;
+		private System.Windows.Forms.ContextMenuStrip contextMenuStripResetGameSettings;
+		private System.Windows.Forms.ToolStripMenuItem toolStripMenuItemResetOptimal;
+		private System.Windows.Forms.ToolStripMenuItem toolStripMenuItemResetSafe;
 	}
 }

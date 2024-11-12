@@ -31,9 +31,6 @@ using System.Text;
 // SA Manager switch
 // Game Health Check
 
-// TODO for third release:
-// AA and AF settings?
-
 namespace SADXModManager
 {
 	public partial class MainForm : Form
@@ -406,6 +403,48 @@ namespace SADXModManager
 			checkBoxBorderImage.Checked = !gameSettings.Graphics.DisableBorderImage;
 			checkBoxForceMipmapping.Checked = gameSettings.Graphics.EnableForcedMipmapping;
 			checkBoxForceTextureFilter.Checked = gameSettings.Graphics.EnableForcedTextureFilter;
+			// AA and AF settings
+			switch (gameSettings.Graphics.Antialiasing)
+			{
+				case 2:
+					comboBoxAntialiasing.SelectedIndex = 1;
+					break;
+				case 4:
+					comboBoxAntialiasing.SelectedIndex = 2;
+					break;
+				case 8:
+					comboBoxAntialiasing.SelectedIndex = 3;
+					break;
+				case 16:
+					comboBoxAntialiasing.SelectedIndex = 4;
+					break;
+				case 0:
+				default:
+					comboBoxAntialiasing.SelectedIndex = 0;
+					break;
+			}
+			switch (gameSettings.Graphics.Anisotropic)
+			{
+				case 1:
+					comboBoxAnisotropic.SelectedIndex = 1;
+					break;
+				case 2:
+					comboBoxAnisotropic.SelectedIndex = 2;
+					break;
+				case 4:
+					comboBoxAnisotropic.SelectedIndex = 3;
+					break;
+				case 8:
+					comboBoxAnisotropic.SelectedIndex = 4;
+					break;
+				case 16:
+					comboBoxAnisotropic.SelectedIndex = 5;
+					break;
+				case 0:
+				default:
+					comboBoxAnisotropic.SelectedIndex = 0;
+					break;
+			}
 			// Load Graphics/Other settings
 			comboBoxBackgroundFill.SelectedIndex = gameSettings.Graphics.FillModeBackground;
 			comboBoxFmvFill.SelectedIndex = gameSettings.Graphics.FillModeFMV;
@@ -1052,6 +1091,46 @@ namespace SADXModManager
 			gameSettings.Graphics.EnableForcedMipmapping = checkBoxForceMipmapping.Checked;
 			gameSettings.Graphics.EnableForcedTextureFilter = checkBoxForceTextureFilter.Checked;
 			gameSettings.Graphics.DisableBorderImage = !checkBoxBorderImage.Checked;
+			// Save graphics settings - AA and AF
+			switch (comboBoxAnisotropic.SelectedIndex)
+			{
+				case 0:
+					gameSettings.Graphics.Anisotropic = 0;
+					break;
+				case 1:
+					gameSettings.Graphics.Anisotropic = 1;
+					break;
+				case 2:
+					gameSettings.Graphics.Anisotropic = 2;
+					break;
+				case 3:
+					gameSettings.Graphics.Anisotropic = 4;
+					break;
+				case 4:
+					gameSettings.Graphics.Anisotropic = 8;
+					break;
+				case 5:
+					gameSettings.Graphics.Anisotropic = 16;
+					break;
+			}
+			switch (comboBoxAntialiasing.SelectedIndex)
+			{
+				case 0:
+					gameSettings.Graphics.Antialiasing = 0;
+					break;
+				case 1:
+					gameSettings.Graphics.Antialiasing = 2;
+					break;
+				case 2:
+					gameSettings.Graphics.Antialiasing = 4;
+					break;
+				case 3:
+					gameSettings.Graphics.Antialiasing = 8;
+					break;
+				case 4:
+					gameSettings.Graphics.Antialiasing = 16;
+					break;
+			}
 			// Direct3D 9 setting applied immediately
 			// Save graphics settings - Other
 			gameSettings.Graphics.FillModeBackground = comboBoxBackgroundFill.SelectedIndex;
@@ -2911,6 +2990,66 @@ namespace SADXModManager
 					}
 				}
 			}
+		}
+
+		private void buttonResetGameSettings_Click(object sender, EventArgs e)
+		{
+			contextMenuStripResetGameSettings.Show(buttonResetGameSettings, buttonResetGameSettings.Width, 0);
+		}
+
+		private void toolStripMenuItemResetOptimal_Click(object sender, EventArgs e)
+		{
+			comboBoxScreenNumber.SelectedIndex = 0;
+			numericUpDownHorizontalResolution.Value = Screen.PrimaryScreen.Bounds.Width;
+			numericUpDownVerticalResolution.Value = Screen.PrimaryScreen.Bounds.Height;
+			comboBoxAnisotropic.SelectedIndex = 5;
+			comboBoxScreenMode.SelectedIndex = 2;
+			if (checkBoxEnableD3D9.Enabled)
+			{
+				checkBoxEnableD3D9.Checked = true;
+				CopyD3D9Dll();
+			}
+			checkBoxForceMipmapping.Checked = true;
+			checkBoxForceTextureFilter.Checked = true;
+			checkBoxBorderImage.Checked = true;
+			comboBoxFramerate.SelectedIndex = 0;
+			comboBoxFogEmulation.SelectedIndex = 0;
+			comboBoxClipLevel.SelectedIndex = 0;
+			comboBoxBackgroundFill.SelectedIndex = 2;
+			comboBoxFmvFill.SelectedIndex = 1;
+			checkBoxScaleHud.Checked = true;
+			checkBoxShowMouse.Checked = false;
+			checkBoxVsync.Checked = true;
+			checkBoxWindowResizable.Checked = false;
+			MessageBox.Show(this, "The settings will be applied once you click 'Save' or 'Save & Play'.", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+		}
+
+		private void toolStripMenuItemResetSafe_Click(object sender, EventArgs e)
+		{
+			comboBoxScreenNumber.SelectedIndex = Math.Min(1, comboBoxScreenNumber.Items.Count - 1);
+			numericUpDownHorizontalResolution.Value = 640;
+			numericUpDownVerticalResolution.Value = 480;
+			comboBoxAnisotropic.SelectedIndex = 0;
+			comboBoxScreenMode.SelectedIndex = 0;
+			if (checkBoxEnableD3D9.Enabled)
+			{
+				checkBoxEnableD3D9.Checked = false;
+				if (File.Exists(d3d8to9InstalledDLLName))
+					File.Delete(d3d8to9InstalledDLLName);
+			}
+			checkBoxForceMipmapping.Checked = true;
+			checkBoxForceTextureFilter.Checked = true;
+			checkBoxBorderImage.Checked = false;
+			comboBoxFramerate.SelectedIndex = 0;
+			comboBoxFogEmulation.SelectedIndex = 0;
+			comboBoxClipLevel.SelectedIndex = 0;
+			comboBoxBackgroundFill.SelectedIndex = 0;
+			comboBoxFmvFill.SelectedIndex = 0;
+			checkBoxScaleHud.Checked = false;
+			checkBoxShowMouse.Checked = true;
+			checkBoxVsync.Checked = false;
+			checkBoxWindowResizable.Checked = false;
+			MessageBox.Show(this, "The settings will be applied once you click 'Save' or 'Save & Play'.", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
 		}
 	}
 }
