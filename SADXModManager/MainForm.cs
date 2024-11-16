@@ -511,6 +511,8 @@ namespace SADXModManager
 			}
 			else
 				groupBoxControllerDInput.Visible = false;
+			if (!radioButtonDInput.Checked)
+				groupBoxControllerDInput.Visible = false;
 			// Hide SDL controls for now
 			ListControls();
 			// Load Sound settings
@@ -2774,7 +2776,7 @@ namespace SADXModManager
 			}
 			listViewControlBindings.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent); // Control name
 			listViewControlBindings.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent); // Control binding
-																									// Remove for now
+			// Remove for now
 			tabControlGameConfig.TabPages.Remove(tabPageController);
 		}
 
@@ -2786,6 +2788,10 @@ namespace SADXModManager
 				radioButtonMouseDisable.Checked = false;
 				radioButtonMouseDragAccelerate.Checked = true;
 			}
+			if (radioButtonDInput.Checked && directInput.GetDevices(DeviceClass.GameControl, DeviceEnumerationFlags.AttachedOnly).Count > 0)
+				groupBoxControllerDInput.Visible = true;
+			else
+				groupBoxControllerDInput.Visible = false;
 		}
 
 		private void comboBoxScreenMode_SelectedIndexChanged(object sender, EventArgs e)
