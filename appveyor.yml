@@ -15,9 +15,10 @@ before_build:
 
     nuget restore
 build:
+  project: SADXModManager.sln  
   publish_nuget: true
   include_nuget_references: true
-  verbosity: minimal
+  verbosity: minimal  
 artifacts:
 - path: SADXModManager.exe
   name: sadxmodmanager
