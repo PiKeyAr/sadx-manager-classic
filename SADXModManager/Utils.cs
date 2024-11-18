@@ -249,7 +249,7 @@ namespace SADXModManager
 			string url_releases = "https://api.github.com/repos/PiKeyAr/sadx-manager-classic/releases";
 			string text_releases = string.Empty;
 			string assetName = "SADXModManager.exe";
-			string mlverfile = Path.Combine(managerAppDataPath, "sadxmgrver.txt");
+			string mlverfile = Path.Combine(managerAppDataPath, "sadxmanagerver.txt");
 			string currentTagName = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "106";
 			uint currentID = 106;
 			if (!uint.TryParse(currentTagName, out currentID))
