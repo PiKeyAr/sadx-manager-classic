@@ -1,0 +1,34 @@
+version: '{build}'
+branches:
+  only:
+  - master  
+skip_tags: true
+image: Visual Studio 2022
+configuration: Release
+platform: x86
+nuget:
+  project_feed: true
+before_build:
+- cmd: nuget restore
+build:
+  publish_nuget: true
+  include_nuget_references: true
+  verbosity: minimal
+artifacts:
+- path: SADXModManager.exe
+  name: sadxmodmanager
+
+before_deploy:
+- ps: |-
+      if (!$env:APPVEYOR_REPO_COMMIT_MESSAGE_EXTENDED) {
+        $env:APPVEYOR_REPO_COMMIT_MESSAGE_EXTENDED = "$env:APPVEYOR_REPO_COMMIT_MESSAGE"
+      }
+
+deploy:
+- provider: GitHub
+  description: $(APPVEYOR_REPO_COMMIT_MESSAGE_EXTENDED)
+  auth_token:
+    secure: 3U0hYOvkeEJsoN2b4U/c9RTDxjcj9txunvCbWfkg5qvOSB1qOnh4fnIE9EK5yAXi2m8RJMO4Zr/UqiVMB9CDPulfPRcJSJ83rsmh1EXBipUs4K/RQmQHaDG6UiiNQ1Xg
+  artifact: sadxmodmanager
+  on:
+    branch: master
