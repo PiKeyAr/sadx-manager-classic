@@ -20,7 +20,7 @@ build:
   include_nuget_references: true
   verbosity: minimal  
 artifacts:
-- path: SADXModManager.exe
+- path: C:\projects\sadx-manager-classic\bin\SADXModManager.exe
   name: sadxmodmanager
 
 before_deploy:
@@ -33,7 +33,7 @@ deploy:
 - provider: GitHub
   description: $(APPVEYOR_REPO_COMMIT_MESSAGE_EXTENDED)
   auth_token:
-    secure: 3U0hYOvkeEJsoN2b4U/c9RTDxjcj9txunvCbWfkg5qvOSB1qOnh4fnIE9EK5yAXi2m8RJMO4Zr/UqiVMB9CDPulfPRcJSJ83rsmh1EXBipUs4K/RQmQHaDG6UiiNQ1Xg
+    secure: 3U0hYOvkeEJsoN2b4U/c9UpG+OoVIqNa7EtW9r2+FbdvP7m2ul7i1oCKz+gUyx+khXCfbKrOSvSWzk8nYTAme9yv/ZCUchsuuCF8vltt5XT2faWG/TsDq9+KxiW9o3cb
   artifact: sadxmodmanager
   on:
     branch: master
