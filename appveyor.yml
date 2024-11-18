@@ -20,7 +20,7 @@ build:
   include_nuget_references: true
   verbosity: minimal  
 artifacts:
-- path: C:\projects\sadx-manager-classic\bin\SADXModManager.exe
+- path: bin\SADXModManager.exe
   name: sadxmodmanager
 
 before_deploy:
