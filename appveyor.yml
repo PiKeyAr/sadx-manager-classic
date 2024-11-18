@@ -9,7 +9,10 @@ platform: x86
 nuget:
   project_feed: true
 before_build:
-- cmd: nuget restore
+- cmd: >-
+    git submodule update --init --recursive
+    nuget restore
+    echo | set /p dummyName="%APPVEYOR_BUILD_VERSION%" > "C:\sadx-manager-classic\sadxmgrver.txt"
 build:
   publish_nuget: true
   include_nuget_references: true
