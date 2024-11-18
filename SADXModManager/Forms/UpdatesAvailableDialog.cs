@@ -303,8 +303,6 @@ namespace SADXModManager.Forms
 										case DownloadItem.DownloadItemType.Loader:
 											// Extract SADXModLoader.dll, border image, codes, game patches
 											Process.Start(new ProcessStartInfo("7z.exe", $"e -aoa -o\"{Path.Combine(Variables.gameSettings.GamePath, "mods")}\" \"{filePath}\" *.*") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
-											// Generate sadxmlver.txt
-											File.WriteAllText(Path.Combine(Variables.managerAppDataPath, "sadxmlver.txt"), item.Version);
 											// Extract extlibs
 											Process.Start(new ProcessStartInfo("7z.exe", $"x -aoa -o\"{Variables.managerAppDataPath}\" \"{filePath}\" extlib") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
 											// Copy SADXModLoader.dll to system\CHRMODELS.dll if the Loader is installed

@@ -96,7 +96,7 @@ namespace SADXModManager
 			string url_releases = "https://api.github.com/repos/x-hax/sadx-mod-loader/releases";
 			string text_releases = string.Empty;
 			string assetName = "SADXModLoader.7z";
-			string mlverfile = Path.Combine(managerAppDataPath, "sadxmlver.txt");
+			string mlverfile = Path.Combine(gameSettings.GamePath, "mods", "sadxmlver.txt");
 			string currentTagName = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "605";
 			uint currentID = 604;
 			if (!uint.TryParse(currentTagName, out currentID))
