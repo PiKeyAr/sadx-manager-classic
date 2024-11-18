@@ -246,58 +246,95 @@ namespace SADXModManager
 		/// <summary>Retrieves a download for an update for SADX Mod Manager Classic from a direct link (null if no update).</summary>
 		public static DownloadItem CheckManagerUpdates(Form parent)
 		{
-			string changelog;
-			string mlverfile = Path.Combine(managerAppDataPath, "sadxmanagerver.txt");
+			string url_releases = "https://api.github.com/repos/PiKeyAr/sadx-manager-classic/releases";
+			string text_releases = string.Empty;
+			string assetName = "SADXModManager.exe";
+			string mlverfile = Path.Combine(managerAppDataPath, "sadxmgrver.txt");
+			string currentTagName = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "106";
+			uint currentID = 106;
+			if (!uint.TryParse(currentTagName, out currentID))
+				currentID = 106;
 			try
 			{
-				// Read remote and local version info
-				string msg_remote = webClient.DownloadString("https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/sadx-manager-classic/sadxmanagerver.txt");
-				string msg_local = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "1.00";
-				// If there's no difference, there's no update
-				if (msg_remote == msg_local && File.Exists(Path.Combine(managerExePath, "SADXModManager.exe")))
-					return null;
-				// Get request
-				WebRequest req = WebRequest.Create(managerUpdateUrl);
-				req.Method = "HEAD";
-				using (WebResponse resp = req.GetResponse())
+				StringBuilder changelog = new StringBuilder();
+				List<GitHubRelease> releases;
+				try
 				{
-					// Get size
-					long size = GetDownloadSize(resp);
-					// If the URL doesn't work, output an error
-					if (size == 0)
+					text_releases = webClient.DownloadString(url_releases);
+				}
+				catch (Exception e)
+				{
+					MessageBox.Show(parent, string.Format("Error downloading GitHub repo data for Mod Manager Classic from\n`{0}`.\n{1}\n\nIf this is a 403 error, you may be hitting a rate limit. Wait a while and try again.", url_releases, e.Message.ToString()), "SADX Mod Manager Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					return null;
+				}
+
+				releases = JsonConvert.DeserializeObject<List<GitHubRelease>>(text_releases)
+				.Where(x => !x.Draft && !x.PreRelease).ToList();
+				if (releases == null || releases.Count == 0)
+					throw new Exception("No GitHub releases found for URL " + url_releases);
+
+				GitHubRelease latestRelease = null;
+				GitHubAsset latestAsset = null;
+
+				DateTime dateCheck = DateTime.MinValue;
+
+				foreach (GitHubRelease release in releases)
+				{
+					GitHubAsset asset;
+					asset = release.Assets
+						.FirstOrDefault(x => x.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase));
+
+					if (asset == null)
+						continue;
+
+					uint releaseID = 0;
+					if (uint.TryParse(release.TagName, out releaseID))
 					{
-						MessageBox.Show(parent, "Could not retrieve SADX Mod Manager Classic update information: size is 0", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
-						return null;
+						if (releaseID > currentID)
+						{
+							changelog.AppendLine(string.Format("Revision {0}\n{1}\n", release.TagName, release.Body));
+						}
 					}
-					// Get last modified date
-					DateTime modifiedDate = GetDownloadDate(resp);
-					try
+
+					DateTime uploaded = DateTime.Parse(asset.Uploaded, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal);
+					if (uploaded > dateCheck)
 					{
-						changelog = webClient.DownloadString(managerChangelogUrl);
+						latestRelease = release;
+						latestAsset = asset;
+						dateCheck = uploaded;
 					}
-					catch (Exception ex)
-					{
-						changelog = "Error retrieving Mod Manager Classic changelog: " + ex.Message.ToString();
-					}
+				}
+
+				if (latestRelease == null || latestAsset == null)
+				{
+					return null;
+				}
+
+				if (latestRelease.TagName != currentTagName)
+				{
+					string body = Regex.Replace(changelog.ToString(), "(?<!\r)\n", "\r\n");
+
 					return new DownloadItem()
 					{
+						Type = DownloadItem.DownloadItemType.Manager,
 						Name = "SADX Mod Manager Classic",
 						Authors = "PkR",
-						Version = msg_remote,
-						ReleaseDate = modifiedDate,
-						UploadDate = modifiedDate,
-						DownloadSize = size,
 						FileCount = 1,
+						Version = latestRelease.TagName,
+						ReleaseDate = DateTime.Parse(latestRelease.Published, DateTimeFormatInfo.InvariantInfo),
+						UploadDate = DateTime.Parse(latestAsset.Uploaded, DateTimeFormatInfo.InvariantInfo),
+						DownloadSize = latestAsset.Size,
 						HomepageUrl = "https://sadxmodinstaller.unreliable.network/index.php/tools/",
-						DownloadUrl = managerUpdateUrl,
-						ReleaseName = "",
+						DownloadUrl = latestAsset.DownloadUrl,
+						ReleaseName = "Revision " + latestRelease.TagName,
 						ReleaseTag = "",
-						Description = "This tool replaces the Steam version's launcher. It can be used to configure keyboard and gamepad controls.",
-						Files = new List<Tuple<string, string, long>> { new Tuple<string, string, long>("Download", "SADXModManager.exe", size) },
-						Changelog = changelog,
-						Type = DownloadItem.DownloadItemType.Manager
+						Description = "The tool to manage settings and mods for SADX.",
+						Files = new List<Tuple<string, string, long>> { new Tuple<string, string, long>("Download", "SADXModManager.exe", latestAsset.Size) },
+						Changelog = body.TrimEnd()
 					};
 				}
+				else
+					return null;
 			}
 			catch (Exception ex)
 			{
