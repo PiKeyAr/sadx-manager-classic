@@ -207,7 +207,10 @@ namespace SADXModManager
 				// Use the default font.
 				boldFont = new Font(this.Font.FontFamily, this.Font.Size * 1.25f, FontStyle.Bold);
 			}
-
+			buttonSelectAllMods.Text = Encoding.GetEncoding(Encoding.Default.CodePage).GetString(new byte[] { Convert.ToByte(0xFE) });
+			buttonCheckModUpdates.Text = Encoding.GetEncoding(Encoding.Default.CodePage).GetString(new byte[] { Convert.ToByte(0xBF) });
+			buttonRefreshModList.Text = Encoding.GetEncoding(Encoding.Default.CodePage).GetString(new byte[] { Convert.ToByte(0x71) });
+			checkBoxSearchMod.Text = Encoding.GetEncoding(Encoding.Default.CodePage).GetString(new byte[] { Convert.ToByte(0x4C) });
 			buttonModTop.Font = boldFont;
 			buttonModUp.Font = boldFont;
 			buttonModDown.Font = boldFont;

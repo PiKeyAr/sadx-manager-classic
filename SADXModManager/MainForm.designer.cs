@@ -557,11 +557,12 @@
             this.buttonRefreshModList.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonRefreshModList.AutoSize = true;
             this.buttonRefreshModList.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.buttonRefreshModList.Font = new System.Drawing.Font("Webdings", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(2)));
             this.buttonRefreshModList.Location = new System.Drawing.Point(439, 248);
             this.buttonRefreshModList.Name = "buttonRefreshModList";
             this.buttonRefreshModList.Size = new System.Drawing.Size(33, 29);
             this.buttonRefreshModList.TabIndex = 7;
-            this.buttonRefreshModList.Text = "🗘";
+            this.buttonRefreshModList.Text = "q";
             this.toolTip.SetToolTip(this.buttonRefreshModList, "Refresh Mod List");
             this.buttonRefreshModList.UseVisualStyleBackColor = true;
             this.buttonRefreshModList.Click += new System.EventHandler(this.buttonRefreshModList_Click);
@@ -658,9 +659,9 @@
             this.buttonInstallLoader.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.buttonInstallLoader.Location = new System.Drawing.Point(168, 453);
             this.buttonInstallLoader.Name = "buttonInstallLoader";
-            this.buttonInstallLoader.Size = new System.Drawing.Size(84, 22);
+            this.buttonInstallLoader.Size = new System.Drawing.Size(90, 22);
             this.buttonInstallLoader.TabIndex = 3;
-            this.buttonInstallLoader.Text = "Install Loader";
+            this.buttonInstallLoader.Text = "Enable Loader";
             this.buttonInstallLoader.UseVisualStyleBackColor = true;
             this.buttonInstallLoader.Click += new System.EventHandler(this.installButton_Click);
             // 
@@ -714,12 +715,13 @@
             this.checkBoxSearchMod.Appearance = System.Windows.Forms.Appearance.Button;
             this.checkBoxSearchMod.AutoSize = true;
             this.checkBoxSearchMod.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.checkBoxSearchMod.Font = new System.Drawing.Font("Webdings", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(2)));
             this.checkBoxSearchMod.Location = new System.Drawing.Point(439, 283);
             this.checkBoxSearchMod.MinimumSize = new System.Drawing.Size(33, 29);
             this.checkBoxSearchMod.Name = "checkBoxSearchMod";
             this.checkBoxSearchMod.Size = new System.Drawing.Size(33, 29);
             this.checkBoxSearchMod.TabIndex = 8;
-            this.checkBoxSearchMod.Text = "🔍︎";
+            this.checkBoxSearchMod.Text = "L";
             this.checkBoxSearchMod.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.toolTip.SetToolTip(this.checkBoxSearchMod, "Filter Mod List");
             this.checkBoxSearchMod.UseVisualStyleBackColor = true;
@@ -777,11 +779,12 @@
             this.buttonCheckModUpdates.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonCheckModUpdates.AutoSize = true;
             this.buttonCheckModUpdates.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.buttonCheckModUpdates.Font = new System.Drawing.Font("Wingdings", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(2)));
             this.buttonCheckModUpdates.Location = new System.Drawing.Point(439, 213);
             this.buttonCheckModUpdates.Name = "buttonCheckModUpdates";
             this.buttonCheckModUpdates.Size = new System.Drawing.Size(33, 29);
             this.buttonCheckModUpdates.TabIndex = 6;
-            this.buttonCheckModUpdates.Text = "🕒︎";
+            this.buttonCheckModUpdates.Text = "ї";
             this.toolTip.SetToolTip(this.buttonCheckModUpdates, "Check for Mod Updates");
             this.buttonCheckModUpdates.UseVisualStyleBackColor = true;
             this.buttonCheckModUpdates.Click += new System.EventHandler(this.buttonCheckModUpdates_Click);
@@ -807,11 +810,12 @@
             this.buttonSelectAllMods.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonSelectAllMods.AutoSize = true;
             this.buttonSelectAllMods.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.buttonSelectAllMods.Font = new System.Drawing.Font("Wingdings", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(2)));
             this.buttonSelectAllMods.Location = new System.Drawing.Point(439, 178);
             this.buttonSelectAllMods.Name = "buttonSelectAllMods";
             this.buttonSelectAllMods.Size = new System.Drawing.Size(33, 29);
             this.buttonSelectAllMods.TabIndex = 5;
-            this.buttonSelectAllMods.Text = "🗹";
+            this.buttonSelectAllMods.Text = "ю";
             this.toolTip.SetToolTip(this.buttonSelectAllMods, "Select or Deselect All Mods");
             this.buttonSelectAllMods.UseVisualStyleBackColor = true;
             this.buttonSelectAllMods.Click += new System.EventHandler(this.buttonSelectAllMods_Click);
@@ -1480,7 +1484,7 @@
             this.tabPageInput.Controls.Add(this.groupBoxMouseMode);
             this.tabPageInput.Location = new System.Drawing.Point(4, 22);
             this.tabPageInput.Name = "tabPageInput";
-            this.tabPageInput.Size = new System.Drawing.Size(464, 366);
+            this.tabPageInput.Size = new System.Drawing.Size(464, 389);
             this.tabPageInput.TabIndex = 8;
             this.tabPageInput.Text = "Input";
             this.tabPageInput.UseVisualStyleBackColor = true;
@@ -1720,7 +1724,7 @@
             this.tabPageController.Location = new System.Drawing.Point(4, 22);
             this.tabPageController.Name = "tabPageController";
             this.tabPageController.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageController.Size = new System.Drawing.Size(464, 366);
+            this.tabPageController.Size = new System.Drawing.Size(464, 389);
             this.tabPageController.TabIndex = 9;
             this.tabPageController.Text = "Controls";
             this.tabPageController.UseVisualStyleBackColor = true;
@@ -2000,7 +2004,7 @@
             this.tabPageSound.Location = new System.Drawing.Point(4, 22);
             this.tabPageSound.Name = "tabPageSound";
             this.tabPageSound.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageSound.Size = new System.Drawing.Size(464, 366);
+            this.tabPageSound.Size = new System.Drawing.Size(464, 389);
             this.tabPageSound.TabIndex = 4;
             this.tabPageSound.Text = "Sound";
             // 
@@ -2215,7 +2219,7 @@
             this.tabPagePatches.Location = new System.Drawing.Point(4, 22);
             this.tabPagePatches.Name = "tabPagePatches";
             this.tabPagePatches.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPagePatches.Size = new System.Drawing.Size(464, 366);
+            this.tabPagePatches.Size = new System.Drawing.Size(464, 389);
             this.tabPagePatches.TabIndex = 7;
             this.tabPagePatches.Text = "Patches";
             this.tabPagePatches.UseVisualStyleBackColor = true;
@@ -2224,7 +2228,7 @@
             // 
             this.labelPatchDescription.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.labelPatchDescription.Location = new System.Drawing.Point(6, 304);
+            this.labelPatchDescription.Location = new System.Drawing.Point(6, 327);
             this.labelPatchDescription.Name = "labelPatchDescription";
             this.labelPatchDescription.Size = new System.Drawing.Size(452, 49);
             this.labelPatchDescription.TabIndex = 1;
@@ -2248,7 +2252,7 @@
             this.listViewPatches.MultiSelect = false;
             this.listViewPatches.Name = "listViewPatches";
             this.listViewPatches.ShowGroups = false;
-            this.listViewPatches.Size = new System.Drawing.Size(456, 295);
+            this.listViewPatches.Size = new System.Drawing.Size(456, 318);
             this.listViewPatches.TabIndex = 0;
             this.listViewPatches.UseCompatibleStateImageBehavior = false;
             this.listViewPatches.View = System.Windows.Forms.View.Details;
@@ -2277,7 +2281,7 @@
             this.tabPageGameOptions.Location = new System.Drawing.Point(4, 22);
             this.tabPageGameOptions.Name = "tabPageGameOptions";
             this.tabPageGameOptions.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageGameOptions.Size = new System.Drawing.Size(464, 366);
+            this.tabPageGameOptions.Size = new System.Drawing.Size(464, 389);
             this.tabPageGameOptions.TabIndex = 10;
             this.tabPageGameOptions.Text = "Options";
             this.tabPageGameOptions.UseVisualStyleBackColor = true;
