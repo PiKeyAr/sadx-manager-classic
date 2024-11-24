@@ -358,7 +358,6 @@ namespace SADXModManager
 			listViewMods.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.None); // Author
 			listViewMods.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.HeaderSize); // Version
 			listViewMods.Columns[3].Width = -2; // Category
-			CheckD3D8to9Update();
 		}
 
 		/// <summary>Sets UI items according to the game settings in the currently loaded profile</summary>
@@ -453,6 +452,10 @@ namespace SADXModManager
 			comboBoxFmvFill.SelectedIndex = gameSettings.Graphics.FillModeFMV;
 			checkBoxScaleHud.Checked = gameSettings.Graphics.EnableUIScaling;
 			checkBoxShowMouse.Checked = gameSettings.Graphics.ShowMouseInFullscreen;
+			// Check old d3d8.dll
+			if (File.Exists(d3d8to9InstalledDLLName))
+				gameSettings.Graphics.RenderBackend = 1;
+			checkBoxEnableD3D9.Checked = gameSettings.Graphics.RenderBackend == 1;			
 			// Load Input settings
 			radioButtonDInput.Checked = !gameSettings.Controller.EnabledInputMod;
 			radioButtonSDL.Checked = gameSettings.Controller.EnabledInputMod;
@@ -1136,8 +1139,8 @@ namespace SADXModManager
 					gameSettings.Graphics.Antialiasing = 16;
 					break;
 			}
-			// Direct3D 9 setting applied immediately
 			// Save graphics settings - Other
+			gameSettings.Graphics.RenderBackend = checkBoxEnableD3D9.Checked ? 1 : 0;
 			gameSettings.Graphics.FillModeBackground = comboBoxBackgroundFill.SelectedIndex;
 			gameSettings.Graphics.FillModeFMV = comboBoxFmvFill.SelectedIndex;
 			gameSettings.Graphics.EnableUIScaling = checkBoxScaleHud.Checked;
@@ -2247,70 +2250,15 @@ namespace SADXModManager
 		#endregion
 
 		#region Direct3D wrapper
-		private void CopyD3D9Dll()
-		{
-			try
-			{
-				File.Copy(d3d8to9StoredDLLName, d3d8to9InstalledDLLName, true);
-			}
-			catch (Exception ex)
-			{
-				MessageBox.Show(this, "Unable to update d3d8.dll:\n" + ex.Message, "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
+
 
 		private void checkBoxEnableD3D9_Click(object sender, EventArgs e)
 		{
-			if (checkBoxEnableD3D9.Checked)
-			{
-				CopyD3D9Dll();
-			}
-			else if (!checkBoxEnableD3D9.Checked && File.Exists(d3d8to9InstalledDLLName))
+			gameSettings.Graphics.RenderBackend = checkBoxEnableD3D9.Checked ? 1 : 0;
+			if (File.Exists(d3d8to9InstalledDLLName))
 				File.Delete(d3d8to9InstalledDLLName);
 		}
 
-		private void CheckD3D8to9Update()
-		{
-			bool result = false;
-			if (!File.Exists(d3d8to9StoredDLLName) || !File.Exists(d3d8to9InstalledDLLName))
-				return;
-			try
-			{
-				long length1 = new FileInfo(d3d8to9InstalledDLLName).Length;
-				long length2 = new FileInfo(d3d8to9StoredDLLName).Length;
-				if (length1 != length2)
-					result = true;
-				else
-				{
-					byte[] file1 = File.ReadAllBytes(d3d8to9InstalledDLLName);
-					byte[] file2 = File.ReadAllBytes(d3d8to9StoredDLLName);
-					for (int i = 0; i < file1.Length; i++)
-					{
-						if (file1[i] != file2[i])
-							result = true;
-					}
-					return;
-				}
-			}
-			catch (Exception ex)
-			{
-				MessageBox.Show(this, "Unable to check d3d8to9 version:\n" + ex.Message, "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				return;
-			}
-
-			if (!result)
-				return;
-			DialogResult update = MessageBox.Show(this,
-												  "The version of d3d8.dll in SADX folder differs from the one included with the Mod Loader." +
-												  " Would you like to update the installed copy?",
-												  "SADX Mod Manager",
-												  MessageBoxButtons.YesNo,
-												  MessageBoxIcon.Question);
-			if (update == DialogResult.Yes)
-			{
-				CopyD3D9Dll();
-			}
-		}
 		#endregion
 
 		#region Mod profiles
@@ -3014,10 +2962,7 @@ namespace SADXModManager
 			comboBoxAnisotropic.SelectedIndex = 5;
 			comboBoxScreenMode.SelectedIndex = 2;
 			if (checkBoxEnableD3D9.Enabled)
-			{
 				checkBoxEnableD3D9.Checked = true;
-				CopyD3D9Dll();
-			}
 			checkBoxForceMipmapping.Checked = true;
 			checkBoxForceTextureFilter.Checked = true;
 			checkBoxBorderImage.Checked = true;

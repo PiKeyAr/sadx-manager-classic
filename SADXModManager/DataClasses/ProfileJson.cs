@@ -93,6 +93,8 @@ namespace SADXModManager
 
 		[DefaultValue(0)]
 		public int Anisotropic { get; set; }
+		[DefaultValue(0)]
+		public int RenderBackend { get; set; }
 	}
 
 	public class ControllerSettings
