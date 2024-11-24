@@ -152,7 +152,7 @@ namespace SADXModManager
 			managerConfigJsonPath = Path.Combine(managerAppDataPath, "ManagerClassic.json");
 			managerConfig = JsonDeserialize<ClassicManagerJson>(managerConfigJsonPath);
 			if (managerConfig == null)
-				managerConfig = new ClassicManagerJson();
+				managerConfig = new ClassicManagerJson(){ KeepManagerOpen = true, ManagerUpdateCheck = true };
 			if (managerConfig.IgnoredModUpdates == null)
 				managerConfig.IgnoredModUpdates = new List<string>();
 			// Load the SADX profiles JSON file

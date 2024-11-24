@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using ModManagerCommon;
 
@@ -12,7 +13,9 @@ namespace SADXModManager.DataClasses
 		public Point WindowPosition { get; set; }
 		public Point LastMonitorResolution { get; set; }
 		public bool Maximized { get; set; }
+		[DefaultValue(true)]
 		public bool ManagerUpdateCheck { get; set; }
+		[DefaultValue(true)]
 		public bool KeepManagerOpen { get; set; }
 		public string ModAuthor { get; set; }
 		public bool AngleHex { get; set; }
