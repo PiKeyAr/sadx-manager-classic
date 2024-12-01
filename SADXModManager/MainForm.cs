@@ -25,7 +25,6 @@ using System.Text;
 // TODO for second release:
 // Add mods from archive
 // Mod dependencies
-// Reset to optimal/failsafe settings
 // SDL Configuration
 // Clean up code
 // SA Manager switch
@@ -2614,6 +2613,7 @@ namespace SADXModManager
 					}
 					listViewPatches.Items.Add(item);
 				}
+				gameSettings.Patches = null;
 				listViewPatches.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent); // Patch name
 				listViewPatches.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent); // Author
 				listViewPatches.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.ColumnContent); // Category
