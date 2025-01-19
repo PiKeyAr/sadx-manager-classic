@@ -329,7 +329,7 @@ namespace SADXModManager
 			if (sonicDxIni.Controllers == null)
 				sonicDxIni.Controllers = new Dictionary<string, ControllerConfig>();
 			// Load d3d8to11 config.ini
-			d3d8to11ConfigIni = File.Exists(d3d8to11ConfigPath) ? IniSerializer.Deserialize<D3d8to11ConfigIni>(d3d8to11ConfigPath) : new D3d8to11ConfigIni();
+			d3d8to11ConfigIni = File.Exists(d3d8to11ConfigPath) ? IniSerializer.Deserialize<D3d8to11ConfigIni>(d3d8to11ConfigPath) : new D3d8to11ConfigIni { OIT = new D3d8to11ConfigIni.OITConfig() };
 			// Load codes list
 			try
 			{
@@ -1236,6 +1236,8 @@ namespace SADXModManager
 			else
 				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", textBoxProfileName.Text + ".json");
 			IniSerializer.Serialize(sonicDxIni, sonicDxIniPath);
+			if (!Directory.Exists(Path.GetDirectoryName(d3d8to11ConfigPath)))
+				Directory.CreateDirectory(Path.GetDirectoryName(d3d8to11ConfigPath));
 			IniSerializer.Serialize(d3d8to11ConfigIni, d3d8to11ConfigPath);
 			JsonSerialize(gameSettings, currentProfileJsonPath);
 			JsonSerialize(managerConfig, managerConfigJsonPath);
