@@ -29,10 +29,8 @@ namespace SADXModManager
 		public static string datadllorigpath = "system/CHRMODELS_orig.dll";
 		/// <summary>Path to the file SADXModLoader.dll</summary>
 		public static string loaderdllpath = "mods/SADXModLoader.dll";
-		/// <summary>Path to d3d8.dll</summary>
-		public static string d3d8to9InstalledDLLName;
-		/// <summary>Path to d3d8m.dll</summary>
-		public static string d3d8to9StoredDLLName;
+		/// <summary>Path to d3d8to11 configuration file</summary>
+		public static string d3d8to11ConfigPath;
 
 		/// <summary>JSON serializer</summary>
 		public static readonly JsonSerializer jsonSerializer = new JsonSerializer() { Culture = System.Globalization.CultureInfo.InvariantCulture, Formatting = Formatting.Indented, NullValueHandling = NullValueHandling.Ignore, };

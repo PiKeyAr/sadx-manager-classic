@@ -83,8 +83,8 @@
             this.tabPageGameConfig = new System.Windows.Forms.TabPage();
             this.tabControlGameConfig = new System.Windows.Forms.TabControl();
             this.tabPageGraphics = new System.Windows.Forms.TabPage();
-            this.buttonResetGameSettings = new System.Windows.Forms.Button();
             this.groupBoxGraphicsOther = new System.Windows.Forms.GroupBox();
+            this.buttonResetGameSettings = new System.Windows.Forms.Button();
             this.checkBoxShowMouse = new System.Windows.Forms.CheckBox();
             this.checkBoxScaleHud = new System.Windows.Forms.CheckBox();
             this.comboBoxBackgroundFill = new System.Windows.Forms.ComboBox();
@@ -92,11 +92,13 @@
             this.labeFmvFillMode = new System.Windows.Forms.Label();
             this.labelBgFillMode = new System.Windows.Forms.Label();
             this.groupBoxVisuals = new System.Windows.Forms.GroupBox();
+            this.comboBoxBackend = new System.Windows.Forms.ComboBox();
+            this.labelBackend = new System.Windows.Forms.Label();
             this.comboBoxAntialiasing = new System.Windows.Forms.ComboBox();
             this.comboBoxAnisotropic = new System.Windows.Forms.ComboBox();
             this.labelAnisotropic = new System.Windows.Forms.Label();
             this.labelAntiAliasing = new System.Windows.Forms.Label();
-            this.checkBoxEnableD3D9 = new System.Windows.Forms.CheckBox();
+            this.checkBoxEnableOIT = new System.Windows.Forms.CheckBox();
             this.checkBoxBorderImage = new System.Windows.Forms.CheckBox();
             this.comboBoxFogEmulation = new System.Windows.Forms.ComboBox();
             this.comboBoxClipLevel = new System.Windows.Forms.ComboBox();
@@ -136,8 +138,11 @@
             this.labelMouseAction = new System.Windows.Forms.Label();
             this.tabPageController = new System.Windows.Forms.TabPage();
             this.groupBoxControlsSDL = new System.Windows.Forms.GroupBox();
-            this.labelSdlDevice = new System.Windows.Forms.Label();
-            this.comboBoxSdlDevice = new System.Windows.Forms.ComboBox();
+            this.listViewSDLDevices = new System.Windows.Forms.ListView();
+            this.columnHeaderSDLDevice = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.groupBoxDeviceSettings = new System.Windows.Forms.GroupBox();
+            this.comboBoxKeyboardPlayer = new System.Windows.Forms.ComboBox();
+            this.labelKeyboardPlayer = new System.Windows.Forms.Label();
             this.buttonBindingReset = new System.Windows.Forms.Button();
             this.buttonBindingClear = new System.Windows.Forms.Button();
             this.buttonBindingSet = new System.Windows.Forms.Button();
@@ -156,8 +161,6 @@
             this.labelTriggersDeadzone = new System.Windows.Forms.Label();
             this.labelRightStickDeadzone = new System.Windows.Forms.Label();
             this.labelLeftStickDeadzone = new System.Windows.Forms.Label();
-            this.labelKeyboardPlayer = new System.Windows.Forms.Label();
-            this.comboBoxKeyboardPlayer = new System.Windows.Forms.ComboBox();
             this.listViewControlBindings = new System.Windows.Forms.ListView();
             this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -286,6 +289,7 @@
             this.groupBoxMouseMode.SuspendLayout();
             this.tabPageController.SuspendLayout();
             this.groupBoxControlsSDL.SuspendLayout();
+            this.groupBoxDeviceSettings.SuspendLayout();
             this.groupBoxRumble.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownRumbleMultiplier)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownRumbleMinTime)).BeginInit();
@@ -489,7 +493,7 @@
             "All Screens"});
             this.comboBoxScreenNumber.Location = new System.Drawing.Point(87, 19);
             this.comboBoxScreenNumber.Name = "comboBoxScreenNumber";
-            this.comboBoxScreenNumber.Size = new System.Drawing.Size(352, 21);
+            this.comboBoxScreenNumber.Size = new System.Drawing.Size(335, 21);
             this.comboBoxScreenNumber.TabIndex = 0;
             this.toolTip.SetToolTip(this.comboBoxScreenNumber, "The screen to put the game on.");
             this.comboBoxScreenNumber.SelectedIndexChanged += new System.EventHandler(this.screenNumComboBox_SelectedIndexChanged);
@@ -657,7 +661,7 @@
             this.buttonInstallLoader.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.buttonInstallLoader.AutoSize = true;
             this.buttonInstallLoader.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonInstallLoader.Location = new System.Drawing.Point(168, 453);
+            this.buttonInstallLoader.Location = new System.Drawing.Point(169, 453);
             this.buttonInstallLoader.Name = "buttonInstallLoader";
             this.buttonInstallLoader.Size = new System.Drawing.Size(90, 22);
             this.buttonInstallLoader.TabIndex = 3;
@@ -996,7 +1000,6 @@
             // 
             this.tabPageGraphics.AutoScroll = true;
             this.tabPageGraphics.BackColor = System.Drawing.SystemColors.ControlLightLight;
-            this.tabPageGraphics.Controls.Add(this.buttonResetGameSettings);
             this.tabPageGraphics.Controls.Add(this.groupBoxGraphicsOther);
             this.tabPageGraphics.Controls.Add(this.groupBoxVisuals);
             this.tabPageGraphics.Controls.Add(this.groupBoxDisplay);
@@ -1007,32 +1010,33 @@
             this.tabPageGraphics.TabIndex = 2;
             this.tabPageGraphics.Text = "Graphics";
             // 
-            // buttonResetGameSettings
-            // 
-            this.buttonResetGameSettings.Location = new System.Drawing.Point(6, 352);
-            this.buttonResetGameSettings.Name = "buttonResetGameSettings";
-            this.buttonResetGameSettings.Size = new System.Drawing.Size(75, 22);
-            this.buttonResetGameSettings.TabIndex = 3;
-            this.buttonResetGameSettings.Text = "Reset...";
-            this.buttonResetGameSettings.UseVisualStyleBackColor = true;
-            this.buttonResetGameSettings.Click += new System.EventHandler(this.buttonResetGameSettings_Click);
-            // 
             // groupBoxGraphicsOther
             // 
             this.groupBoxGraphicsOther.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBoxGraphicsOther.Controls.Add(this.buttonResetGameSettings);
             this.groupBoxGraphicsOther.Controls.Add(this.checkBoxShowMouse);
             this.groupBoxGraphicsOther.Controls.Add(this.checkBoxScaleHud);
             this.groupBoxGraphicsOther.Controls.Add(this.comboBoxBackgroundFill);
             this.groupBoxGraphicsOther.Controls.Add(this.comboBoxFmvFill);
             this.groupBoxGraphicsOther.Controls.Add(this.labeFmvFillMode);
             this.groupBoxGraphicsOther.Controls.Add(this.labelBgFillMode);
-            this.groupBoxGraphicsOther.Location = new System.Drawing.Point(7, 271);
+            this.groupBoxGraphicsOther.Location = new System.Drawing.Point(7, 285);
             this.groupBoxGraphicsOther.Name = "groupBoxGraphicsOther";
-            this.groupBoxGraphicsOther.Size = new System.Drawing.Size(469, 75);
+            this.groupBoxGraphicsOther.Size = new System.Drawing.Size(451, 98);
             this.groupBoxGraphicsOther.TabIndex = 2;
             this.groupBoxGraphicsOther.TabStop = false;
             this.groupBoxGraphicsOther.Text = "Other Settings";
+            // 
+            // buttonResetGameSettings
+            // 
+            this.buttonResetGameSettings.Location = new System.Drawing.Point(6, 70);
+            this.buttonResetGameSettings.Name = "buttonResetGameSettings";
+            this.buttonResetGameSettings.Size = new System.Drawing.Size(139, 22);
+            this.buttonResetGameSettings.TabIndex = 4;
+            this.buttonResetGameSettings.Text = "Reset Game Settings...";
+            this.buttonResetGameSettings.UseVisualStyleBackColor = true;
+            this.buttonResetGameSettings.Click += new System.EventHandler(this.buttonResetGameSettings_Click);
             // 
             // checkBoxShowMouse
             // 
@@ -1110,11 +1114,13 @@
             // 
             this.groupBoxVisuals.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBoxVisuals.Controls.Add(this.comboBoxBackend);
+            this.groupBoxVisuals.Controls.Add(this.labelBackend);
             this.groupBoxVisuals.Controls.Add(this.comboBoxAntialiasing);
             this.groupBoxVisuals.Controls.Add(this.comboBoxAnisotropic);
             this.groupBoxVisuals.Controls.Add(this.labelAnisotropic);
             this.groupBoxVisuals.Controls.Add(this.labelAntiAliasing);
-            this.groupBoxVisuals.Controls.Add(this.checkBoxEnableD3D9);
+            this.groupBoxVisuals.Controls.Add(this.checkBoxEnableOIT);
             this.groupBoxVisuals.Controls.Add(this.checkBoxBorderImage);
             this.groupBoxVisuals.Controls.Add(this.comboBoxFogEmulation);
             this.groupBoxVisuals.Controls.Add(this.comboBoxClipLevel);
@@ -1126,10 +1132,37 @@
             this.groupBoxVisuals.Controls.Add(this.checkBoxForceTextureFilter);
             this.groupBoxVisuals.Location = new System.Drawing.Point(6, 148);
             this.groupBoxVisuals.Name = "groupBoxVisuals";
-            this.groupBoxVisuals.Size = new System.Drawing.Size(469, 117);
+            this.groupBoxVisuals.Size = new System.Drawing.Size(452, 131);
             this.groupBoxVisuals.TabIndex = 1;
             this.groupBoxVisuals.TabStop = false;
             this.groupBoxVisuals.Text = "Visuals";
+            // 
+            // comboBoxBackend
+            // 
+            this.comboBoxBackend.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBoxBackend.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.comboBoxBackend.FormattingEnabled = true;
+            this.comboBoxBackend.Items.AddRange(new object[] {
+            "DirectX 8.1",
+            "DirectX 9",
+            "DirectX 11"});
+            this.comboBoxBackend.Location = new System.Drawing.Point(96, 13);
+            this.comboBoxBackend.Name = "comboBoxBackend";
+            this.comboBoxBackend.Size = new System.Drawing.Size(88, 21);
+            this.comboBoxBackend.TabIndex = 0;
+            this.toolTip.SetToolTip(this.comboBoxBackend, "Select the rendering backend.\r\nDirectX 8.1 is vanilla mode. DirectX 9 and 11 are " +
+        "provided via d3d8to9 and d3d8to11 wrappers. For the Lantern Engine mod, select D" +
+        "irectX 9.");
+            this.comboBoxBackend.SelectedIndexChanged += new System.EventHandler(this.comboBoxBackend_SelectedIndexChanged);
+            // 
+            // labelBackend
+            // 
+            this.labelBackend.AutoSize = true;
+            this.labelBackend.Location = new System.Drawing.Point(37, 16);
+            this.labelBackend.Name = "labelBackend";
+            this.labelBackend.Size = new System.Drawing.Size(53, 13);
+            this.labelBackend.TabIndex = 28;
+            this.labelBackend.Text = "Backend:";
             // 
             // comboBoxAntialiasing
             // 
@@ -1141,10 +1174,10 @@
             "4x",
             "8x",
             "16x"});
-            this.comboBoxAntialiasing.Location = new System.Drawing.Point(217, 82);
+            this.comboBoxAntialiasing.Location = new System.Drawing.Point(217, 104);
             this.comboBoxAntialiasing.Name = "comboBoxAntialiasing";
             this.comboBoxAntialiasing.Size = new System.Drawing.Size(52, 21);
-            this.comboBoxAntialiasing.TabIndex = 7;
+            this.comboBoxAntialiasing.TabIndex = 8;
             this.toolTip.SetToolTip(this.comboBoxAntialiasing, "Make polygons look less jagged. May cause stuttering.");
             // 
             // comboBoxAnisotropic
@@ -1158,16 +1191,16 @@
             "4x",
             "8x",
             "16x"});
-            this.comboBoxAnisotropic.Location = new System.Drawing.Point(344, 82);
+            this.comboBoxAnisotropic.Location = new System.Drawing.Point(338, 104);
             this.comboBoxAnisotropic.Name = "comboBoxAnisotropic";
             this.comboBoxAnisotropic.Size = new System.Drawing.Size(51, 21);
-            this.comboBoxAnisotropic.TabIndex = 8;
+            this.comboBoxAnisotropic.TabIndex = 9;
             this.toolTip.SetToolTip(this.comboBoxAnisotropic, "Make textures look smoother. 16x is recommended.");
             // 
             // labelAnisotropic
             // 
             this.labelAnisotropic.AutoSize = true;
-            this.labelAnisotropic.Location = new System.Drawing.Point(322, 66);
+            this.labelAnisotropic.Location = new System.Drawing.Point(316, 88);
             this.labelAnisotropic.Name = "labelAnisotropic";
             this.labelAnisotropic.Size = new System.Drawing.Size(101, 13);
             this.labelAnisotropic.TabIndex = 27;
@@ -1176,34 +1209,34 @@
             // labelAntiAliasing
             // 
             this.labelAntiAliasing.AutoSize = true;
-            this.labelAntiAliasing.Location = new System.Drawing.Point(214, 66);
+            this.labelAntiAliasing.Location = new System.Drawing.Point(214, 88);
             this.labelAntiAliasing.Name = "labelAntiAliasing";
             this.labelAntiAliasing.Size = new System.Drawing.Size(67, 13);
             this.labelAntiAliasing.TabIndex = 26;
             this.labelAntiAliasing.Text = "Anti-Aliasing:";
             // 
-            // checkBoxEnableD3D9
+            // checkBoxEnableOIT
             // 
-            this.checkBoxEnableD3D9.AutoSize = true;
-            this.checkBoxEnableD3D9.Enabled = false;
-            this.checkBoxEnableD3D9.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.checkBoxEnableD3D9.Location = new System.Drawing.Point(200, 17);
-            this.checkBoxEnableD3D9.Name = "checkBoxEnableD3D9";
-            this.checkBoxEnableD3D9.Size = new System.Drawing.Size(105, 18);
-            this.checkBoxEnableD3D9.TabIndex = 3;
-            this.checkBoxEnableD3D9.Text = "Use Direct3D 9";
-            this.toolTip.SetToolTip(this.checkBoxEnableD3D9, "Use Direct3D 8 to 9 wrapper (recommended). Required for the Lantern Engine mod.");
-            this.checkBoxEnableD3D9.UseVisualStyleBackColor = true;
-            this.checkBoxEnableD3D9.Click += new System.EventHandler(this.checkBoxEnableD3D9_Click);
+            this.checkBoxEnableOIT.AutoSize = true;
+            this.checkBoxEnableOIT.Enabled = false;
+            this.checkBoxEnableOIT.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.checkBoxEnableOIT.Location = new System.Drawing.Point(200, 14);
+            this.checkBoxEnableOIT.Name = "checkBoxEnableOIT";
+            this.checkBoxEnableOIT.Size = new System.Drawing.Size(189, 18);
+            this.checkBoxEnableOIT.TabIndex = 4;
+            this.checkBoxEnableOIT.Text = "Order-Independent Transparency";
+            this.toolTip.SetToolTip(this.checkBoxEnableOIT, "Per-pixel transparency which fixes all issues related to transparency sorting in " +
+        "the game.\r\nMay be unstable or cause visual glitches.");
+            this.checkBoxEnableOIT.UseVisualStyleBackColor = true;
             // 
             // checkBoxBorderImage
             // 
             this.checkBoxBorderImage.AutoSize = true;
             this.checkBoxBorderImage.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.checkBoxBorderImage.Location = new System.Drawing.Point(200, 41);
+            this.checkBoxBorderImage.Location = new System.Drawing.Point(200, 62);
             this.checkBoxBorderImage.Name = "checkBoxBorderImage";
             this.checkBoxBorderImage.Size = new System.Drawing.Size(117, 18);
-            this.checkBoxBorderImage.TabIndex = 4;
+            this.checkBoxBorderImage.TabIndex = 7;
             this.checkBoxBorderImage.Text = "Use Border Image";
             this.toolTip.SetToolTip(this.checkBoxBorderImage, "Display a frame instead of black bars for 4:3 content.");
             this.checkBoxBorderImage.UseVisualStyleBackColor = true;
@@ -1216,10 +1249,10 @@
             this.comboBoxFogEmulation.Items.AddRange(new object[] {
             "Auto",
             "Emulation"});
-            this.comboBoxFogEmulation.Location = new System.Drawing.Point(96, 71);
+            this.comboBoxFogEmulation.Location = new System.Drawing.Point(96, 94);
             this.comboBoxFogEmulation.Name = "comboBoxFogEmulation";
             this.comboBoxFogEmulation.Size = new System.Drawing.Size(88, 21);
-            this.comboBoxFogEmulation.TabIndex = 2;
+            this.comboBoxFogEmulation.TabIndex = 3;
             this.toolTip.SetToolTip(this.comboBoxFogEmulation, "Sets fog mode. Recommended: Auto\r\nOnly set to emulation if you have an archaic vi" +
         "deo card from\r\nbefore 2003.");
             // 
@@ -1232,17 +1265,17 @@
             "High (best)",
             "Low",
             "Lowest"});
-            this.comboBoxClipLevel.Location = new System.Drawing.Point(96, 44);
+            this.comboBoxClipLevel.Location = new System.Drawing.Point(96, 67);
             this.comboBoxClipLevel.Name = "comboBoxClipLevel";
             this.comboBoxClipLevel.Size = new System.Drawing.Size(88, 21);
-            this.comboBoxClipLevel.TabIndex = 1;
+            this.comboBoxClipLevel.TabIndex = 2;
             this.toolTip.SetToolTip(this.comboBoxClipLevel, "Sets detail level. Recommended: High.\r\nAt lower detail level the game skips drawi" +
         "ng distant\r\nobjects, disables some effects and pauses some animations.");
             // 
             // labelFogEmulation
             // 
             this.labelFogEmulation.AutoSize = true;
-            this.labelFogEmulation.Location = new System.Drawing.Point(13, 74);
+            this.labelFogEmulation.Location = new System.Drawing.Point(13, 97);
             this.labelFogEmulation.Name = "labelFogEmulation";
             this.labelFogEmulation.Size = new System.Drawing.Size(77, 13);
             this.labelFogEmulation.TabIndex = 8;
@@ -1251,7 +1284,7 @@
             // labelDetail
             // 
             this.labelDetail.AutoSize = true;
-            this.labelDetail.Location = new System.Drawing.Point(24, 47);
+            this.labelDetail.Location = new System.Drawing.Point(24, 70);
             this.labelDetail.Name = "labelDetail";
             this.labelDetail.Size = new System.Drawing.Size(66, 13);
             this.labelDetail.TabIndex = 7;
@@ -1260,7 +1293,7 @@
             // labelFramerate
             // 
             this.labelFramerate.AutoSize = true;
-            this.labelFramerate.Location = new System.Drawing.Point(33, 20);
+            this.labelFramerate.Location = new System.Drawing.Point(33, 43);
             this.labelFramerate.Name = "labelFramerate";
             this.labelFramerate.Size = new System.Drawing.Size(57, 13);
             this.labelFramerate.TabIndex = 6;
@@ -1275,10 +1308,10 @@
             "60 FPS",
             "30 FPS",
             "15 FPS"});
-            this.comboBoxFramerate.Location = new System.Drawing.Point(96, 17);
+            this.comboBoxFramerate.Location = new System.Drawing.Point(96, 40);
             this.comboBoxFramerate.Name = "comboBoxFramerate";
             this.comboBoxFramerate.Size = new System.Drawing.Size(88, 21);
-            this.comboBoxFramerate.TabIndex = 0;
+            this.comboBoxFramerate.TabIndex = 1;
             this.toolTip.SetToolTip(this.comboBoxFramerate, "Sets the target framerate. Recommended: 60 FPS.\r\nHigher framerate is recommended " +
         "for smoother gameplay.");
             // 
@@ -1286,10 +1319,10 @@
             // 
             this.checkBoxForceMipmapping.AutoSize = true;
             this.checkBoxForceMipmapping.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.checkBoxForceMipmapping.Location = new System.Drawing.Point(325, 17);
+            this.checkBoxForceMipmapping.Location = new System.Drawing.Point(320, 38);
             this.checkBoxForceMipmapping.Name = "checkBoxForceMipmapping";
             this.checkBoxForceMipmapping.Size = new System.Drawing.Size(119, 18);
-            this.checkBoxForceMipmapping.TabIndex = 5;
+            this.checkBoxForceMipmapping.TabIndex = 6;
             this.checkBoxForceMipmapping.Text = "Force Mipmapping";
             this.toolTip.SetToolTip(this.checkBoxForceMipmapping, "Generates mipmaps for all textures that don\'t have them. Improves the look of dis" +
         "tant objects with vanilla SADX textures and texture packs.");
@@ -1299,10 +1332,10 @@
             // 
             this.checkBoxForceTextureFilter.AutoSize = true;
             this.checkBoxForceTextureFilter.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.checkBoxForceTextureFilter.Location = new System.Drawing.Point(325, 41);
+            this.checkBoxForceTextureFilter.Location = new System.Drawing.Point(200, 38);
             this.checkBoxForceTextureFilter.Name = "checkBoxForceTextureFilter";
             this.checkBoxForceTextureFilter.Size = new System.Drawing.Size(98, 18);
-            this.checkBoxForceTextureFilter.TabIndex = 6;
+            this.checkBoxForceTextureFilter.TabIndex = 5;
             this.checkBoxForceTextureFilter.Text = "Force Filtering";
             this.toolTip.SetToolTip(this.checkBoxForceTextureFilter, "Forces all Point Filtered textures to use Linear filtering. This makes UI texture" +
         "s smoother.");
@@ -1331,7 +1364,7 @@
             this.groupBoxDisplay.Controls.Add(this.numericUpDownVerticalResolution);
             this.groupBoxDisplay.Location = new System.Drawing.Point(6, 6);
             this.groupBoxDisplay.Name = "groupBoxDisplay";
-            this.groupBoxDisplay.Size = new System.Drawing.Size(469, 136);
+            this.groupBoxDisplay.Size = new System.Drawing.Size(452, 136);
             this.groupBoxDisplay.TabIndex = 0;
             this.groupBoxDisplay.TabStop = false;
             this.groupBoxDisplay.Text = "Display";
@@ -1340,7 +1373,7 @@
             // 
             this.checkBoxWindowResizable.AutoSize = true;
             this.checkBoxWindowResizable.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.checkBoxWindowResizable.Location = new System.Drawing.Point(366, 106);
+            this.checkBoxWindowResizable.Location = new System.Drawing.Point(367, 106);
             this.checkBoxWindowResizable.Name = "checkBoxWindowResizable";
             this.checkBoxWindowResizable.Size = new System.Drawing.Size(78, 18);
             this.checkBoxWindowResizable.TabIndex = 10;
@@ -1731,54 +1764,85 @@
             // 
             // groupBoxControlsSDL
             // 
-            this.groupBoxControlsSDL.Controls.Add(this.labelSdlDevice);
-            this.groupBoxControlsSDL.Controls.Add(this.comboBoxSdlDevice);
+            this.groupBoxControlsSDL.Controls.Add(this.listViewSDLDevices);
+            this.groupBoxControlsSDL.Controls.Add(this.groupBoxDeviceSettings);
             this.groupBoxControlsSDL.Controls.Add(this.buttonBindingReset);
             this.groupBoxControlsSDL.Controls.Add(this.buttonBindingClear);
             this.groupBoxControlsSDL.Controls.Add(this.buttonBindingSet);
             this.groupBoxControlsSDL.Controls.Add(this.groupBoxRumble);
             this.groupBoxControlsSDL.Controls.Add(this.groupBoxDeadzones);
-            this.groupBoxControlsSDL.Controls.Add(this.labelKeyboardPlayer);
-            this.groupBoxControlsSDL.Controls.Add(this.comboBoxKeyboardPlayer);
             this.groupBoxControlsSDL.Controls.Add(this.listViewControlBindings);
-            this.groupBoxControlsSDL.Location = new System.Drawing.Point(3, 6);
+            this.groupBoxControlsSDL.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.groupBoxControlsSDL.Location = new System.Drawing.Point(3, 3);
             this.groupBoxControlsSDL.Name = "groupBoxControlsSDL";
-            this.groupBoxControlsSDL.Size = new System.Drawing.Size(452, 385);
+            this.groupBoxControlsSDL.Size = new System.Drawing.Size(458, 383);
             this.groupBoxControlsSDL.TabIndex = 2;
             this.groupBoxControlsSDL.TabStop = false;
             this.groupBoxControlsSDL.Text = "Controls (SDL)";
             // 
-            // labelSdlDevice
+            // listViewSDLDevices
             // 
-            this.labelSdlDevice.AutoSize = true;
-            this.labelSdlDevice.Location = new System.Drawing.Point(24, 21);
-            this.labelSdlDevice.Name = "labelSdlDevice";
-            this.labelSdlDevice.Size = new System.Drawing.Size(44, 13);
-            this.labelSdlDevice.TabIndex = 29;
-            this.labelSdlDevice.Text = "Device:";
+            this.listViewSDLDevices.CheckBoxes = true;
+            this.listViewSDLDevices.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnHeaderSDLDevice});
+            this.listViewSDLDevices.FullRowSelect = true;
+            this.listViewSDLDevices.HideSelection = false;
+            this.listViewSDLDevices.Location = new System.Drawing.Point(6, 19);
+            this.listViewSDLDevices.Name = "listViewSDLDevices";
+            this.listViewSDLDevices.Size = new System.Drawing.Size(222, 113);
+            this.listViewSDLDevices.TabIndex = 31;
+            this.listViewSDLDevices.UseCompatibleStateImageBehavior = false;
+            this.listViewSDLDevices.View = System.Windows.Forms.View.Details;
+            this.listViewSDLDevices.SelectedIndexChanged += new System.EventHandler(this.listViewSDLDevices_SelectedIndexChanged);
             // 
-            // comboBoxSdlDevice
+            // columnHeaderSDLDevice
             // 
-            this.comboBoxSdlDevice.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.comboBoxSdlDevice.FormattingEnabled = true;
-            this.comboBoxSdlDevice.Items.AddRange(new object[] {
-            "Keyboard",
-            "Controller 1",
-            "Controller 2",
-            "Controller 3",
-            "Controller 4",
-            "Controller 5",
-            "Controller 6",
-            "Controller 7",
-            "Controller 8"});
-            this.comboBoxSdlDevice.Location = new System.Drawing.Point(68, 18);
-            this.comboBoxSdlDevice.Name = "comboBoxSdlDevice";
-            this.comboBoxSdlDevice.Size = new System.Drawing.Size(202, 21);
-            this.comboBoxSdlDevice.TabIndex = 0;
+            this.columnHeaderSDLDevice.Text = "Device";
+            this.columnHeaderSDLDevice.Width = 248;
+            // 
+            // groupBoxDeviceSettings
+            // 
+            this.groupBoxDeviceSettings.Controls.Add(this.comboBoxKeyboardPlayer);
+            this.groupBoxDeviceSettings.Controls.Add(this.labelKeyboardPlayer);
+            this.groupBoxDeviceSettings.Location = new System.Drawing.Point(3, 138);
+            this.groupBoxDeviceSettings.Name = "groupBoxDeviceSettings";
+            this.groupBoxDeviceSettings.Size = new System.Drawing.Size(225, 46);
+            this.groupBoxDeviceSettings.TabIndex = 30;
+            this.groupBoxDeviceSettings.TabStop = false;
+            this.groupBoxDeviceSettings.Text = "Device Settings";
+            // 
+            // comboBoxKeyboardPlayer
+            // 
+            this.comboBoxKeyboardPlayer.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBoxKeyboardPlayer.FormattingEnabled = true;
+            this.comboBoxKeyboardPlayer.Items.AddRange(new object[] {
+            "Any",
+            "Player 1",
+            "Player 2",
+            "Player 3",
+            "Player 4",
+            "Player 5",
+            "Player 6",
+            "Player 7",
+            "Player 8"});
+            this.comboBoxKeyboardPlayer.Location = new System.Drawing.Point(93, 19);
+            this.comboBoxKeyboardPlayer.Name = "comboBoxKeyboardPlayer";
+            this.comboBoxKeyboardPlayer.Size = new System.Drawing.Size(120, 21);
+            this.comboBoxKeyboardPlayer.TabIndex = 1;
+            // 
+            // labelKeyboardPlayer
+            // 
+            this.labelKeyboardPlayer.AutoSize = true;
+            this.labelKeyboardPlayer.Location = new System.Drawing.Point(6, 22);
+            this.labelKeyboardPlayer.Name = "labelKeyboardPlayer";
+            this.labelKeyboardPlayer.Size = new System.Drawing.Size(81, 13);
+            this.labelKeyboardPlayer.TabIndex = 21;
+            this.labelKeyboardPlayer.Text = "Used by Player:";
             // 
             // buttonBindingReset
             // 
-            this.buttonBindingReset.Location = new System.Drawing.Point(399, 359);
+            this.buttonBindingReset.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.buttonBindingReset.Location = new System.Drawing.Point(370, 359);
             this.buttonBindingReset.Margin = new System.Windows.Forms.Padding(2);
             this.buttonBindingReset.Name = "buttonBindingReset";
             this.buttonBindingReset.Size = new System.Drawing.Size(51, 21);
@@ -1788,7 +1852,8 @@
             // 
             // buttonBindingClear
             // 
-            this.buttonBindingClear.Location = new System.Drawing.Point(337, 359);
+            this.buttonBindingClear.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.buttonBindingClear.Location = new System.Drawing.Point(315, 359);
             this.buttonBindingClear.Margin = new System.Windows.Forms.Padding(2);
             this.buttonBindingClear.Name = "buttonBindingClear";
             this.buttonBindingClear.Size = new System.Drawing.Size(51, 21);
@@ -1798,7 +1863,8 @@
             // 
             // buttonBindingSet
             // 
-            this.buttonBindingSet.Location = new System.Drawing.Point(276, 359);
+            this.buttonBindingSet.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.buttonBindingSet.Location = new System.Drawing.Point(260, 359);
             this.buttonBindingSet.Margin = new System.Windows.Forms.Padding(2);
             this.buttonBindingSet.Name = "buttonBindingSet";
             this.buttonBindingSet.Size = new System.Drawing.Size(51, 21);
@@ -1813,9 +1879,9 @@
             this.groupBoxRumble.Controls.Add(this.labelRumpleMultiplier);
             this.groupBoxRumble.Controls.Add(this.labelMinRumbleTime);
             this.groupBoxRumble.Controls.Add(this.checkBoxMegaRumble);
-            this.groupBoxRumble.Location = new System.Drawing.Point(5, 173);
+            this.groupBoxRumble.Location = new System.Drawing.Point(3, 296);
             this.groupBoxRumble.Name = "groupBoxRumble";
-            this.groupBoxRumble.Size = new System.Drawing.Size(265, 70);
+            this.groupBoxRumble.Size = new System.Drawing.Size(225, 81);
             this.groupBoxRumble.TabIndex = 3;
             this.groupBoxRumble.TabStop = false;
             this.groupBoxRumble.Text = "Rumble";
@@ -1855,11 +1921,11 @@
             // checkBoxMegaRumble
             // 
             this.checkBoxMegaRumble.AutoSize = true;
-            this.checkBoxMegaRumble.Location = new System.Drawing.Point(148, 29);
+            this.checkBoxMegaRumble.Location = new System.Drawing.Point(148, 42);
             this.checkBoxMegaRumble.Name = "checkBoxMegaRumble";
-            this.checkBoxMegaRumble.Size = new System.Drawing.Size(92, 17);
+            this.checkBoxMegaRumble.Size = new System.Drawing.Size(53, 17);
             this.checkBoxMegaRumble.TabIndex = 2;
-            this.checkBoxMegaRumble.Text = "Mega Rumble";
+            this.checkBoxMegaRumble.Text = "Mega";
             this.checkBoxMegaRumble.UseVisualStyleBackColor = true;
             // 
             // groupBoxDeadzones
@@ -1872,9 +1938,9 @@
             this.groupBoxDeadzones.Controls.Add(this.labelTriggersDeadzone);
             this.groupBoxDeadzones.Controls.Add(this.labelRightStickDeadzone);
             this.groupBoxDeadzones.Controls.Add(this.labelLeftStickDeadzone);
-            this.groupBoxDeadzones.Location = new System.Drawing.Point(5, 67);
+            this.groupBoxDeadzones.Location = new System.Drawing.Point(3, 190);
             this.groupBoxDeadzones.Name = "groupBoxDeadzones";
-            this.groupBoxDeadzones.Size = new System.Drawing.Size(265, 100);
+            this.groupBoxDeadzones.Size = new System.Drawing.Size(225, 100);
             this.groupBoxDeadzones.TabIndex = 2;
             this.groupBoxDeadzones.TabStop = false;
             this.groupBoxDeadzones.Text = "Deadzones";
@@ -1884,9 +1950,9 @@
             this.checkBoxRadialMotionRight.AutoSize = true;
             this.checkBoxRadialMotionRight.Location = new System.Drawing.Point(148, 48);
             this.checkBoxRadialMotionRight.Name = "checkBoxRadialMotionRight";
-            this.checkBoxRadialMotionRight.Size = new System.Drawing.Size(102, 17);
+            this.checkBoxRadialMotionRight.Size = new System.Drawing.Size(67, 17);
             this.checkBoxRadialMotionRight.TabIndex = 3;
-            this.checkBoxRadialMotionRight.Text = "Radial Motion R";
+            this.checkBoxRadialMotionRight.Text = "Radial R";
             this.checkBoxRadialMotionRight.UseVisualStyleBackColor = true;
             // 
             // checkBoxRadialMotionLeft
@@ -1894,9 +1960,9 @@
             this.checkBoxRadialMotionLeft.AutoSize = true;
             this.checkBoxRadialMotionLeft.Location = new System.Drawing.Point(148, 22);
             this.checkBoxRadialMotionLeft.Name = "checkBoxRadialMotionLeft";
-            this.checkBoxRadialMotionLeft.Size = new System.Drawing.Size(100, 17);
+            this.checkBoxRadialMotionLeft.Size = new System.Drawing.Size(65, 17);
             this.checkBoxRadialMotionLeft.TabIndex = 1;
-            this.checkBoxRadialMotionLeft.Text = "Radial Motion L";
+            this.checkBoxRadialMotionLeft.Text = "Radial L";
             this.checkBoxRadialMotionLeft.UseVisualStyleBackColor = true;
             // 
             // numericUpDownTriggersDeadzone
@@ -1947,42 +2013,18 @@
             this.labelLeftStickDeadzone.TabIndex = 0;
             this.labelLeftStickDeadzone.Text = "Left Stick:";
             // 
-            // labelKeyboardPlayer
-            // 
-            this.labelKeyboardPlayer.AutoSize = true;
-            this.labelKeyboardPlayer.Location = new System.Drawing.Point(12, 46);
-            this.labelKeyboardPlayer.Name = "labelKeyboardPlayer";
-            this.labelKeyboardPlayer.Size = new System.Drawing.Size(56, 13);
-            this.labelKeyboardPlayer.TabIndex = 21;
-            this.labelKeyboardPlayer.Text = "KB Player:";
-            // 
-            // comboBoxKeyboardPlayer
-            // 
-            this.comboBoxKeyboardPlayer.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.comboBoxKeyboardPlayer.FormattingEnabled = true;
-            this.comboBoxKeyboardPlayer.Items.AddRange(new object[] {
-            "Player 1",
-            "Player 2",
-            "Player 3",
-            "Player 4",
-            "Player 5",
-            "Player 6",
-            "Player 7",
-            "Player 8"});
-            this.comboBoxKeyboardPlayer.Location = new System.Drawing.Point(68, 43);
-            this.comboBoxKeyboardPlayer.Name = "comboBoxKeyboardPlayer";
-            this.comboBoxKeyboardPlayer.Size = new System.Drawing.Size(107, 21);
-            this.comboBoxKeyboardPlayer.TabIndex = 1;
-            // 
             // listViewControlBindings
             // 
+            this.listViewControlBindings.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
             this.listViewControlBindings.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.columnHeader1,
             this.columnHeader2});
+            this.listViewControlBindings.FullRowSelect = true;
             this.listViewControlBindings.HideSelection = false;
-            this.listViewControlBindings.Location = new System.Drawing.Point(276, 18);
+            this.listViewControlBindings.Location = new System.Drawing.Point(234, 18);
             this.listViewControlBindings.Name = "listViewControlBindings";
-            this.listViewControlBindings.Size = new System.Drawing.Size(175, 336);
+            this.listViewControlBindings.Size = new System.Drawing.Size(217, 336);
             this.listViewControlBindings.TabIndex = 4;
             this.listViewControlBindings.UseCompatibleStateImageBehavior = false;
             this.listViewControlBindings.View = System.Windows.Forms.View.Details;
@@ -3265,7 +3307,8 @@
             this.groupBoxMouseMode.PerformLayout();
             this.tabPageController.ResumeLayout(false);
             this.groupBoxControlsSDL.ResumeLayout(false);
-            this.groupBoxControlsSDL.PerformLayout();
+            this.groupBoxDeviceSettings.ResumeLayout(false);
+            this.groupBoxDeviceSettings.PerformLayout();
             this.groupBoxRumble.ResumeLayout(false);
             this.groupBoxRumble.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownRumbleMultiplier)).EndInit();
@@ -3414,7 +3457,7 @@
         private System.Windows.Forms.ComboBox comboBoxTestSpawnLevel;
         private System.Windows.Forms.NumericUpDown numericUpDownTestSpawnX;
         private System.Windows.Forms.CheckBox checkBoxTestSpawnAngleHex;
-        private System.Windows.Forms.CheckBox checkBoxEnableD3D9;
+        private System.Windows.Forms.CheckBox checkBoxEnableOIT;
         private System.Windows.Forms.Label labelTestSpawnTime;
         private System.Windows.Forms.ComboBox comboBoxTestSpawnTime;
 		private System.Windows.Forms.Label labelTestSpawnWarning;
@@ -3506,8 +3549,6 @@
 		private System.Windows.Forms.Button buttonBindingReset;
 		private System.Windows.Forms.Button buttonBindingClear;
 		private System.Windows.Forms.Button buttonBindingSet;
-		private System.Windows.Forms.Label labelSdlDevice;
-		private System.Windows.Forms.ComboBox comboBoxSdlDevice;
 		private System.Windows.Forms.GroupBox groupBoxControllerDInput;
 		private System.Windows.Forms.TextBox comboBoxControllerName;
 		private System.Windows.Forms.ComboBox comboBoxControllerProfile;
@@ -3536,5 +3577,10 @@
 		private System.Windows.Forms.ContextMenuStrip contextMenuStripResetGameSettings;
 		private System.Windows.Forms.ToolStripMenuItem toolStripMenuItemResetOptimal;
 		private System.Windows.Forms.ToolStripMenuItem toolStripMenuItemResetSafe;
+		private System.Windows.Forms.GroupBox groupBoxDeviceSettings;
+		private System.Windows.Forms.ListView listViewSDLDevices;
+		private System.Windows.Forms.ColumnHeader columnHeaderSDLDevice;
+		private System.Windows.Forms.ComboBox comboBoxBackend;
+		private System.Windows.Forms.Label labelBackend;
 	}
 }

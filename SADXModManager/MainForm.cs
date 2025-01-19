@@ -21,6 +21,7 @@ using static SADXModManager.GraphicsSettings;
 using static SADXModManager.Variables;
 using static SADXModManager.Utils;
 using System.Text;
+using System.Windows.Input;
 
 // TODO for second release:
 // Add mods from archive
@@ -83,6 +84,8 @@ namespace SADXModManager
 		// Serialized structs
 		/// <summary>Deserialized sonicDX.ini</summary>
 		private SonicDxIni sonicDxIni;
+		/// <summary>Deserialized config.ini for d3d8to11</summary>
+		private D3d8to11ConfigIni d3d8to11ConfigIni;
 		/// <summary>Deserialized Patches.json</summary>
 		GamePatchesJson patchesJson;
 
@@ -146,7 +149,7 @@ namespace SADXModManager
 			// Temp folder
 			updatesTempPath = Path.Combine(managerAppDataPath, "Updates");
 			// d3d8to9 path
-			d3d8to9StoredDLLName = Path.Combine(managerAppDataPath, "extlib", "D3D8M", "d3d8m.dll");
+			d3d8to11ConfigPath = Path.Combine(managerAppDataPath, "extlib", "d3d8to11", "config.ini");
 			// Load SAManager settings JSON file
 			managerConfigJsonPath = Path.Combine(managerAppDataPath, "ManagerClassic.json");
 			managerConfig = JsonDeserialize<ClassicManagerJson>(managerConfigJsonPath);
@@ -271,7 +274,6 @@ namespace SADXModManager
 			}
 			// Set paths for stuff inside game folder
 			sonicDxIniPath = Path.Combine(gameSettings.GamePath, "sonicDX.ini");
-			d3d8to9InstalledDLLName = Path.Combine(gameSettings.GamePath, "d3d8.dll");
 			datadllpath = Path.Combine(gameSettings.GamePath, "system", "CHRMODELS.dll");
 			datadllorigpath = Path.Combine(gameSettings.GamePath, "system", "CHRMODELS_orig.dll");
 			loaderdllpath = Path.Combine(gameSettings.GamePath, "mods", "SADXModLoader.dll");
@@ -326,6 +328,8 @@ namespace SADXModManager
 			}
 			if (sonicDxIni.Controllers == null)
 				sonicDxIni.Controllers = new Dictionary<string, ControllerConfig>();
+			// Load d3d8to11 config.ini
+			d3d8to11ConfigIni = File.Exists(d3d8to11ConfigPath) ? IniSerializer.Deserialize<D3d8to11ConfigIni>(d3d8to11ConfigPath) : new D3d8to11ConfigIni();
 			// Load codes list
 			try
 			{
@@ -368,6 +372,7 @@ namespace SADXModManager
 			// Load Graphics settings
 			// Load Display settings
 			int screenNum = Math.Min(Screen.AllScreens.Length, gameSettings.Graphics.SelectedScreen);
+			comboBoxBackend.SelectedIndex = Math.Max(0, Math.Min(2, gameSettings.Graphics.RenderBackend));
 			comboBoxScreenNumber.SelectedIndex = screenNum;
 			comboBoxScreenMode.SelectedIndex = gameSettings.Graphics.ScreenMode;
 			checkBoxVsync.Checked = gameSettings.Graphics.EnableVsync;
@@ -399,8 +404,8 @@ namespace SADXModManager
 			}
 			comboBoxClipLevel.SelectedIndex = sonicDxIni.GameConfig.ClipLevel;
 			comboBoxFogEmulation.SelectedIndex = sonicDxIni.GameConfig.FogEmulation;
-			checkBoxEnableD3D9.Enabled = File.Exists(d3d8to9StoredDLLName);
-			checkBoxEnableD3D9.Checked = File.Exists(d3d8to9InstalledDLLName);
+			checkBoxEnableOIT.Enabled = comboBoxBackend.SelectedIndex == 2;
+			checkBoxEnableOIT.Checked = d3d8to11ConfigIni.OIT.EnableOIT == "true";
 			checkBoxBorderImage.Checked = !gameSettings.Graphics.DisableBorderImage;
 			checkBoxForceMipmapping.Checked = gameSettings.Graphics.EnableForcedMipmapping;
 			checkBoxForceTextureFilter.Checked = gameSettings.Graphics.EnableForcedTextureFilter;
@@ -451,10 +456,7 @@ namespace SADXModManager
 			comboBoxFmvFill.SelectedIndex = gameSettings.Graphics.FillModeFMV;
 			checkBoxScaleHud.Checked = gameSettings.Graphics.EnableUIScaling;
 			checkBoxShowMouse.Checked = gameSettings.Graphics.ShowMouseInFullscreen;
-			// Check old d3d8.dll
-			if (File.Exists(d3d8to9InstalledDLLName))
-				gameSettings.Graphics.RenderBackend = 1;
-			checkBoxEnableD3D9.Checked = gameSettings.Graphics.RenderBackend == 1;			
+			
 			// Load Input settings
 			radioButtonDInput.Checked = !gameSettings.Controller.EnabledInputMod;
 			radioButtonSDL.Checked = gameSettings.Controller.EnabledInputMod;
@@ -1091,6 +1093,8 @@ namespace SADXModManager
 			gameSettings.Graphics.EnableKeepResolutionRatio = checkBoxWindowMaintainAspect.Checked;
 			gameSettings.Graphics.EnableResizableWindow = checkBoxWindowResizable.Checked;
 			// Save graphics settings - Visuals
+			gameSettings.Graphics.RenderBackend = Math.Max(0, comboBoxBackend.SelectedIndex);
+			d3d8to11ConfigIni.OIT.EnableOIT = checkBoxEnableOIT.Checked ? "true" : "false";
 			sonicDxIni.GameConfig.FullScreen = ((DisplayMode)(comboBoxScreenMode.SelectedIndex) == DisplayMode.Fullscreen ||
 				(DisplayMode)(comboBoxScreenMode.SelectedIndex) == DisplayMode.Borderless) ? 1 : 0;
 			sonicDxIni.GameConfig.ClipLevel = comboBoxClipLevel.SelectedIndex;
@@ -1139,7 +1143,6 @@ namespace SADXModManager
 					break;
 			}
 			// Save graphics settings - Other
-			gameSettings.Graphics.RenderBackend = checkBoxEnableD3D9.Checked ? 1 : 0;
 			gameSettings.Graphics.FillModeBackground = comboBoxBackgroundFill.SelectedIndex;
 			gameSettings.Graphics.FillModeFMV = comboBoxFmvFill.SelectedIndex;
 			gameSettings.Graphics.EnableUIScaling = checkBoxScaleHud.Checked;
@@ -1233,6 +1236,7 @@ namespace SADXModManager
 			else
 				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", textBoxProfileName.Text + ".json");
 			IniSerializer.Serialize(sonicDxIni, sonicDxIniPath);
+			IniSerializer.Serialize(d3d8to11ConfigIni, d3d8to11ConfigPath);
 			JsonSerialize(gameSettings, currentProfileJsonPath);
 			JsonSerialize(managerConfig, managerConfigJsonPath);
 			JsonSerialize(profilesJson, profilesListJsonPath);
@@ -2248,14 +2252,11 @@ namespace SADXModManager
 		}
 		#endregion
 
-		#region Direct3D wrapper
+		#region Backends
 
-
-		private void checkBoxEnableD3D9_Click(object sender, EventArgs e)
+		private void comboBoxBackend_SelectedIndexChanged(object sender, EventArgs e)
 		{
-			gameSettings.Graphics.RenderBackend = checkBoxEnableD3D9.Checked ? 1 : 0;
-			if (File.Exists(d3d8to9InstalledDLLName))
-				File.Delete(d3d8to9InstalledDLLName);
+			checkBoxEnableOIT.Enabled = comboBoxBackend.SelectedIndex == 2;
 		}
 
 		#endregion
@@ -2717,23 +2718,36 @@ namespace SADXModManager
 
 		private void ListControls()
 		{
-			List<string> ctrls = new List<string>
-			{
-				"Up", "Down", "Left", "Right", "Jump (A)", "Attack (B)", "Action (X)", "Whistle (Y)", "Start", "Camera Left", "Camera Right", "Look Up", "Look Down", "Look Left", "Look Right", "Z Button", "C Button", "D Button", "Center Camera", "Slow Walk", "Menu Up", "Menu Down", "Menu Left", "Menu Right"
-			};
-			foreach (var ctrl in ctrls)
-			{
-				listViewControlBindings.Items.Add(ctrl);
-			}
-			listViewControlBindings.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent); // Control name
-			listViewControlBindings.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent); // Control binding
-			// Remove for now
 			tabControlGameConfig.TabPages.Remove(tabPageController);
+			return;
+			listViewSDLDevices.Columns[0].Width = listViewSDLDevices.Width - 8;
+			InputControls.SDLInit(managerAppDataPath);
+			Task.Factory.StartNew(SDLUILoop);	
+		}
+
+		public void SDLUILoop()
+		{
+			while (true)
+			{
+				if (InputControls.UpdateRequired)
+				{
+					InputControls.UpdateRequired = false;
+					listViewSDLDevices.Items.Clear();
+					listViewSDLDevices.Items.Add("Keyboard Layout 1");
+					listViewSDLDevices.Items.Add("Keyboard Layout 2");
+					listViewSDLDevices.Items.Add("Keyboard Layout 3");
+					foreach (Controller controller in InputControls.Controllers)
+					{
+						if (controller.Connected)
+							listViewSDLDevices.Items.Add(controller.DeviceName);
+					}
+				}
+			}
 		}
 
 		private void radioButtonDInput_CheckedChanged(object sender, EventArgs e)
 		{
-			radioButtonMouseDisable.Enabled = false;//radioButtonSDL.Checked;
+			radioButtonMouseDisable.Enabled = radioButtonSDL.Checked;
 			if (!radioButtonMouseDisable.Enabled && radioButtonMouseDisable.Checked)
 			{
 				radioButtonMouseDisable.Checked = false;
@@ -2961,8 +2975,7 @@ namespace SADXModManager
 			numericUpDownVerticalResolution.Value = Screen.PrimaryScreen.Bounds.Height;
 			comboBoxAnisotropic.SelectedIndex = 5;
 			comboBoxScreenMode.SelectedIndex = 2;
-			if (checkBoxEnableD3D9.Enabled)
-				checkBoxEnableD3D9.Checked = true;
+			comboBoxBackend.SelectedIndex = 1;			
 			checkBoxForceMipmapping.Checked = true;
 			checkBoxForceTextureFilter.Checked = true;
 			checkBoxBorderImage.Checked = true;
@@ -2985,12 +2998,8 @@ namespace SADXModManager
 			numericUpDownVerticalResolution.Value = 480;
 			comboBoxAnisotropic.SelectedIndex = 0;
 			comboBoxScreenMode.SelectedIndex = 0;
-			if (checkBoxEnableD3D9.Enabled)
-			{
-				checkBoxEnableD3D9.Checked = false;
-				if (File.Exists(d3d8to9InstalledDLLName))
-					File.Delete(d3d8to9InstalledDLLName);
-			}
+			comboBoxBackend.SelectedIndex = 0;
+			checkBoxEnableOIT.Checked = false;			
 			checkBoxForceMipmapping.Checked = true;
 			checkBoxForceTextureFilter.Checked = true;
 			checkBoxBorderImage.Checked = false;
@@ -3004,6 +3013,120 @@ namespace SADXModManager
 			checkBoxVsync.Checked = false;
 			checkBoxWindowResizable.Checked = false;
 			MessageBox.Show(this, "The settings will be applied once you click 'Save' or 'Save & Play'.", "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
+		}
+
+		private void listViewSDLDevices_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			// No selection
+			if (listViewSDLDevices.SelectedIndices.Count == 0)
+			{
+				groupBoxDeadzones.Enabled = groupBoxDeviceSettings.Enabled = groupBoxRumble.Enabled = listViewControlBindings.Enabled =
+					buttonBindingSet.Enabled = buttonBindingReset.Enabled = buttonBindingReset.Enabled = false;
+				return;
+			}
+			switch (listViewSDLDevices.SelectedIndices[0])
+			{
+				// Nothing
+				case -1:
+					return;
+				// Keyboard 1
+				case 0:
+					groupBoxDeadzones.Enabled = false;
+					groupBoxRumble.Enabled = false;
+					groupBoxDeviceSettings.Enabled = true;
+					listViewControlBindings.Enabled = true;
+					buttonBindingSet.Enabled = buttonBindingReset.Enabled = buttonBindingReset.Enabled = true;
+					listViewControlBindings.Items.Clear();
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Forward (Left Stick Up)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.LeftYMinus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Backward (Left Stick Down)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.LeftYPlus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Left (Left Stick Left)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.LeftXMinus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Right (Left Stick Right)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.LeftXPlus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Jump (A)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.ButtonA).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Attack (B)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.ButtonB).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Action (X)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.ButtonX).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Whistle (Y)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.ButtonY).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Start", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.ButtonStart).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Turn Camera Left (Left Trigger)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.LeftTrigger).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Turn Camera Right (Right Trigger)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.RightTrigger).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Look Up (Right Stick Up)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.RightYMinus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Look Down (Right Stick Down)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.RightYPlus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Look Left (Right Stick Left)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.RightXMinus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Look Right (Right Stick Right)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.RightXPlus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Z Button (for mods)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.ButtonRightShoulder).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "C Button (for mods)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.ButtonLeftShoulder).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "D Button (for mods)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.ButtonBack).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Center Camera", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.ButtonLeftStick).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Slow Walk", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout1.ButtonRightStick).ToString() }));
+					break;
+				// Keyboard 2
+				case 1:
+					groupBoxDeadzones.Enabled = false;
+					groupBoxRumble.Enabled = false;
+					groupBoxDeviceSettings.Enabled = true;
+					listViewControlBindings.Enabled = true;
+					buttonBindingSet.Enabled = buttonBindingReset.Enabled = buttonBindingReset.Enabled = true;
+					listViewControlBindings.Items.Clear();
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Forward (Left Stick Up)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.LeftYMinus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Backward (Left Stick Down)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.LeftYPlus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Left (Left Stick Left)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.LeftXMinus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Right (Left Stick Right)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.LeftXPlus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Jump (A)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.ButtonA).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Attack (B)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.ButtonB).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Action (X)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.ButtonX).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Whistle (Y)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.ButtonY).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Start", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.ButtonStart).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Turn Camera Left (Left Trigger)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.LeftTrigger).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Turn Camera Right (Right Trigger)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.RightTrigger).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Look Up (Right Stick Up)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.RightYMinus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Look Down (Right Stick Down)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.RightYPlus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Look Left (Right Stick Left)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.RightXMinus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Look Right (Right Stick Right)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.RightXPlus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Z Button (for mods)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.ButtonRightShoulder).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "C Button (for mods)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.ButtonLeftShoulder).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "D Button (for mods)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.ButtonBack).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Center Camera", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.ButtonLeftStick).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Slow Walk", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout2.ButtonRightStick).ToString() }));
+					break;
+				// Keyboard 3
+				case 2:
+					groupBoxDeadzones.Enabled = false;
+					groupBoxRumble.Enabled = false;
+					groupBoxDeviceSettings.Enabled = true;
+					listViewControlBindings.Enabled = true;
+					buttonBindingSet.Enabled = buttonBindingReset.Enabled = buttonBindingReset.Enabled = true;
+					listViewControlBindings.Items.Clear();
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Forward (Left Stick Up)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.LeftYMinus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Backward (Left Stick Down)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.LeftYPlus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Left (Left Stick Left)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.LeftXMinus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Right (Left Stick Right)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.LeftXPlus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Jump (A)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.ButtonA).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Attack (B)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.ButtonB).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Action (X)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.ButtonX).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Whistle (Y)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.ButtonY).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Start", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.ButtonStart).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Turn Camera Left (Left Trigger)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.LeftTrigger).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Turn Camera Right (Right Trigger)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.RightTrigger).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Look Up (Right Stick Up)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.RightYMinus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Look Down (Right Stick Down)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.RightYPlus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Look Left (Right Stick Left)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.RightXMinus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Look Right (Right Stick Right)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.RightXPlus).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Z Button (for mods)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.ButtonRightShoulder).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "C Button (for mods)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.ButtonLeftShoulder).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "D Button (for mods)", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.ButtonBack).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Center Camera", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.ButtonLeftStick).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Slow Walk", KeyInterop.KeyFromVirtualKey(InputControls.ConfigFile.KeyboardLayout3.ButtonRightStick).ToString() }));
+					break;
+				// Controllers
+				default:
+					groupBoxDeadzones.Enabled = groupBoxDeviceSettings.Enabled = groupBoxRumble.Enabled = listViewControlBindings.Enabled =
+					buttonBindingSet.Enabled = buttonBindingReset.Enabled = buttonBindingReset.Enabled = true;
+					listViewControlBindings.Items.Clear();
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Forward (Left Stick Up)", InputControls.Controllers[listViewSDLDevices.SelectedIndices[0]-3].GetBindForAxis(SDL2.SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTY).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Backward (Left Stick Down)", InputControls.Controllers[listViewSDLDevices.SelectedIndices[0]-3].GetBindForAxis(SDL2.SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTX).ToString() }));
+					break;
+			}
+			listViewControlBindings.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent); // Control name
+			listViewControlBindings.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent); // Control binding
 		}
 	}
 }

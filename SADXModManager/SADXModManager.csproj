@@ -52,6 +52,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>SADXModManager.ico</ApplicationIcon>
@@ -88,11 +89,12 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataClasses\D3d8to11ConfigIni.cs" />
     <Compile Include="DataClasses\DownloadItem.cs" />
     <Compile Include="DataClasses\GamePatchesJson.cs" />
-    <Compile Include="DataClasses\InputModConfigIni.cs" />
     <Compile Include="Controls\ButtonControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -102,6 +104,8 @@
     <Compile Include="DataClasses\ManagerClassicJson.cs" />
     <Compile Include="DataClasses\ProfileJson.cs" />
     <Compile Include="DataClasses\ProfilesListJson.cs" />
+    <Compile Include="DataClasses\SDLConfigIni.cs" />
+    <Compile Include="DataClasses\SDLMapping.cs" />
     <Compile Include="DataClasses\sonicDxIni.cs" />
     <Compile Include="DataClasses\SadxModLoaderIni.cs" />
     <Compile Include="DataClasses\UpdateChecker.cs" />
@@ -135,6 +139,7 @@
     <Compile Include="Forms\UpdatesAvailableDialog.Designer.cs">
       <DependentUpon>UpdatesAvailableDialog.cs</DependentUpon>
     </Compile>
+    <Compile Include="InputControls.cs" />
     <Compile Include="ListViewColumnSorter.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
@@ -156,6 +161,11 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="SDL2-CS\LPUtf8StrMarshaler.cs" />
+    <Compile Include="SDL2-CS\SDL2.cs" />
+    <Compile Include="SDL2-CS\SDL2_image.cs" />
+    <Compile Include="SDL2-CS\SDL2_mixer.cs" />
+    <Compile Include="SDL2-CS\SDL2_ttf.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="Variables.cs" />
     <EmbeddedResource Include="Controls\ButtonControl.resx">

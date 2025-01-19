@@ -323,24 +323,6 @@ namespace SADXModManager.Forms
 												}
 												while (mlres == DialogResult.Retry);
 											}
-											// Copy d3d8to9 DLL to game folder
-											if (File.Exists(Variables.d3d8to9InstalledDLLName))
-											{
-												DialogResult d3res = DialogResult.Cancel;
-												do
-												{
-													try
-													{
-														File.Copy(Variables.d3d8to9StoredDLLName, Variables.d3d8to9InstalledDLLName, true);
-														d3res = DialogResult.OK;
-													}
-													catch (Exception ex)
-													{
-														d3res = MessageBox.Show(this, $"Failed to update Direct3D8to9 file:\r\n\n{ex.Message.ToString()}\n\nMake sure the game is not running.", "Update Failed", MessageBoxButtons.RetryCancel, MessageBoxIcon.Error);
-													}
-												}
-												while (d3res == DialogResult.Retry);
-											}
 											break;
 										// Install Launcher
 										case DownloadItem.DownloadItemType.Launcher:
