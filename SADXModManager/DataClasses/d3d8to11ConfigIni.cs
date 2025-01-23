@@ -8,9 +8,9 @@ namespace SADXModManager.DataClasses
 		public class OITConfig
 		{
 			[IniAlwaysInclude]
-			[DefaultValue("false")] // Had to make it string because it doesn't read "True" as "true"
+			[DefaultValue(false)]
 			[IniName("enabled")]
-			public string EnableOIT;
+			public bool EnableOIT;
 		}
 
 		[IniAlwaysInclude]

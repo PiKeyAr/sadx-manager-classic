@@ -405,7 +405,7 @@ namespace SADXModManager
 			comboBoxClipLevel.SelectedIndex = sonicDxIni.GameConfig.ClipLevel;
 			comboBoxFogEmulation.SelectedIndex = sonicDxIni.GameConfig.FogEmulation;
 			checkBoxEnableOIT.Enabled = comboBoxBackend.SelectedIndex == 2;
-			checkBoxEnableOIT.Checked = d3d8to11ConfigIni.OIT.EnableOIT == "true";
+			checkBoxEnableOIT.Checked = d3d8to11ConfigIni.OIT.EnableOIT == true;
 			checkBoxBorderImage.Checked = !gameSettings.Graphics.DisableBorderImage;
 			checkBoxForceMipmapping.Checked = gameSettings.Graphics.EnableForcedMipmapping;
 			checkBoxForceTextureFilter.Checked = gameSettings.Graphics.EnableForcedTextureFilter;
@@ -1094,7 +1094,7 @@ namespace SADXModManager
 			gameSettings.Graphics.EnableResizableWindow = checkBoxWindowResizable.Checked;
 			// Save graphics settings - Visuals
 			gameSettings.Graphics.RenderBackend = Math.Max(0, comboBoxBackend.SelectedIndex);
-			d3d8to11ConfigIni.OIT.EnableOIT = checkBoxEnableOIT.Checked ? "true" : "false";
+			d3d8to11ConfigIni.OIT.EnableOIT = checkBoxEnableOIT.Checked;
 			sonicDxIni.GameConfig.FullScreen = ((DisplayMode)(comboBoxScreenMode.SelectedIndex) == DisplayMode.Fullscreen ||
 				(DisplayMode)(comboBoxScreenMode.SelectedIndex) == DisplayMode.Borderless) ? 1 : 0;
 			sonicDxIni.GameConfig.ClipLevel = comboBoxClipLevel.SelectedIndex;
