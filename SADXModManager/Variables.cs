@@ -17,6 +17,8 @@ namespace SADXModManager
 		public static string updatesTempPath;
 		/// <summary>Path to the SAManager folder in AppData or game folder</summary>
 		public static string managerAppDataPath;
+		/// <summary>Path to the folder where sonic.exe is located</summary>
+		public static string gameMainPath;
 		/// <summary>Path to the file ManagerClassic.json</summary>
 		public static string managerConfigJsonPath;
 		/// <summary>Path to the file Profiles.json</summary>
