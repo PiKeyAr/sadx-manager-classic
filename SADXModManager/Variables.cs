@@ -60,6 +60,7 @@ namespace SADXModManager
 		/// <summary>List of files to delete from old Loader/Manager versions</summary>
 		public static List<string> cleanupFilesToDelete = new List<string>()
 		{
+			"d3d8.dll",
 			"7z.dll",
 			"7z.exe",
 			"7za.exe",
