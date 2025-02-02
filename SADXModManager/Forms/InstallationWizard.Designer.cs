@@ -96,26 +96,25 @@
             // radioButtonAppData
             // 
             this.radioButtonAppData.AutoSize = true;
-            this.radioButtonAppData.Location = new System.Drawing.Point(97, 77);
+            this.radioButtonAppData.Location = new System.Drawing.Point(186, 77);
             this.radioButtonAppData.Name = "radioButtonAppData";
             this.radioButtonAppData.Size = new System.Drawing.Size(135, 17);
-            this.radioButtonAppData.TabIndex = 2;
+            this.radioButtonAppData.TabIndex = 3;
             this.radioButtonAppData.Text = "Application Data Folder";
-            this.toolTip1.SetToolTip(this.radioButtonAppData, "In this mode settings and mod lists will be saved in the AppData folder.\r\nThe Mod" +
-        " Manager can be placed anywhere, and settings and mod lists will be global to th" +
-        "is computer.");
+            this.toolTip1.SetToolTip(this.radioButtonAppData, "In this mode the Mod Manager\'s settings will be saved in the local AppData folder" +
+        ", and you can run the Mod Manager from any location on this computer.");
             this.radioButtonAppData.UseVisualStyleBackColor = true;
             // 
             // radioButtonGameFolder
             // 
             this.radioButtonGameFolder.AutoSize = true;
             this.radioButtonGameFolder.Checked = true;
-            this.radioButtonGameFolder.Location = new System.Drawing.Point(238, 77);
+            this.radioButtonGameFolder.Location = new System.Drawing.Point(97, 77);
             this.radioButtonGameFolder.Name = "radioButtonGameFolder";
-            this.radioButtonGameFolder.Size = new System.Drawing.Size(163, 17);
-            this.radioButtonGameFolder.TabIndex = 3;
+            this.radioButtonGameFolder.Size = new System.Drawing.Size(83, 17);
+            this.radioButtonGameFolder.TabIndex = 2;
             this.radioButtonGameFolder.TabStop = true;
-            this.radioButtonGameFolder.Text = "Game Folder (Portable Mode)";
+            this.radioButtonGameFolder.Text = "Mods Folder";
             this.toolTip1.SetToolTip(this.radioButtonGameFolder, resources.GetString("radioButtonGameFolder.ToolTip"));
             this.radioButtonGameFolder.UseVisualStyleBackColor = true;
             // 
