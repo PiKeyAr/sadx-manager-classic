@@ -3217,7 +3217,6 @@
             this.toolStripStatusLabelGameFolder.Spring = true;
             this.toolStripStatusLabelGameFolder.Text = "Game location will be displayed here.";
             this.toolStripStatusLabelGameFolder.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.toolStripStatusLabelGameFolder.Click += new System.EventHandler(this.toolStripStatusLabelGameFolder_Click);
             // 
             // contextMenuStripProfile
             // 
