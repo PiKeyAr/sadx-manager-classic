@@ -22,6 +22,5 @@ namespace SADXModManager.DataClasses
 		public bool AngleDeg { get; set; }
 		public bool SingleProfileMode { get; set; }
 		public List<string> IgnoredModUpdates { get; set; }
-		public string GameFolderFallback { get; set; } // This is used when the Manager EXE is located outside the game folder
 	}
 }
