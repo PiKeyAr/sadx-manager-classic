@@ -431,7 +431,7 @@ namespace SADXModManager
 		public DebugSettings DebugSettings { get; set; } = new DebugSettings();
 
 		/// <summary>
-		/// Path to the game install saved with this configuration.
+		/// This is only used for retrieving the game path when migrating from the old Manager settings location (SAManager folder).
 		/// </summary>
 		public string GamePath { get; set; } = string.Empty;
 
