@@ -22,7 +22,7 @@ namespace SADXModManager
 		/// <summary>Path to the folder where sonic.exe is located</summary>
 		public static string gameMainPath;
 		/// <summary>Path to the file ManagerClassic.json</summary>
-		public static string managerConfigJsonPath;
+		public static string managerClassicConfigJsonPath;
 		/// <summary>Path to the file Profiles.json</summary>
 		public static string profilesListJsonPath;
 		/// <summary>Path to the current profile JSON file containing mods, game settings etc.</summary>
@@ -46,7 +46,7 @@ namespace SADXModManager
 		/// <summary>Deserialized profile containing mod list, game settings etc.</summary>
 		public static GameSettings gameSettings;
 		/// <summary>Deserialized ManagerClassic.json</summary>
-		public static ClassicManagerJson managerConfig;
+		public static ClassicManagerJson managerClassicConfig;
 		/// <summary>Deserialized Profiles.json</summary>
 		public static ProfilesJson profilesJson;
 

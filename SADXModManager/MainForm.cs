@@ -49,7 +49,8 @@ namespace SADXModManager
 		public string patchdatpath;
 		/// <summary>Path to Patches.json</summary>
 		public string patchesJsonPath;
-
+		/// <summary>Path to old SAManager folder in case settings were migrated</summary>
+		public string oldManagerSettingsPath = string.Empty;
 		// Controller
 		/// <summary>DirectInput object</summary>
 		DirectInput directInput;
@@ -143,22 +144,52 @@ namespace SADXModManager
 		private void InitConfigAndPaths()
 		{
 			// Set the base folder
-			managerExePath = AppDomain.CurrentDomain.BaseDirectory;
-			// Locate the manager data folder (portable mode or otherwise)
-			managerAppDataPath = Path.GetFullPath(Directory.Exists(Path.Combine(managerExePath, "SAManager")) ? Path.Combine(managerExePath, "SAManager") : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SAManager"));
+			managerExePath = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(new char[] { '\\', '/' });
+			// If the manager is located in the game folder and a .modloader folder is found, set paths
+			if (Directory.Exists(Path.Combine(managerExePath, "mods", ".modloader")))
+			{
+				gameMainPath = managerExePath;
+			}
+			// Otherwise try to read from the Manager's old data location
+			else
+			{
+				gameMainPath = GetGamePathFromSettings();
+			}
+			// If game path detection failed
+			if (string.IsNullOrEmpty(gameMainPath))
+			{
+				// If the manager is located in the same folder as the game, set game path and proceed
+				if (File.Exists(Path.Combine(managerExePath, "sonic.exe")))
+				{
+					gameMainPath = managerExePath;
+					Directory.CreateDirectory(Path.Combine(gameMainPath, "mods", ".modloader", "profiles"));			
+				}
+				// If the manager isn't located in the same folder as the game, hide the form and load the installation wizard instead
+				else
+				{
+					Hide();
+					Form wizard = new InstallationWizard();
+					wizard.ShowDialog();
+					return;
+				}
+			}
+			// Set manager data path
+			managerAppDataPath = Path.Combine(gameMainPath, "mods", ".modloader");
+			managerClassicConfigJsonPath = Path.Combine(gameMainPath, "mods", ".modloader", "ManagerClassic.json");
 			// Temp folder
-			updatesTempPath = Path.Combine(managerAppDataPath, "Updates");
-			// d3d8to9 path
+			updatesTempPath = Path.Combine(managerAppDataPath, "updates");
+			// d3d8to11 path
 			d3d8to11ConfigPath = Path.Combine(managerAppDataPath, "extlib", "d3d8to11", "config.ini");
 			// Load SAManager settings JSON file
-			managerConfigJsonPath = Path.Combine(managerAppDataPath, "ManagerClassic.json");
-			managerConfig = JsonDeserialize<ClassicManagerJson>(managerConfigJsonPath);
-			if (managerConfig == null)
-				managerConfig = new ClassicManagerJson(){ KeepManagerOpen = true, ManagerUpdateCheck = true };
-			if (managerConfig.IgnoredModUpdates == null)
-				managerConfig.IgnoredModUpdates = new List<string>();
+			if (managerClassicConfig == null) // It might be already loaded from a legacy location (SAManager folder)
+				managerClassicConfig = JsonDeserialize<ClassicManagerJson>(managerClassicConfigJsonPath);
+			// If loading failed, create a new configuration
+			if (managerClassicConfig == null)
+				managerClassicConfig = new ClassicManagerJson(){ KeepManagerOpen = true, ManagerUpdateCheck = true };
+			if (managerClassicConfig.IgnoredModUpdates == null)
+				managerClassicConfig.IgnoredModUpdates = new List<string>();
 			// Load the SADX profiles JSON file
-			profilesListJsonPath = Path.Combine(managerAppDataPath, "SADX", "Profiles.json");
+			profilesListJsonPath = Path.Combine(managerAppDataPath, "profiles", "Profiles.json");
 			profilesJson = JsonDeserialize<ProfilesJson>(profilesListJsonPath);
 			// Create a new profile list if one doesn't exist
 			if (profilesJson == null)
@@ -166,6 +197,112 @@ namespace SADXModManager
 				profilesJson = new ProfilesJson();
 				profilesJson.ProfilesList.Add(new ProfileData { Name = "Default", Filename = "Default.json" });
 			}
+		}
+
+		private string GetGamePathFromSettings()
+		{
+			// Locate the manager data folder (portable mode or otherwise)
+			oldManagerSettingsPath = Path.GetFullPath(Directory.Exists(Path.Combine(managerExePath, "SAManager")) ? Path.Combine(managerExePath, "SAManager") : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SAManager"));
+			if (!Directory.Exists(oldManagerSettingsPath))
+			{
+				return string.Empty; // Failed to find the manager data folder
+			}
+			// If it fails, try to locate the game path in Manager.json
+			string managerjsonpath = Path.Combine(oldManagerSettingsPath, "Manager.json");
+			{
+				if (File.Exists(managerjsonpath))
+				{
+					// Load ManagerClassic.json if it exists
+					if (File.Exists(Path.Combine(oldManagerSettingsPath, "ManagerClassic.json")))
+						managerClassicConfig = JsonDeserialize<ClassicManagerJson>(Path.Combine(oldManagerSettingsPath, "ManagerClassic.json"));
+					ManagerJson settings = JsonDeserialize<ManagerJson>(managerjsonpath);
+					if (settings != null && settings.GameEntries != null && settings.GameEntries.Count > 0)
+					{
+						// Look for the SADX entry
+						foreach (var entry in settings.GameEntries)
+						{
+							// If the game folder is written in Manager.json, it's safe to assume the rest is in the mods folder
+							if (entry != null && entry.Type == GameEntry.GameType.SADX || !string.IsNullOrEmpty(entry.Directory))
+							{
+								return entry.Directory;
+							}
+						}
+					}
+				}
+			}
+			// If locating the game path in Manager.json or ManagerClassic.json failed, try the currently selected profile or Default.json
+			string tempCurrentProfileJsonPath = string.Empty;
+			// Load the Profiles.json file (old path)
+			string tempProfilesListJsonPath = Path.Combine(oldManagerSettingsPath, "SADX", "Profiles.json");
+			// If Profiles.json exists, try to read it
+			if (File.Exists(tempProfilesListJsonPath))
+			{
+				profilesJson = JsonDeserialize<ProfilesJson>(profilesListJsonPath);
+				// Find the filename of the currently selected profile
+				if (profilesJson != null && profilesJson.ProfilesList != null)
+					tempCurrentProfileJsonPath = Path.Combine(oldManagerSettingsPath, "SADX", profilesJson.ProfilesList[Math.Min(profilesJson.ProfilesList.Count - 1, profilesJson.ProfileIndex)].Filename);
+				// If the specified profile doesn't exist, try to load the default one
+				if (!File.Exists(tempCurrentProfileJsonPath))
+					tempCurrentProfileJsonPath = Path.Combine(oldManagerSettingsPath, "SADX", "Default.json");
+			}
+			// If Profiles.json doesn't exist, assume Default.json
+			else
+				tempCurrentProfileJsonPath = Path.Combine(oldManagerSettingsPath, "SADX", "Default.json");
+			// If Default.json doesn't exist either...
+			if (!File.Exists(tempCurrentProfileJsonPath))
+				return string.Empty; // Failed to find profile
+			gameSettings = JsonDeserialize<GameSettings>(tempCurrentProfileJsonPath);
+			if (gameSettings == null || string.IsNullOrEmpty(gameSettings.GamePath))
+				return string.Empty; // Failed to load the profile or retrieve the game path
+			// Set the .modloader folder location
+			managerAppDataPath = Path.Combine(gameSettings.GamePath, "mods", ".modloader");
+			DialogResult resultMigrate;
+			// Attempt transfer
+			do
+			{
+				try
+				{
+					resultMigrate = DialogResult.Cancel;
+					// Create the profiles folder
+					Directory.CreateDirectory(Path.Combine(gameSettings.GamePath, "mods", ".modloader", "profiles"));
+					// Copy all JSON files from the SADX folder
+					string[] srcpfrfiles = Directory.GetFiles(Path.Combine(oldManagerSettingsPath, "SADX"), "*.json", SearchOption.AllDirectories);
+					foreach (string srcpfrfile in srcpfrfiles)
+					{
+						// Only copy files if the destination doesn't exist
+						if (!File.Exists(Path.Combine(managerAppDataPath, "profiles", Path.GetFileName(srcpfrfile))))
+							File.Copy(srcpfrfile, Path.Combine(managerAppDataPath, "profiles", Path.GetFileName(srcpfrfile)), true);
+					}
+					// Copy the extlib folder if it exists in the old folder but not in the new one
+					if (Directory.Exists(Path.Combine(oldManagerSettingsPath, "extlib")) && !Directory.Exists(Path.Combine(managerAppDataPath, "extlib")))
+					{
+						CopyDirectory(Path.Combine(oldManagerSettingsPath, "extlib"), Path.Combine(managerAppDataPath, "extlib"), true);
+					}
+					// Copy the CrashDumps folder if it exists in the old folder but not in the new one
+					if (Directory.Exists(Path.Combine(oldManagerSettingsPath, "CrashDump")) && !Directory.Exists(Path.Combine(managerAppDataPath, "CrashDump")))
+					{
+						CopyDirectory(Path.Combine(oldManagerSettingsPath, "CrashDump"), Path.Combine(managerAppDataPath, "CrashDump"), true);
+					}
+					// Copy the manager version info file if it exists in the old folder but not in the new one
+					if (File.Exists(Path.Combine(oldManagerSettingsPath, "sadxmanagerver.txt")) && !File.Exists(Path.Combine(managerAppDataPath, "sadxmanagerver.txt")))
+					{
+						File.Copy(Path.Combine(oldManagerSettingsPath, "sadxmanagerver.txt"), Path.Combine(managerAppDataPath, "sadxmanagerver.txt"));
+					}
+					// Copy the manager settings file if it exists in the old folder but not in the new one
+					if (File.Exists(Path.Combine(oldManagerSettingsPath, "ManagerClassic.json")) && !File.Exists(Path.Combine(managerAppDataPath, "ManagerClassic.json")))
+					{
+						File.Copy(Path.Combine(oldManagerSettingsPath, "ManagerClassic.json"), Path.Combine(managerAppDataPath, "ManagerClassic.json"));
+					}
+					// Finished
+					return gameSettings.GamePath;
+				}
+				catch (Exception ex)
+				{
+					resultMigrate = MessageBox.Show(this, "Failed to migrate Mod Manager settings:\n" + ex.Message.ToString()
+						+ "\n\nWould you like to retry?", "Settings Migration Failed", MessageBoxButtons.RetryCancel);
+				}
+			} while (resultMigrate == DialogResult.Retry);
+			return string.Empty;
 		}
 
 		public MainForm()
@@ -231,36 +368,33 @@ namespace SADXModManager
 		private void LoadCurrentProfile(bool loadProfile)
 		{
 			if (loadProfile)
-				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", profilesJson.ProfilesList[Math.Min(profilesJson.ProfileIndex, profilesJson.ProfilesList.Count - 1)].Filename);
+				currentProfileJsonPath = Path.Combine(managerAppDataPath, "profiles", profilesJson.ProfilesList[Math.Min(profilesJson.ProfileIndex, profilesJson.ProfilesList.Count - 1)].Filename);
 			else
-				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", "Default.json");
+				currentProfileJsonPath = Path.Combine(managerAppDataPath, "profiles", "Default.json");
 			gameSettings = JsonDeserialize<GameSettings>(currentProfileJsonPath);
 			// Override in single profile mode
 			if (checkBoxSingleProfile.Checked)
-				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", "Default.json");
+				currentProfileJsonPath = Path.Combine(managerAppDataPath, "profiles", "Default.json");
 			// Create a new profile if it doesn't exist
 			if (gameSettings == null)
 				gameSettings = new GameSettings();
-			// Set current game folder
-			if (Directory.Exists(Path.Combine(managerExePath, "mods")))
-				gameSettings.GamePath = managerExePath;
 			// Import old settings if they exist
 			if (!File.Exists(currentProfileJsonPath))
 			{
-				bool cancel = CheckOldLoaderSettings(this, gameSettings.GamePath);
+				bool cancel = CheckOldLoaderSettings(this);
 				if (cancel)
 					System.Environment.Exit(0);
 				else
 				{
 					JsonSerialize(gameSettings, currentProfileJsonPath);
-					JsonSerialize(managerConfig, managerConfigJsonPath);
+					JsonSerialize(managerClassicConfig, managerClassicConfigJsonPath);
 					JsonSerialize(profilesJson, profilesListJsonPath);
 				}
 			}
 			// Populate save list
-			if (!Directory.Exists(Path.Combine(gameSettings.GamePath, "savedata")))
-				Directory.CreateDirectory(Path.Combine(gameSettings.GamePath, "savedata"));
-			string[] saveListAll = Directory.GetFiles(Path.Combine(gameSettings.GamePath, "savedata"), "*.snc");
+			if (!Directory.Exists(Path.Combine(gameMainPath, "savedata")))
+				Directory.CreateDirectory(Path.Combine(gameMainPath, "savedata"));
+			string[] saveListAll = Directory.GetFiles(Path.Combine(gameMainPath, "savedata"), "*.snc");
 			saveList = new Dictionary<int, string>();
 			int savecount = 1;
 			for (int ind = 0; ind < saveListAll.Length; ind++)
@@ -273,16 +407,16 @@ namespace SADXModManager
 				}
 			}
 			// Set paths for stuff inside game folder
-			sonicDxIniPath = Path.Combine(gameSettings.GamePath, "sonicDX.ini");
-			datadllpath = Path.Combine(gameSettings.GamePath, "system", "CHRMODELS.dll");
-			datadllorigpath = Path.Combine(gameSettings.GamePath, "system", "CHRMODELS_orig.dll");
-			loaderdllpath = Path.Combine(gameSettings.GamePath, "mods", "SADXModLoader.dll");
-			codelstpath = Path.Combine(gameSettings.GamePath, "mods", "Codes.lst");
-			codexmlpath = Path.Combine(gameSettings.GamePath, "mods", "Codes.xml");
-			codedatpath = Path.Combine(gameSettings.GamePath, "mods", "Codes.dat");
-			patchdatpath = Path.Combine(gameSettings.GamePath, "mods", "Patches.dat");
-			patchesJsonPath = Path.Combine(gameSettings.GamePath, "mods", "Patches.json");
-			toolStripStatusLabelGameFolder.Text = "Game Folder: " + gameSettings.GamePath + " (click to change)";
+			sonicDxIniPath = Path.Combine(gameMainPath, "sonicDX.ini");
+			datadllpath = Path.Combine(gameMainPath, "system", "CHRMODELS.dll");
+			datadllorigpath = Path.Combine(gameMainPath, "system", "CHRMODELS_orig.dll");
+			loaderdllpath = Path.Combine(gameMainPath, "mods", "SADXModLoader.dll");
+			codelstpath = Path.Combine(gameMainPath, "mods", "Codes.lst");
+			codexmlpath = Path.Combine(gameMainPath, "mods", "Codes.xml");
+			codedatpath = Path.Combine(gameMainPath, "mods", "Codes.dat");
+			patchdatpath = Path.Combine(gameMainPath, "mods", "Patches.dat");
+			patchesJsonPath = Path.Combine(gameMainPath, "mods", "Patches.json");
+			toolStripStatusLabelGameFolder.Text = "Game Folder: " + gameMainPath;
 			InitPatches();
 		}
 
@@ -298,11 +432,11 @@ namespace SADXModManager
 			// Load the current profile
 			LoadCurrentProfile(!checkBoxSingleProfile.Checked);
 			// Load window settings
-			if (managerConfig.LastMonitorResolution == new Point(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height))
+			if (managerClassicConfig.LastMonitorResolution == new Point(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height))
 			{
-				Location = managerConfig.WindowPosition;
-				Size = managerConfig.WindowSize;
-				if (managerConfig.Maximized)
+				Location = managerClassicConfig.WindowPosition;
+				Size = managerClassicConfig.WindowSize;
+				if (managerClassicConfig.Maximized)
 					WindowState = FormWindowState.Maximized;
 			}
 			// Load the profile list and update UI
@@ -554,8 +688,8 @@ namespace SADXModManager
 			numericUpDownTestSpawnZ.Value = (int)gameSettings.TestSpawn.ZPosition;
 			checkBoxTestSpawnAngleDeg.Checked = true;
 			numericUpDownTestSpawnAngle.Value = gameSettings.TestSpawn.Rotation;
-			checkBoxTestSpawnAngleDeg.Checked = managerConfig.AngleDeg;
-			checkBoxTestSpawnAngleHex.Checked = managerConfig.AngleHex;
+			checkBoxTestSpawnAngleDeg.Checked = managerClassicConfig.AngleDeg;
+			checkBoxTestSpawnAngleHex.Checked = managerClassicConfig.AngleHex;
 			checkBoxTestSpawnEvent.Checked = gameSettings.TestSpawn.UseEvent;
 			comboBoxTestSpawnEvent.SelectedIndex = GetTestspawnEventIndex(gameSettings.TestSpawn.EventIndex, false);
 			checkBoxTestSpawnGameMode.Checked = gameSettings.TestSpawn.UseGameMode;
@@ -568,35 +702,56 @@ namespace SADXModManager
 			}
 			comboBoxTestSpawnSave.SelectedIndex = GetTestspawnSaveIndex(gameSettings.TestSpawn.SaveIndex, false);
 			// Load Options/Update settings
-			checkBoxCheckLoaderUpdatesStartup.Checked = managerConfig.UpdateCheck;
-			checkBoxCheckUpdateModsStartup.Checked = managerConfig.ModUpdateCheck;
-			checkBoxCheckManagerUpdateStartup.Checked = managerConfig.ManagerUpdateCheck;
-			comboBoxUpdateUnit.SelectedIndex = (int)managerConfig.UpdateUnit;
-			numericUpDownUpdateFrequency.Value = managerConfig.UpdateFrequency;
+			checkBoxCheckLoaderUpdatesStartup.Checked = managerClassicConfig.UpdateCheck;
+			checkBoxCheckUpdateModsStartup.Checked = managerClassicConfig.ModUpdateCheck;
+			checkBoxCheckManagerUpdateStartup.Checked = managerClassicConfig.ManagerUpdateCheck;
+			comboBoxUpdateUnit.SelectedIndex = (int)managerClassicConfig.UpdateUnit;
+			numericUpDownUpdateFrequency.Value = managerClassicConfig.UpdateFrequency;
 			// Load Options/Misc settings
 			comboBoxVoiceLanguage.SelectedIndex = gameSettings.TestSpawn.GameVoiceLanguage;
 			comboBoxTextLanguage.SelectedIndex = gameSettings.TestSpawn.GameTextLanguage;
 			checkBoxPauseWhenInactive.Checked = gameSettings.Graphics.EnablePauseOnInactive;
 			// Load Options/Manager settings
-			checkBoxKeepManagerOpen.Checked = managerConfig.KeepManagerOpen;
-			checkBoxSingleProfile.Checked = managerConfig.SingleProfileMode;
+			checkBoxKeepManagerOpen.Checked = managerClassicConfig.KeepManagerOpen;
+			checkBoxSingleProfile.Checked = managerClassicConfig.SingleProfileMode;
 			suppressEvent = false;
 		}
 
 		private void MainForm_Shown(object sender, EventArgs e)
 		{
+			// Check if the old settings were moved
+			if (!string.IsNullOrEmpty(oldManagerSettingsPath))
+			{
+				MessageBox.Show(this, string.Format("Settings and mod lists have been migrated from '{0}' to '{1}'.\n\nIf you aren't using the SA Manager version 1.3.1 or below alongside the Classic SADX Mod Manager, you can delete the folder '{0}'.", oldManagerSettingsPath, managerAppDataPath), "SADX Mod Manager Classic", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			}
+			// Delete the updates folder
+			string updateFolder = Path.Combine(managerAppDataPath, "updates");
+			if (Directory.Exists(updateFolder))
+			{
+				try
+				{ 
+					Directory.Delete(updateFolder, true); 
+				}
+				catch (Exception ex)
+				{
+					MessageBox.Show(this, string.Format("Error cleaning up the temporary update folder at {0}: {1}", updateFolder, ex.Message.ToString()));
+				}
+			}
 			// Check and delete old version files
-			if (managerExePath != gameSettings.GamePath) // This check needs to be done because the DLLs will be in use
-				DeleteOldFiles(this, gameSettings.GamePath);
+			if (managerExePath != gameMainPath) // This check needs to be done because the DLLs will be in use
+				DeleteOldFiles(this, gameMainPath);
 			else
-				CheckOldFilesCritical(this, gameSettings.GamePath);
+				CheckOldFilesCritical(this, gameMainPath);
 			if (!File.Exists(datadllpath))
 			{
 				MessageBox.Show(this, "CHRMODELS.dll could not be found.\n\n" +
 					"Cannot determine state of installation. Make sure you are running the Mod Manager from the game's main folder (where sonic.exe is).\n\n" +
-					"If you are using the Steam version of the game, you need to convert it to the 2004 version before you can use the Mod Loader.",
+					"If you are using the Steam version of the game, you need to convert it to the 2004 version first before you can use the Mod Loader.",
 					Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-				buttonInstallLoader.Hide();
+				Hide();
+				Form wizard = new InstallationWizard();
+				wizard.ShowDialog();
+				return;
 			}
 			else if (File.Exists(datadllorigpath))
 			{
@@ -646,7 +801,7 @@ namespace SADXModManager
 			// click the save button.
 			if (checkedForUpdates)
 			{
-				JsonSerialize(managerConfig, managerConfigJsonPath);
+				JsonSerialize(managerClassicConfig, managerClassicConfigJsonPath);
 			}
 		}
 
@@ -665,7 +820,7 @@ namespace SADXModManager
 		private void AutoUpdate()
 		{
 			// Periodic update check but not enough time has passed since last check
-			if (UpdateChecker.CheckMode == UpdateChecker.UpdateMode.Scheduled && !UpdateTimeElapsed(managerConfig.UpdateUnit, managerConfig.UpdateFrequency, DateTime.FromFileTimeUtc(managerConfig.ModUpdateTime)))
+			if (UpdateChecker.CheckMode == UpdateChecker.UpdateMode.Scheduled && !UpdateTimeElapsed(managerClassicConfig.UpdateUnit, managerClassicConfig.UpdateFrequency, DateTime.FromFileTimeUtc(managerClassicConfig.ModUpdateTime)))
 				return;
 
 			// Nothing to check
@@ -687,12 +842,12 @@ namespace SADXModManager
 			if (UpdateChecker.ItemsToCheck.HasFlag(UpdateChecker.UpdateItems.Mods) && (UpdateChecker.CheckMode == UpdateChecker.UpdateMode.Startup || UpdateChecker.CheckMode == UpdateChecker.UpdateMode.Scheduled))
 			{
 				checkedForUpdates = true;
-				managerConfig.ModUpdateTime = DateTime.UtcNow.ToFileTimeUtc();
+				managerClassicConfig.ModUpdateTime = DateTime.UtcNow.ToFileTimeUtc();
 			}
 			Dictionary<string, SADXModInfo> infoNew = new Dictionary<string, SADXModInfo>();
 			foreach (KeyValuePair<string, SADXModInfo> mod in mods)
 			{
-				if (!managerConfig.IgnoredModUpdates.Contains(mod.Key))
+				if (!managerClassicConfig.IgnoredModUpdates.Contains(mod.Key))
 					infoNew.Add(mod.Key, mod.Value);
 			}
 			updateWorker.RunWorkerAsync(infoNew.Select(x => new KeyValuePair<string, ModInfo>(x.Key, x.Value)).ToList());
@@ -706,7 +861,7 @@ namespace SADXModManager
 			listViewMods.Items.Clear();
 			mods = new Dictionary<string, SADXModInfo>();
 			codes = new List<Code>(mainCodes.Codes);
-			string modDir = Path.Combine(gameSettings.GamePath, "mods");
+			string modDir = Path.Combine(gameMainPath, "mods");
 			if (!Directory.Exists(modDir))
 			{
 				MessageBox.Show(this, "Mods directory not found.", "SADX Mod Manager Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -737,7 +892,7 @@ namespace SADXModManager
 				{
 					SADXModInfo inf = mods[mod];
 					suppressEvent = true;
-					listViewMods.Items.Add(new ListViewItem(new[] { inf.Name, inf.Author, inf.Version, inf.Category }) { Checked = true, Tag = mod, ForeColor = managerConfig.IgnoredModUpdates.Contains(mod) ? SystemColors.GrayText : SystemColors.WindowText });
+					listViewMods.Items.Add(new ListViewItem(new[] { inf.Name, inf.Author, inf.Version, inf.Category }) { Checked = true, Tag = mod, ForeColor = managerClassicConfig.IgnoredModUpdates.Contains(mod) ? SystemColors.GrayText : SystemColors.WindowText });
 					suppressEvent = false;
 					if (!string.IsNullOrEmpty(inf.Codes))
 						codes.AddRange(CodeList.Load(Path.Combine(Path.Combine(modDir, mod), inf.Codes)).Codes);
@@ -992,7 +1147,7 @@ namespace SADXModManager
 
 			if (listViewMods.FocusedItem.Bounds.Contains(e.Location))
 			{
-				disableUpdatesToolStripMenuItem.Checked = managerConfig.IgnoredModUpdates.Contains((string)listViewMods.SelectedItems[0].Tag);
+				disableUpdatesToolStripMenuItem.Checked = managerClassicConfig.IgnoredModUpdates.Contains((string)listViewMods.SelectedItems[0].Tag);
 				configureToolStripMenuItem.Enabled = listViewMods.SelectedItems.Count == 1 && File.Exists(Path.Combine("mods", (string)listViewMods.SelectedItems[0].Tag, "configschema.xml"));
 				contextMenuStripMod.Show(Cursor.Position);
 			}
@@ -1206,42 +1361,51 @@ namespace SADXModManager
 			gameSettings.TestSpawn.GameModeIndex = GetTestspawnGamemodeIndex(comboBoxTestSpawnGameMode.SelectedIndex, true);
 			gameSettings.TestSpawn.UseSave = checkBoxTestSpawnSave.Checked;
 			gameSettings.TestSpawn.SaveIndex = GetTestspawnSaveIndex(comboBoxTestSpawnSave.SelectedIndex, true);
-			managerConfig.AngleDeg = checkBoxTestSpawnAngleDeg.Checked;
-			managerConfig.AngleHex = checkBoxTestSpawnAngleHex.Checked;
+			managerClassicConfig.AngleDeg = checkBoxTestSpawnAngleDeg.Checked;
+			managerClassicConfig.AngleHex = checkBoxTestSpawnAngleHex.Checked;
 			// Save Options settings
 			// Save Update settings
-			managerConfig.UpdateCheck = checkBoxCheckLoaderUpdatesStartup.Checked;
-			managerConfig.ModUpdateCheck = checkBoxCheckUpdateModsStartup.Checked;
-			managerConfig.ManagerUpdateCheck = checkBoxCheckManagerUpdateStartup.Checked;
-			managerConfig.UpdateFrequency = (int)numericUpDownUpdateFrequency.Value;
-			managerConfig.UpdateUnit = (UpdateUnit)comboBoxUpdateUnit.SelectedIndex;
+			managerClassicConfig.UpdateCheck = checkBoxCheckLoaderUpdatesStartup.Checked;
+			managerClassicConfig.ModUpdateCheck = checkBoxCheckUpdateModsStartup.Checked;
+			managerClassicConfig.ManagerUpdateCheck = checkBoxCheckManagerUpdateStartup.Checked;
+			managerClassicConfig.UpdateFrequency = (int)numericUpDownUpdateFrequency.Value;
+			managerClassicConfig.UpdateUnit = (UpdateUnit)comboBoxUpdateUnit.SelectedIndex;
 			// Save Misc settings
 			gameSettings.Graphics.EnablePauseOnInactive = checkBoxPauseWhenInactive.Checked;
 			gameSettings.TestSpawn.GameVoiceLanguage = comboBoxVoiceLanguage.SelectedIndex;
 			gameSettings.TestSpawn.GameTextLanguage = comboBoxTextLanguage.SelectedIndex;
 			// Save Manager Settings
-			managerConfig.KeepManagerOpen = checkBoxKeepManagerOpen.Checked;
-			managerConfig.SingleProfileMode = checkBoxSingleProfile.Checked;
+			managerClassicConfig.KeepManagerOpen = checkBoxKeepManagerOpen.Checked;
+			managerClassicConfig.SingleProfileMode = checkBoxSingleProfile.Checked;
 			// Save window settings
-			managerConfig.LastMonitorResolution = new Point(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height);
-			managerConfig.Maximized = WindowState == FormWindowState.Maximized;
+			managerClassicConfig.LastMonitorResolution = new Point(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height);
+			managerClassicConfig.Maximized = WindowState == FormWindowState.Maximized;
 			if (WindowState != FormWindowState.Maximized)
 			{
-				managerConfig.WindowPosition = Location;
-				managerConfig.WindowSize = Size;
+				managerClassicConfig.WindowPosition = Location;
+				managerClassicConfig.WindowSize = Size;
 			}
-			// Serialize JSONs and sonicDX.ini
-			if (!saveProfile && checkBoxSingleProfile.Checked)
-				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", "Default.json");
-			else
-				currentProfileJsonPath = Path.Combine(managerAppDataPath, "SADX", textBoxProfileName.Text + ".json");
+			// Serialize sonicDX.ini
 			IniSerializer.Serialize(sonicDxIni, sonicDxIniPath);
+			// Create the profiles folder if it doesn't exist
+			if (!Directory.Exists(Path.Combine(managerAppDataPath, "profiles")))
+				Directory.CreateDirectory(Path.Combine(managerAppDataPath, "profiles"));
+			// Set current profile filename
+			if (!saveProfile && checkBoxSingleProfile.Checked)
+				currentProfileJsonPath = Path.Combine(managerAppDataPath, "profiles", "Default.json");
+			else
+				currentProfileJsonPath = Path.Combine(managerAppDataPath, "profiles", textBoxProfileName.Text + ".json");
+			// Serialize profile
+			JsonSerialize(gameSettings, currentProfileJsonPath);
+			// Serialize Profiles.json
+			JsonSerialize(profilesJson, profilesListJsonPath);
+			// Serialize manager configuration
+			JsonSerialize(managerClassicConfig, managerClassicConfigJsonPath);
+			// Create the d3d8to11 config folder if it doesn't exist
 			if (!Directory.Exists(Path.GetDirectoryName(d3d8to11ConfigPath)))
 				Directory.CreateDirectory(Path.GetDirectoryName(d3d8to11ConfigPath));
+			// Serialize d3d8to11 config
 			IniSerializer.Serialize(d3d8to11ConfigIni, d3d8to11ConfigPath);
-			JsonSerialize(gameSettings, currentProfileJsonPath);
-			JsonSerialize(managerConfig, managerConfigJsonPath);
-			JsonSerialize(profilesJson, profilesListJsonPath);
 		}
 
 		private Dictionary<string, string> GetModReference()
@@ -1869,7 +2033,7 @@ namespace SADXModManager
 			List<KeyValuePair<string, ModInfo>> infoNew = new List<KeyValuePair<string, ModInfo>>();
 			foreach (KeyValuePair<string, ModInfo> mod in selected)
 			{
-				if (!managerConfig.IgnoredModUpdates.Contains(mod.Key))
+				if (!managerClassicConfig.IgnoredModUpdates.Contains(mod.Key))
 					infoNew.Add(mod);
 			}
 			updateWorker?.RunWorkerAsync(infoNew);
@@ -2274,7 +2438,7 @@ namespace SADXModManager
 			else
 			{
 				buttonSaveProfile.Enabled = true;
-				buttonLoadProfile.Enabled = File.Exists(Path.Combine(managerAppDataPath, "SADX", textBoxProfileName.Text + ".json"));
+				buttonLoadProfile.Enabled = File.Exists(Path.Combine(managerAppDataPath, "profiles", textBoxProfileName.Text + ".json"));
 			}
 		}
 
@@ -2773,13 +2937,13 @@ namespace SADXModManager
 			{
 				suppressEvent = true;
 				// Delete profile file
-				File.Delete(Path.Combine(managerAppDataPath, "SADX", textBoxProfileName.Text + ".json"));
+				File.Delete(Path.Combine(managerAppDataPath, "profiles", textBoxProfileName.Text + ".json"));
 				// Set default profile
 				profilesJson.ProfileIndex = 0;
 				// Delete entries for profiles that don't exist
 				List<ProfileData> deleteProfiles = new List<ProfileData>();
 				foreach (ProfileData data in profilesJson.ProfilesList)
-					if (!File.Exists(Path.Combine(managerAppDataPath, "SADX", data.Filename)))
+					if (!File.Exists(Path.Combine(managerAppDataPath, "profiles", data.Filename)))
 						deleteProfiles.Add(data);
 				foreach (ProfileData data in deleteProfiles)
 					profilesJson.ProfilesList.Remove(data);
@@ -2811,31 +2975,7 @@ namespace SADXModManager
 			profilesJson.ProfileIndex = textBoxProfileName.SelectedIndex;
 		}
 
-		/// <summary>Change SADX game folder in the currently loaded profile.</summary>
-		private void toolStripStatusLabelGameFolder_Click(object sender, EventArgs e)
-		{
-			using (OpenFileDialog dialog = new OpenFileDialog
-			{
-				Title = "Select the location of sonic.exe",
-				InitialDirectory = gameSettings.GamePath,
-				Filter = "SADX 2004 EXE|sonic.exe",
-				AutoUpgradeEnabled = true,
-				CheckFileExists = true,
-				CheckPathExists = true,
-				Multiselect = false,
-				RestoreDirectory = true
-			})
-			{
-				if (dialog.ShowDialog() == DialogResult.OK)
-				{
-					gameSettings.GamePath = Path.GetDirectoryName(dialog.FileName);
-					SaveSettings(!checkBoxSingleProfile.Checked);
-					LoadCurrentProfile(!checkBoxSingleProfile.Checked);
-				}
-			}
-		}
-
-		private void SortList(object sender, ColumnClickEventArgs e)
+				private void SortList(object sender, ColumnClickEventArgs e)
 		{
 			suppressEvent = true;
 			ListView lv = (ListView)sender;
@@ -2929,14 +3069,14 @@ namespace SADXModManager
 			foreach (ListViewItem item in listViewMods.SelectedItems)
 			{
 				string tag = (string)item.Tag;
-				if (managerConfig.IgnoredModUpdates.Contains(tag))
+				if (managerClassicConfig.IgnoredModUpdates.Contains(tag))
 				{
-					managerConfig.IgnoredModUpdates.Remove(tag);
+					managerClassicConfig.IgnoredModUpdates.Remove(tag);
 					item.ForeColor = SystemColors.WindowText;
 				}
 				else
 				{
-					managerConfig.IgnoredModUpdates.Add(tag);
+					managerClassicConfig.IgnoredModUpdates.Add(tag);
 					item.ForeColor = SystemColors.GrayText;
 				}
 			}

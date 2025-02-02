@@ -170,10 +170,11 @@ namespace SADXModManager
 			// Set the base folder
 			string exePath = AppDomain.CurrentDomain.BaseDirectory;
 			// Locate the manager data folder (portable mode or otherwise)
+			bool newdata = Directory.Exists(Path.Combine(exePath, "mods", ".modloader"));
 			bool portable = Directory.Exists(Path.Combine(exePath, "SAManager"));
 			bool appdata = Directory.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SAManager"));
 			bool legacy = File.Exists(Path.Combine(exePath, "mods", "SADXModLoader.ini"));
-			if (!portable && !appdata && !legacy)
+			if (!newdata && !portable && !appdata && !legacy)
 				primaryForm = new InstallationWizard();
 			else
 				primaryForm = new MainForm();

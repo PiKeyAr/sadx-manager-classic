@@ -302,7 +302,7 @@ namespace SADXModManager.Forms
 										// Install Loader
 										case DownloadItem.DownloadItemType.Loader:
 											// Extract SADXModLoader.dll, border image, codes, game patches
-											Process.Start(new ProcessStartInfo("7z.exe", $"e -aoa -o\"{Path.Combine(Variables.gameSettings.GamePath, "mods")}\" \"{filePath}\" *.*") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
+											Process.Start(new ProcessStartInfo("7z.exe", $"e -aoa -o\"{Path.Combine(Variables.gameMainPath, "mods")}\" \"{filePath}\" *.*") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
 											// Extract extlibs
 											Process.Start(new ProcessStartInfo("7z.exe", $"x -aoa -o\"{Variables.managerAppDataPath}\" \"{filePath}\" extlib") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
 											// Copy SADXModLoader.dll to system\CHRMODELS.dll if the Loader is installed
@@ -313,7 +313,7 @@ namespace SADXModManager.Forms
 												{
 													try
 													{
-														File.Copy(Path.Combine(Variables.gameSettings.GamePath, "mods", "SADXModLoader.dll"), Variables.datadllpath, true);
+														File.Copy(Path.Combine(Variables.gameMainPath, "mods", "SADXModLoader.dll"), Variables.datadllpath, true);
 														mlres = DialogResult.OK;
 													}
 													catch (Exception ex)
@@ -327,7 +327,7 @@ namespace SADXModManager.Forms
 										// Install Launcher
 										case DownloadItem.DownloadItemType.Launcher:
 											// Extract to game folder
-											Process.Start(new ProcessStartInfo("7z.exe", $"x -aoa -o\"{Variables.gameSettings.GamePath}\" \"{filePath}\"")	{ UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
+											Process.Start(new ProcessStartInfo("7z.exe", $"x -aoa -o\"{Variables.gameMainPath}\" \"{filePath}\"")	{ UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
 											break;
 										// Install Manager
 										case DownloadItem.DownloadItemType.Manager:
@@ -342,7 +342,7 @@ namespace SADXModManager.Forms
 											// Extract to game folder
 											Process.Start(new ProcessStartInfo("7z.exe", $"x -aoa -o\"{Path.Combine(updatePath, "steam_tools")}\" \"{filePath}\"") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
 											// Initialize conversion
-											string arg = "\"" + Variables.gameSettings.GamePath + "\"" + " \"" + Path.Combine(updatePath, "steam_tools") + "\"";
+											string arg = "\"" + Variables.gameMainPath + "\"" + " \"" + Path.Combine(updatePath, "steam_tools") + "\"";
 											Process.Start(Path.Combine(updatePath, "steam_tools", "SteamHelper.exe"), arg).WaitForExit();
 											break;
 										// Install Visual C++ runtime

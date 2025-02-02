@@ -96,7 +96,7 @@ namespace SADXModManager
 			string url_releases = "https://api.github.com/repos/x-hax/sadx-mod-loader/releases";
 			string text_releases = string.Empty;
 			string assetName = "SADXModLoader.7z";
-			string mlverfile = Path.Combine(gameSettings.GamePath, "mods", "sadxmlver.txt");
+			string mlverfile = Path.Combine(gameMainPath, "mods", "sadxmlver.txt");
 			string currentTagName = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "605";
 			uint currentID = 604;
 			if (!uint.TryParse(currentTagName, out currentID))
@@ -195,7 +195,7 @@ namespace SADXModManager
 		{
 			long size = 0;
 			DateTime modifiedDate = DateTime.Now;
-			string appLauncherExe = Path.Combine(Path.Combine(gameSettings.GamePath, "AppLauncher.exe"));
+			string appLauncherExe = Path.Combine(Path.Combine(gameMainPath, "AppLauncher.exe"));
 			if (File.Exists(appLauncherExe))
 			{
 				string localcrc = "AppLauncher.exe," + Force.Crc32.Crc32Algorithm.Compute(File.ReadAllBytes(appLauncherExe)).ToString("X") + "\r\n";
@@ -250,8 +250,8 @@ namespace SADXModManager
 			string text_releases = string.Empty;
 			string assetName = "SADXModManager.exe";
 			string mlverfile = Path.Combine(managerAppDataPath, "sadxmanagerver.txt");
-			string currentTagName = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "115";
-			uint currentID = 115;
+			string currentTagName = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : internalVersion.ToString();
+			uint currentID = internalVersion;
 			if (!uint.TryParse(currentTagName, out currentID))
 				currentID = 115;
 			try
@@ -350,7 +350,7 @@ namespace SADXModManager
 			long size = 0;
 			DateTime modifiedDate = DateTime.Now;
 			MD5 md5 = MD5.Create();
-			string sonicexe = Path.Combine(gameSettings.GamePath, "Sonic Adventure DX.exe");
+			string sonicexe = Path.Combine(gameMainPath, "Sonic Adventure DX.exe");
 			// Steam
 			if (File.Exists(sonicexe))
 			{
@@ -370,7 +370,7 @@ namespace SADXModManager
 			// Not Steam
 			else
 			{
-				sonicexe = Path.Combine(gameSettings.GamePath, "sonic.exe");
+				sonicexe = Path.Combine(gameMainPath, "sonic.exe");
 				if (File.Exists(sonicexe))
 				{
 					byte[] filehash_bytes = md5.ComputeHash(File.ReadAllBytes(sonicexe));
@@ -393,8 +393,8 @@ namespace SADXModManager
 						case "6b3c7a0013cbfd9b12c3765e9ba3a73e": // KR
 							steam = false;
 							// Check for incomplete conversion
-							if (!File.Exists(Path.Combine(gameSettings.GamePath, "system", "SA1.MPG")) && 
-								 File.Exists(Path.Combine(gameSettings.GamePath, "system", "SA1.SFD")))
+							if (!File.Exists(Path.Combine(gameMainPath, "system", "SA1.MPG")) && 
+								 File.Exists(Path.Combine(gameMainPath, "system", "SA1.SFD")))
 								steam = true;
 							break;
 						case "6e2e64ebf62787af47ed813221040898": // JP
@@ -921,13 +921,13 @@ namespace SADXModManager
 		}
 
 		/// <summary>Checks and imports settings from SADXModLoader.ini and sonicDX.ini. Returns false on finish, true on cancel.</summary>
-		public static bool CheckOldLoaderSettings(Form parent, string gamePath)
+		public static bool CheckOldLoaderSettings(Form parent)
 		{
-			if (Directory.Exists(Path.Combine(gamePath, "mods")))
+			if (Directory.Exists(Path.Combine(gameMainPath, "mods")))
 			{
-				if (File.Exists(Path.Combine(gamePath, "mods", "SADXModLoader.ini")))
+				if (File.Exists(Path.Combine(gameMainPath, "mods", "SADXModLoader.ini")))
 				{
-					DialogResult useOld = MessageBox.Show(parent, string.Format("Setup has found a legacy Mod Loader configuration in {0}. Would you like to reuse it?", Path.Combine(gamePath, "mods", "SADXModLoader.ini")), "SADX Mod Manager", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation);
+					DialogResult useOld = MessageBox.Show(parent, string.Format("Setup has found a legacy Mod Loader configuration in {0}. Would you like to reuse it?", Path.Combine(gameMainPath, "mods", "SADXModLoader.ini")), "SADX Mod Manager", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation);
 					switch (useOld)
 					{
 						case DialogResult.Cancel:
@@ -937,10 +937,10 @@ namespace SADXModManager
 							return false;
 						case DialogResult.Yes:
 							// Load SADXModLoader.ini
-							SADXLoaderInfo info = IniSerializer.Deserialize<SADXLoaderInfo>(Path.Combine(gamePath, "mods", "SADXModLoader.ini"));
-							gameSettings = new GameSettings { GamePath = gamePath };
+							SADXLoaderInfo info = IniSerializer.Deserialize<SADXLoaderInfo>(Path.Combine(gameMainPath, "mods", "SADXModLoader.ini"));
+							gameSettings = new GameSettings { GamePath = gameMainPath };
 							// Load sonicDX.ini
-							SonicDxIni ini = File.Exists(Path.Combine(gamePath, "sonicDX.ini")) ? IniSerializer.Deserialize<SonicDxIni>(Path.Combine(gamePath, "sonicDX.ini")) : new SonicDxIni();
+							SonicDxIni ini = File.Exists(Path.Combine(gameMainPath, "sonicDX.ini")) ? IniSerializer.Deserialize<SonicDxIni>(Path.Combine(gameMainPath, "sonicDX.ini")) : new SonicDxIni();
 							// Import settings
 							// Graphics settings
 							gameSettings.Graphics.EnableUIScaling = info.ScaleHud;
@@ -985,7 +985,7 @@ namespace SADXModManager
 							gameSettings.TestSpawn.GameModeIndex = info.TestSpawnGameMode;
 							gameSettings.TestSpawn.EventIndex = info.TestSpawnEvent;
 							gameSettings.TestSpawn.Rotation = info.TestSpawnRotation;
-							managerConfig.AngleHex = info.TestSpawnRotationHex;
+							managerClassicConfig.AngleHex = info.TestSpawnRotationHex;
 							gameSettings.TestSpawn.SaveIndex = info.TestSpawnSaveID;
 							gameSettings.TestSpawn.XPosition = (float)info.TestSpawnX;
 							gameSettings.TestSpawn.YPosition = (float)info.TestSpawnY;
@@ -1033,7 +1033,7 @@ namespace SADXModManager
 							if (info.XInputFix)
 								gameSettings.EnabledGamePatches.Add("XInputFix");
 							// Delete SADXModLoader.ini
-							File.Delete(Path.Combine(gamePath, "mods", "SADXModLoader.ini"));
+							File.Delete(Path.Combine(gameMainPath, "mods", "SADXModLoader.ini"));
 							return false;
 					}
 				}
@@ -1043,7 +1043,7 @@ namespace SADXModManager
 		}
 
 		/// <summary>Copies a folder from one location to another.</summary>
-		static void CopyDirectory(string sourceDir, string destinationDir, bool recursive)
+		public static void CopyDirectory(string sourceDir, string destinationDir, bool recursive)
 		{
 			// https://learn.microsoft.com/en-us/dotnet/standard/io/how-to-copy-directories
 

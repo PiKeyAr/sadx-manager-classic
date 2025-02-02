@@ -6,7 +6,6 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
 using Microsoft.Win32;
-using SADXModManager.Properties;
 using SADXModManager.DataClasses;
 using static SADXModManager.Variables;
 using static SADXModManager.Utils;
@@ -17,16 +16,22 @@ namespace SADXModManager.Forms
 	{
 		public InstallationWizard()
 		{
-			managerExePath = AppDomain.CurrentDomain.BaseDirectory;
+			managerExePath = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(new char[] { '\\', '/' });
 			InitializeComponent();
 			Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
 			pictureBoxManagerIcon.Image = Icon.ToBitmap();
 			textBoxGameFolder.Text = LocateGameFolder();
+			FormClosing += OnClose;
+		}
+
+		private void OnClose(object sender, FormClosingEventArgs args)
+		{
+			Environment.Exit(0);
 		}
 
 		private void buttonExit_Click(object sender, EventArgs e)
 		{
-			Environment.Exit(0);
+			Close();
 		}
 
 		public string LocateGameFolder()
@@ -139,76 +144,116 @@ namespace SADXModManager.Forms
 
 		private void buttonInstall_Click(object sender, EventArgs e)
 		{
+			// Lock the install button
 			buttonInstall.Enabled = false;
-			string gamePath = NormalizePath(textBoxGameFolder.Text);
-			managerAppDataPath = Path.GetFullPath(radioButtonGameFolder.Checked ? Path.Combine(gamePath, "SAManager") : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SAManager"));
-			// Reuse an existing configuration
+			bool overwrite = true; // If false, the JSON files will only be created if they don't already exist
+			// Get game and manager data path
+			gameMainPath = NormalizePath(textBoxGameFolder.Text);
+			managerAppDataPath = Path.GetFullPath(Path.Combine(gameMainPath, "mods", ".modloader"));
+			// Check for new configuration
 			if (Directory.Exists(managerAppDataPath))
 			{
-				if (File.Exists(Path.Combine(managerAppDataPath, "Manager.json")) || File.Exists(Path.Combine(managerAppDataPath, "ManagerClassic.json")))
+				switch (MessageBox.Show(this, string.Format("An existing configuration was found in '{0}'. Would you like to reuse it?", managerAppDataPath), "SADX Mod Manager", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question))
 				{
-					DialogResult useCurrent = MessageBox.Show(this, string.Format("Setup has found a Mod Manager configuration in {0}. Would you like to reuse it?", managerAppDataPath), "SADX Mod Manager", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation);
-					switch (useCurrent)
-					{
-						case DialogResult.Cancel:
-						default:
-							buttonInstall.Enabled = true;
-							return;
-						case DialogResult.Yes:
-							int attempt = 0;
-							DialogResult copyres = DialogResult.Cancel;
-							do {
-								try
-								{
-									// Copy Manager.exe
-									if (managerExePath != gamePath)
-										File.Copy(Application.ExecutablePath, Path.Combine(gamePath, "SADXModManager.exe"), true);
-									// Delete old Loader/Manager files if they exist
-									DeleteOldFiles(this, gamePath);
-									// Copy sadxmanagerver.txt
-									File.WriteAllText(Path.Combine(managerAppDataPath, "sadxmanagerver.txt"), Resources.VersionString);
-									// Run the manager from the new location
-									Process.Start(Path.Combine(gamePath, "SADXModManager.exe"), "");
-									Environment.Exit(0);
-								}
-								catch (Exception ex)
-								{
-									copyres = DialogResult.Retry;
-									attempt++;
-									if (attempt > 10)
-										copyres = MessageBox.Show(null, string.Format("Unable to install SADX Mod Manager: {0}. Try again?", ex.Message.ToString()), "SADX Mod Manager Update Error", MessageBoxButtons.RetryCancel, MessageBoxIcon.Error);
-								}
-							}
-							while (copyres == DialogResult.Retry);
-							break;
-						case DialogResult.No:
-							break;
-					}
+					case DialogResult.Cancel:
+						buttonInstall.Enabled = true;
+						return;
+					case DialogResult.Yes:
+						overwrite = false;
+						break;
+					case DialogResult.No:
+						break;
 				}
 			}
-			// Check if SADXModLoader.ini exists and prompt to reuse it
-			bool cancelled = CheckOldLoaderSettings(this, gamePath);
-			if (cancelled)
+			else
 			{
-				buttonInstall.Enabled = true;
-				return;
+				// Check for old configuration: Portable mode
+				string managerAppDataPathOld = Path.Combine(gameMainPath, "SAManager");
+				// Check for old configuration: AppData mode
+				if (!Directory.Exists(managerAppDataPathOld))
+					managerAppDataPathOld = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SAManager");
+				// Reuse an existing configuration if it exists
+				if (Directory.Exists(managerAppDataPathOld))
+				{
+					if (File.Exists(Path.Combine(managerAppDataPathOld, "Manager.json")) || File.Exists(Path.Combine(managerAppDataPathOld, "ManagerClassic.json")))
+					{
+						switch (MessageBox.Show(this, string.Format("An existing configuration was found in '{0}'. Would you like to reuse it?", managerAppDataPathOld), "SADX Mod Manager", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question))
+						{
+							case DialogResult.No:
+								break;
+							case DialogResult.Cancel:
+								buttonInstall.Enabled = true;
+								return;
+							case DialogResult.Yes:
+								// Load ManagerClassic.json if it exists
+								if (File.Exists(Path.Combine(managerAppDataPathOld, "ManagerClassic.json")))
+								{
+									managerClassicConfig = JsonDeserialize<ClassicManagerJson>(Path.Combine(managerAppDataPathOld, "ManagerClassic.json"));
+								}
+								overwrite = false;
+								break;
+						}
+					}
+				}
+				// Check if SADXModLoader.ini exists and prompt to reuse it
+				bool cancelled = CheckOldLoaderSettings(this);
+				if (cancelled)
+				{
+					buttonInstall.Enabled = true;
+					return;
+				}
 			}
-			// Create a new configuration			
-			Directory.CreateDirectory(managerAppDataPath);
-			managerConfig = new DataClasses.ClassicManagerJson();
-			profilesJson = new DataClasses.ProfilesJson();
-			profilesJson.ProfilesList.Add(new ProfileData { Name = "Default", Filename = "Default.json" });
-			if (gameSettings == null)
+			// Create necessary folders
+			Directory.CreateDirectory(Path.Combine(managerAppDataPath, "profiles"));
+			// Create ManagerClassic.json
+			if (overwrite || !File.Exists(Path.Combine(managerAppDataPath, "ManagerClassic.json")))
 			{
-				gameSettings = new GameSettings { GamePath = gamePath };
+				if (managerClassicConfig == null)
+					managerClassicConfig = new DataClasses.ClassicManagerJson();
+				JsonSerialize(managerClassicConfig, Path.Combine(managerAppDataPath, "ManagerClassic.json"));
+			}
+			// Create Profiles.json
+			if (overwrite || !File.Exists(Path.Combine(managerAppDataPath, "profiles", "Profiles.json")))
+			{
+				profilesJson = new DataClasses.ProfilesJson();
+				profilesJson.ProfilesList.Add(new ProfileData { Name = "Default", Filename = "Default.json" });
+				JsonSerialize(profilesJson, Path.Combine(managerAppDataPath, "profiles", "Profiles.json"));
+			}
+			// Create Default.json
+			if (overwrite || !File.Exists(Path.Combine(managerAppDataPath, "profiles", "Default.json")))
+			{
+				if (gameSettings == null)
+					gameSettings = new GameSettings { GamePath = gameMainPath };
 				gameSettings.Graphics.HorizontalResolution = Screen.PrimaryScreen.Bounds.Width;
 				gameSettings.Graphics.VerticalResolution = Screen.PrimaryScreen.Bounds.Height;
+				JsonSerialize(gameSettings, Path.Combine(managerAppDataPath, "profiles", "Default.json"));
 			}
-			JsonSerialize(gameSettings, Path.Combine(managerAppDataPath, "SADX", "Default.json"));
-			JsonSerialize(profilesJson, Path.Combine(managerAppDataPath, "SADX", "Profiles.json"));
-			JsonSerialize(managerConfig, Path.Combine(managerAppDataPath, "ManagerClassic.json"));
-			if (radioButtonGameFolder.Checked)
-				managerExePath = gamePath;
+			// Copy SADXModManager.exe to the game folder
+			if (managerExePath != gameMainPath)
+			{
+				int attempt = 0;
+				DialogResult copyres = DialogResult.Cancel;
+				do
+				{
+					try
+					{
+						// Copy Manager.exe
+						File.Copy(Application.ExecutablePath, Path.Combine(gameMainPath, "SADXModManager.exe"), true);
+					}
+					catch (Exception ex)
+					{
+						copyres = DialogResult.Retry;
+						attempt++;
+						if (attempt > 10)
+							copyres = MessageBox.Show(null, string.Format("Unable to install SADX Mod Manager: {0}. Try again?", ex.Message.ToString()), "SADX Mod Manager Error", MessageBoxButtons.RetryCancel, MessageBoxIcon.Error);
+					}
+				}
+				while (copyres == DialogResult.Retry);
+			}
+			// Write the version file
+			File.WriteAllText(Path.Combine(managerAppDataPath, "sadxmanagerver.txt"), internalVersion.ToString());
+			// Set Manager EXE path to game path
+			managerExePath = gameMainPath;
 			// Create download items
 			List<DownloadItem> items = new List<DownloadItem>();
 			if (checkBoxVCC.Checked)
@@ -226,10 +271,9 @@ namespace SADXModManager.Forms
 			if (criticalError)
 			{
 				Close();
-				Application.Exit();
 			}
 			// Open the dialog
-			using (UpdatesAvailableDialog uDialog = new UpdatesAvailableDialog(items, Path.Combine(managerAppDataPath, "Updates"), true))
+			using (UpdatesAvailableDialog uDialog = new UpdatesAvailableDialog(items, Path.Combine(managerAppDataPath, "updates"), true))
 			{
 				DialogResult result = uDialog.ShowDialog();
 				switch (result)
@@ -246,7 +290,6 @@ namespace SADXModManager.Forms
 							}
 						}
 						Close();
-						Application.Exit();
 						return;
 					// No items to download
 					case DialogResult.None:
@@ -258,13 +301,11 @@ namespace SADXModManager.Forms
 								Process.Start(Path.Combine(managerExePath, "SADXModManager.exe"));
 							}
 							Close();
-							Application.Exit();
 						}
 						break;
 					// Downloads cancelled or critical error
 					case DialogResult.Abort:
 						Close();
-						Application.Exit();
 						return;
 				}
 			}

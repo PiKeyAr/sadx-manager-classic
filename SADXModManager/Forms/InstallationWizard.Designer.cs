@@ -29,14 +29,10 @@
 		private void InitializeComponent()
 		{
             this.components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(InstallationWizard));
             this.labelWelcome = new System.Windows.Forms.Label();
             this.labelGameFolder = new System.Windows.Forms.Label();
             this.textBoxGameFolder = new System.Windows.Forms.TextBox();
             this.buttonBrowse = new System.Windows.Forms.Button();
-            this.labelManagerData = new System.Windows.Forms.Label();
-            this.radioButtonAppData = new System.Windows.Forms.RadioButton();
-            this.radioButtonGameFolder = new System.Windows.Forms.RadioButton();
             this.buttonInstall = new System.Windows.Forms.Button();
             this.buttonExit = new System.Windows.Forms.Button();
             this.pictureBoxManagerIcon = new System.Windows.Forms.PictureBox();
@@ -84,45 +80,11 @@
             this.buttonBrowse.UseVisualStyleBackColor = true;
             this.buttonBrowse.Click += new System.EventHandler(this.buttonBrowse_Click);
             // 
-            // labelManagerData
-            // 
-            this.labelManagerData.AutoSize = true;
-            this.labelManagerData.Location = new System.Drawing.Point(13, 79);
-            this.labelManagerData.Name = "labelManagerData";
-            this.labelManagerData.Size = new System.Drawing.Size(78, 13);
-            this.labelManagerData.TabIndex = 4;
-            this.labelManagerData.Text = "Manager Data:";
-            // 
-            // radioButtonAppData
-            // 
-            this.radioButtonAppData.AutoSize = true;
-            this.radioButtonAppData.Location = new System.Drawing.Point(186, 77);
-            this.radioButtonAppData.Name = "radioButtonAppData";
-            this.radioButtonAppData.Size = new System.Drawing.Size(135, 17);
-            this.radioButtonAppData.TabIndex = 3;
-            this.radioButtonAppData.Text = "Application Data Folder";
-            this.toolTip1.SetToolTip(this.radioButtonAppData, "In this mode the Mod Manager\'s settings will be saved in the local AppData folder" +
-        ", and you can run the Mod Manager from any location on this computer.");
-            this.radioButtonAppData.UseVisualStyleBackColor = true;
-            // 
-            // radioButtonGameFolder
-            // 
-            this.radioButtonGameFolder.AutoSize = true;
-            this.radioButtonGameFolder.Checked = true;
-            this.radioButtonGameFolder.Location = new System.Drawing.Point(97, 77);
-            this.radioButtonGameFolder.Name = "radioButtonGameFolder";
-            this.radioButtonGameFolder.Size = new System.Drawing.Size(83, 17);
-            this.radioButtonGameFolder.TabIndex = 2;
-            this.radioButtonGameFolder.TabStop = true;
-            this.radioButtonGameFolder.Text = "Mods Folder";
-            this.toolTip1.SetToolTip(this.radioButtonGameFolder, resources.GetString("radioButtonGameFolder.ToolTip"));
-            this.radioButtonGameFolder.UseVisualStyleBackColor = true;
-            // 
             // buttonInstall
             // 
             this.buttonInstall.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonInstall.Enabled = false;
-            this.buttonInstall.Location = new System.Drawing.Point(333, 97);
+            this.buttonInstall.Location = new System.Drawing.Point(333, 76);
             this.buttonInstall.Name = "buttonInstall";
             this.buttonInstall.Size = new System.Drawing.Size(75, 23);
             this.buttonInstall.TabIndex = 6;
@@ -133,7 +95,7 @@
             // buttonExit
             // 
             this.buttonExit.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.buttonExit.Location = new System.Drawing.Point(414, 97);
+            this.buttonExit.Location = new System.Drawing.Point(414, 76);
             this.buttonExit.Name = "buttonExit";
             this.buttonExit.Size = new System.Drawing.Size(75, 23);
             this.buttonExit.TabIndex = 7;
@@ -153,10 +115,11 @@
             // 
             // checkBoxDirectX
             // 
+            this.checkBoxDirectX.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.checkBoxDirectX.AutoSize = true;
             this.checkBoxDirectX.Checked = true;
             this.checkBoxDirectX.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBoxDirectX.Location = new System.Drawing.Point(16, 103);
+            this.checkBoxDirectX.Location = new System.Drawing.Point(12, 82);
             this.checkBoxDirectX.Name = "checkBoxDirectX";
             this.checkBoxDirectX.Size = new System.Drawing.Size(115, 17);
             this.checkBoxDirectX.TabIndex = 4;
@@ -166,10 +129,11 @@
             // 
             // checkBoxVCC
             // 
+            this.checkBoxVCC.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.checkBoxVCC.AutoSize = true;
             this.checkBoxVCC.Checked = true;
             this.checkBoxVCC.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBoxVCC.Location = new System.Drawing.Point(137, 103);
+            this.checkBoxVCC.Location = new System.Drawing.Point(133, 82);
             this.checkBoxVCC.Name = "checkBoxVCC";
             this.checkBoxVCC.Size = new System.Drawing.Size(156, 17);
             this.checkBoxVCC.TabIndex = 5;
@@ -181,15 +145,12 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(501, 132);
+            this.ClientSize = new System.Drawing.Size(501, 111);
             this.Controls.Add(this.checkBoxVCC);
             this.Controls.Add(this.checkBoxDirectX);
             this.Controls.Add(this.pictureBoxManagerIcon);
             this.Controls.Add(this.buttonExit);
             this.Controls.Add(this.buttonInstall);
-            this.Controls.Add(this.radioButtonGameFolder);
-            this.Controls.Add(this.radioButtonAppData);
-            this.Controls.Add(this.labelManagerData);
             this.Controls.Add(this.buttonBrowse);
             this.Controls.Add(this.textBoxGameFolder);
             this.Controls.Add(this.labelGameFolder);
@@ -213,9 +174,6 @@
 		private System.Windows.Forms.Label labelGameFolder;
 		private System.Windows.Forms.TextBox textBoxGameFolder;
 		private System.Windows.Forms.Button buttonBrowse;
-		private System.Windows.Forms.Label labelManagerData;
-		private System.Windows.Forms.RadioButton radioButtonAppData;
-		private System.Windows.Forms.RadioButton radioButtonGameFolder;
 		private System.Windows.Forms.Button buttonInstall;
 		private System.Windows.Forms.Button buttonExit;
 		private System.Windows.Forms.PictureBox pictureBoxManagerIcon;
