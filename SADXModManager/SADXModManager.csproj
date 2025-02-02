@@ -177,6 +177,7 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\InstallationWizard.resx">
       <DependentUpon>InstallationWizard.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\ModUrlDialog.resx">
       <DependentUpon>ModUrlDialog.cs</DependentUpon>
