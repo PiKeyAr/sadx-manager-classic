@@ -250,10 +250,10 @@ namespace SADXModManager
 			string text_releases = string.Empty;
 			string assetName = "SADXModManager.exe";
 			string mlverfile = Path.Combine(managerAppDataPath, "sadxmanagerver.txt");
-			string currentTagName = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "106";
-			uint currentID = 106;
+			string currentTagName = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : "115";
+			uint currentID = 115;
 			if (!uint.TryParse(currentTagName, out currentID))
-				currentID = 106;
+				currentID = 115;
 			try
 			{
 				StringBuilder changelog = new StringBuilder();
