@@ -102,6 +102,7 @@
       <DependentUpon>ButtonControl.cs</DependentUpon>
     </Compile>
     <Compile Include="DataClasses\ManagerClassicJson.cs" />
+    <Compile Include="DataClasses\ManagerJson.cs" />
     <Compile Include="DataClasses\ProfileJson.cs" />
     <Compile Include="DataClasses\ProfilesListJson.cs" />
     <Compile Include="DataClasses\SDLConfigIni.cs" />
