@@ -8,6 +8,8 @@ namespace SADXModManager
 	public static class Variables
 	{
 		// Variables
+		/// <summary>Mod Manager internal version string used for initial installation and when update checks fail</summary>
+		public static uint internalVersion = 115;
 		/// <summary>When this is true, the program will try to close as soon as possible</summary>
 		public static bool criticalError;
 		// Paths
