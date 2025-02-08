@@ -23,10 +23,10 @@ using static SADXModManager.Utils;
 using System.Text;
 using System.Windows.Input;
 
-// TODO for second release:
-// Add mods from archive
-// Mod dependencies
+// TODO:
 // SDL Configuration
+// Mod dependencies
+// Add mods from archive
 // Clean up code
 // Game Health Check
 
