@@ -28,7 +28,6 @@ using System.Windows.Input;
 // Mod dependencies
 // SDL Configuration
 // Clean up code
-// SA Manager switch
 // Game Health Check
 
 namespace SADXModManager
