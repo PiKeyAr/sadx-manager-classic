@@ -16,7 +16,9 @@ namespace SADXModManager.DataClasses
 			Mod,
 			SteamTools,
 			VisualCppRuntime,
-			DirectXRuntime
+			DirectXRuntime,
+			DotNetRuntime,
+			SAManager
 		}
 
 		public bool Required;

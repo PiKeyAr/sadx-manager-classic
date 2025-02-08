@@ -2946,11 +2946,12 @@
             this.buttonSwitchToSAManager.Text = "Switch to SA Manager";
             this.toolTip.SetToolTip(this.buttonSwitchToSAManager, "Replace Mod Manager Classic with the modern SA Mod Manager.");
             this.buttonSwitchToSAManager.UseVisualStyleBackColor = true;
-            this.buttonSwitchToSAManager.Visible = false;
-            // 
-            // checkBoxCheckLoaderUpdatesStartup
-            // 
-            this.checkBoxCheckLoaderUpdatesStartup.AutoSize = true;
+            this.buttonSwitchToSAManager.Visible = true;
+			this.buttonSwitchToSAManager.Click += ButtonSwitchToSAManager_Click;
+			// 
+			// checkBoxCheckLoaderUpdatesStartup
+			// 
+			this.checkBoxCheckLoaderUpdatesStartup.AutoSize = true;
             this.checkBoxCheckLoaderUpdatesStartup.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.checkBoxCheckLoaderUpdatesStartup.Location = new System.Drawing.Point(6, 43);
             this.checkBoxCheckLoaderUpdatesStartup.Name = "checkBoxCheckLoaderUpdatesStartup";
@@ -3354,9 +3355,9 @@
 
         }
 
-        #endregion
+		#endregion
 
-        private System.Windows.Forms.ListView listViewMods;
+		private System.Windows.Forms.ListView listViewMods;
         private System.Windows.Forms.ColumnHeader columnHeaderName;
 		private System.Windows.Forms.ColumnHeader columnHeaderAuthor;
         private System.Windows.Forms.Button buttonSave;

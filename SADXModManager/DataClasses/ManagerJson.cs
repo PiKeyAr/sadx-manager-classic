@@ -31,6 +31,7 @@ namespace SADXModManager.DataClasses
 
 	public class ManagerJson
 	{
+		public int SettingsVersion { get; set; }
 		public List<GameEntry> GameEntries { get; set; }
 	}
 }

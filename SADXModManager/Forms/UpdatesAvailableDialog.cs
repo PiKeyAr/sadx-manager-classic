@@ -243,100 +243,133 @@ namespace SADXModManager.Forms
 								// poor man's await Task.Run (not available in .net 4.0)
 								using (var task = new Task(() =>
 								{
-									var cancelArgs = new CancelEventArgs(false);
-									DownloadProgressEventArgs downloadArgs = null;
+								var cancelArgs = new CancelEventArgs(false);
+								DownloadProgressEventArgs downloadArgs = null;
 
-									void DownloadComplete(object _sender, AsyncCompletedEventArgs args)
+								void DownloadComplete(object _sender, AsyncCompletedEventArgs args)
+								{
+									lock (args.UserState)
 									{
-										lock (args.UserState)
+										Monitor.Pulse(args.UserState);
+									}
+								}
+
+								void DownloadProgressChanged(object _sender, DownloadProgressChangedEventArgs args)
+								{
+									downloadArgs = new DownloadProgressEventArgs(args, 1, 1);
+									OnDownloadProgress(this, downloadArgs);
+									if (downloadArgs.Cancel)
+									{
+										client.CancelAsync();
+									}
+								}
+
+								var uri = new Uri(item.DownloadUrl);
+								string filePath = Path.Combine(updatePath, uri.Segments.Last());
+
+								var info = new FileInfo(filePath);
+								client.DownloadFileCompleted += DownloadComplete;
+								client.DownloadProgressChanged += DownloadProgressChanged;
+
+								var sync = new object();
+								lock (sync)
+								{
+									client.DownloadFileAsync(uri, filePath, sync);
+									Monitor.Wait(sync);
+								}
+
+								client.DownloadProgressChanged -= DownloadProgressChanged;
+								client.DownloadFileCompleted -= DownloadComplete;
+
+								if (cancelArgs.Cancel || downloadArgs?.Cancel == true)
+								{
+									return;
+								}
+
+								OnDownloadCompleted(this, cancelArgs);
+								if (cancelArgs.Cancel)
+								{
+									return;
+								}
+
+								if (token.IsCancellationRequested)
+								{
+									return;
+								}
+
+								switch (item.Type)
+								{
+									// Install Loader
+									case DownloadItem.DownloadItemType.Loader:
+										// Extract SADXModLoader.dll, border image, codes, game patches
+										Process.Start(new ProcessStartInfo("7z.exe", $"e -aoa -o\"{Path.Combine(Variables.gameMainPath, "mods")}\" \"{filePath}\" *.*") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
+										// Extract extlibs
+										Process.Start(new ProcessStartInfo("7z.exe", $"x -aoa -o\"{Variables.managerAppDataPath}\" \"{filePath}\" extlib") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
+										// Copy SADXModLoader.dll to system\CHRMODELS.dll if the Loader is installed
+										if (File.Exists(Variables.datadllorigpath))
 										{
-											Monitor.Pulse(args.UserState);
-										}
-									}
-
-									void DownloadProgressChanged(object _sender, DownloadProgressChangedEventArgs args)
-									{
-										downloadArgs = new DownloadProgressEventArgs(args, 1, 1);
-										OnDownloadProgress(this, downloadArgs);
-										if (downloadArgs.Cancel)
-										{
-											client.CancelAsync();
-										}
-									}
-
-									var uri = new Uri(item.DownloadUrl);
-									string filePath = Path.Combine(updatePath, uri.Segments.Last());
-
-									var info = new FileInfo(filePath);
-									client.DownloadFileCompleted += DownloadComplete;
-									client.DownloadProgressChanged += DownloadProgressChanged;
-
-									var sync = new object();
-									lock (sync)
-									{
-										client.DownloadFileAsync(uri, filePath, sync);
-										Monitor.Wait(sync);
-									}
-
-									client.DownloadProgressChanged -= DownloadProgressChanged;
-									client.DownloadFileCompleted -= DownloadComplete;
-
-									if (cancelArgs.Cancel || downloadArgs?.Cancel == true)
-									{
-										return;
-									}
-
-									OnDownloadCompleted(this, cancelArgs);
-									if (cancelArgs.Cancel)
-									{
-										return;
-									}
-
-									if (token.IsCancellationRequested)
-									{
-										return;
-									}
-
-									switch (item.Type)
-									{
-										// Install Loader
-										case DownloadItem.DownloadItemType.Loader:
-											// Extract SADXModLoader.dll, border image, codes, game patches
-											Process.Start(new ProcessStartInfo("7z.exe", $"e -aoa -o\"{Path.Combine(Variables.gameMainPath, "mods")}\" \"{filePath}\" *.*") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
-											// Extract extlibs
-											Process.Start(new ProcessStartInfo("7z.exe", $"x -aoa -o\"{Variables.managerAppDataPath}\" \"{filePath}\" extlib") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
-											// Copy SADXModLoader.dll to system\CHRMODELS.dll if the Loader is installed
-											if (File.Exists(Variables.datadllorigpath))
+											DialogResult mlres = DialogResult.Cancel;
+											do
 											{
-												DialogResult mlres = DialogResult.Cancel;
-												do
+												try
 												{
-													try
+													File.Copy(Path.Combine(Variables.gameMainPath, "mods", "SADXModLoader.dll"), Variables.datadllpath, true);
+													mlres = DialogResult.OK;
+												}
+												catch (Exception ex)
+												{
+													mlres = MessageBox.Show(this, $"Failed to update the Mod Loader DLL file:\r\n\n{ex.Message.ToString()}\n\nMake sure the game is not running.", "Update Failed", MessageBoxButtons.RetryCancel, MessageBoxIcon.Error);
+												}
+											}
+											while (mlres == DialogResult.Retry);
+										}
+										break;
+									// Install Launcher
+									case DownloadItem.DownloadItemType.Launcher:
+										// Extract to game folder
+										Process.Start(new ProcessStartInfo("7z.exe", $"x -aoa -o\"{Variables.gameMainPath}\" \"{filePath}\"") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
+										break;
+									// Install Manager
+									case DownloadItem.DownloadItemType.Manager:
+										// Add sadxmanagerver.txt
+										File.WriteAllText(Path.Combine(updatePath, "sadxmanagerver.txt"), item.Version);
+										// Start the new EXE and close
+										Process.Start(filePath, $"update \"{Variables.managerExePath}\"");
+										Environment.Exit(0);
+										break;
+									// Install the new SA Manager
+									case DownloadItem.DownloadItemType.SAManager:
+										// Extract to game folder
+										Process.Start(new ProcessStartInfo("7z.exe", $"x -aoa -o\"{Variables.gameMainPath}\" \"{filePath}\"") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
+										// Create Manager settings JSON or add game folder entry to it
+										string saManagerDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SAManager");
+										string saManagerSettingsPath = Path.Combine(saManagerDataPath, "Manager.json");
+										ManagerJson json;
+										// If the profiles file already exists, see if it already has this game path as an entry
+										json = File.Exists(saManagerSettingsPath) ? Utils.JsonDeserialize<ManagerJson>(saManagerSettingsPath) : new ManagerJson { SettingsVersion = 3 };
+										bool found = false;
+										if (json.GameEntries != null && json.GameEntries.Count > 0)
+											{
+												foreach (var entry in json.GameEntries)
+												{
+													if (entry.Type == GameEntry.GameType.SADX)
 													{
-														File.Copy(Path.Combine(Variables.gameMainPath, "mods", "SADXModLoader.dll"), Variables.datadllpath, true);
-														mlres = DialogResult.OK;
-													}
-													catch (Exception ex)
-													{
-														mlres = MessageBox.Show(this, $"Failed to update the Mod Loader DLL file:\r\n\n{ex.Message.ToString()}\n\nMake sure the game is not running.", "Update Failed", MessageBoxButtons.RetryCancel, MessageBoxIcon.Error);
+														string check1 = entry.Directory.TrimEnd(new char[] { '\\', '/' }).ToLowerInvariant();
+														string check2 = Variables.gameMainPath.TrimEnd(new char[] { '\\', '/' }).ToLowerInvariant();
+														if (string.Compare(check1, check2, StringComparison.OrdinalIgnoreCase) == 0)
+															found = true;
 													}
 												}
-												while (mlres == DialogResult.Retry);
 											}
-											break;
-										// Install Launcher
-										case DownloadItem.DownloadItemType.Launcher:
-											// Extract to game folder
-											Process.Start(new ProcessStartInfo("7z.exe", $"x -aoa -o\"{Variables.gameMainPath}\" \"{filePath}\"")	{ UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
-											break;
-										// Install Manager
-										case DownloadItem.DownloadItemType.Manager:
-											// Add sadxmanagerver.txt
-											File.WriteAllText(Path.Combine(updatePath, "sadxmanagerver.txt"), item.Version);
-											// Start the new EXE and close
-											Process.Start(filePath, $"update \"{Variables.managerExePath}\"");
-											Environment.Exit(0);
-											break;
+										else
+											json.GameEntries = new List<GameEntry>();
+										if (!found)
+										{
+											json.GameEntries.Add(new GameEntry { Name = "Sonic Adventure DX", Directory = Variables.gameMainPath, Executable = "sonic.exe", Type = GameEntry.GameType.SADX });
+										}
+										Directory.CreateDirectory(saManagerDataPath);
+										Utils.JsonSerialize(json, saManagerSettingsPath);
+										break;
 										// Install Steam tools
 										case DownloadItem.DownloadItemType.SteamTools:
 											// Extract to game folder
@@ -352,6 +385,10 @@ namespace SADXModManager.Forms
 										// Install DirectX 9.0c runtime
 										case DownloadItem.DownloadItemType.DirectXRuntime:
 											Process.Start(filePath, "/Q").WaitForExit();
+											break;
+										// Install .NET 8.0 Desktop runtime
+										case DownloadItem.DownloadItemType.DotNetRuntime:
+											Process.Start(filePath, "/install /quiet /norestart").WaitForExit();
 											break;
 									}
 								}, token))

@@ -1603,6 +1603,44 @@ namespace SADXModManager
 			}
 		}
 
+		private void ButtonSwitchToSAManager_Click(object sender, System.EventArgs e)
+		{
+			switch (MessageBox.Show(this, "This will download and run the latest version of the SA Mod Manager by Sora & ItsEasyActually. You can use both this and the new Manager with the same game. Continue?", "SADX Mod Manager", MessageBoxButtons.YesNo, MessageBoxIcon.Question))
+			{
+				case DialogResult.No:
+				default:
+					return;
+				case DialogResult.Yes:
+					// Open the dialog
+					List<DownloadItem> items = new List<DownloadItem>();
+					items.Add(AddDotnetRuntimeDownload(this));
+					items.Add(AddSAManagerDownload(this));
+					using (UpdatesAvailableDialog uDialog = new UpdatesAvailableDialog(items, Path.Combine(managerAppDataPath, "updates"), false))
+					{
+						DialogResult result = uDialog.ShowDialog();
+						switch (result)
+						{
+							// Downloads finished
+							case DialogResult.OK:
+								if (File.Exists(Path.Combine(Variables.gameMainPath, "SAModManager.exe")))
+									Process.Start(Path.Combine(Variables.gameMainPath, "SAModManager.exe"));
+								else
+									return;
+								Close();
+								return;
+							// No items to download
+							case DialogResult.None:
+								MessageBox.Show(this, "No items to download. Try again later.", "SADX Mod Manager Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+								return;
+							// Downloads cancelled or critical error
+							case DialogResult.Abort:
+								return;
+						}
+					}
+					break;
+			}
+		}
+
 		private void UriQueueOnUriEnqueued(object sender, OnUriEnqueuedArgs args)
 		{
 			args.Handled = true;

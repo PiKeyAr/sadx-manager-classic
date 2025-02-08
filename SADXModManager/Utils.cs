@@ -343,6 +343,132 @@ namespace SADXModManager
 			}
 		}
 
+		/// <summary>Retrieves a download for the new SA Manager from GitHub (null if no update).</summary>
+		public static DownloadItem AddSAManagerDownload(Form parent)
+		{
+			string url_releases = "https://api.github.com/repos/x-hax/SA-Mod-Manager/releases";
+			string text_releases = string.Empty;
+			string assetName = "release_" + (System.Environment.Is64BitOperatingSystem == true ? "x64.zip" : "x86.zip");
+			try
+			{
+				StringBuilder changelog = new StringBuilder();
+				List<GitHubRelease> releases;
+				try
+				{
+					text_releases = webClient.DownloadString(url_releases);
+				}
+				catch (Exception e)
+				{
+					MessageBox.Show(parent, string.Format("Error downloading GitHub repo data for SA Mod Manager from\n`{0}`.\n{1}\n\nIf this is a 403 error, you may be hitting a rate limit. Wait a while and try again.", url_releases, e.Message.ToString()), "SADX Mod Manager Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					return null;
+				}
+
+				releases = JsonConvert.DeserializeObject<List<GitHubRelease>>(text_releases)
+				.Where(x => !x.Draft && !x.PreRelease).ToList();
+				if (releases == null || releases.Count == 0)
+					throw new Exception("No GitHub releases found for URL " + url_releases);
+
+				GitHubRelease latestRelease = null;
+				GitHubAsset latestAsset = null;
+
+				DateTime dateCheck = DateTime.MinValue;
+
+				foreach (GitHubRelease release in releases)
+				{
+					GitHubAsset asset;
+					asset = release.Assets
+						.FirstOrDefault(x => x.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase));
+
+					if (asset == null)
+						continue;
+
+					changelog.AppendLine(string.Format("Revision {0}\n{1}\n", release.TagName, release.Body));
+
+					DateTime uploaded = DateTime.Parse(asset.Uploaded, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal);
+					if (uploaded > dateCheck)
+					{
+						latestRelease = release;
+						latestAsset = asset;
+						dateCheck = uploaded;
+					}
+				}
+
+				if (latestRelease == null || latestAsset == null)
+				{
+					return null;
+				}
+
+				string body = Regex.Replace(changelog.ToString(), "(?<!\r)\n", "\r\n");
+
+				return new DownloadItem()
+				{
+					Type = DownloadItem.DownloadItemType.SAManager,
+					Name = "SA Mod Manager",
+					Authors = "Sora & ItsEasyActually",
+					FileCount = 1,
+					Version = latestRelease.TagName,
+					ReleaseDate = DateTime.Parse(latestRelease.Published, DateTimeFormatInfo.InvariantInfo),
+					UploadDate = DateTime.Parse(latestAsset.Uploaded, DateTimeFormatInfo.InvariantInfo),
+					DownloadSize = latestAsset.Size,
+					HomepageUrl = "https://github.com/X-Hax/SA-Mod-Manager",
+					DownloadUrl = latestAsset.DownloadUrl,
+					ReleaseName = "Revision " + latestRelease.TagName,
+					ReleaseTag = "",
+					Description = "New version of the tool to manage settings and mods for SADX and SA2.",
+					Files = new List<Tuple<string, string, long>> { new Tuple<string, string, long>("Download", "SAModManager.zip", latestAsset.Size) },
+					Changelog = body.TrimEnd()
+				};
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(parent, "Could not retrieve SA Mod Manager download information: " + ex.Message.ToString(), "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				return null;
+			}
+		}
+
+		/// <summary>Retrieves a download for .NET 8.0 Desktop runtime (null if no update).</summary>
+		public static DownloadItem AddDotnetRuntimeDownload(Form parent)
+		{
+			long size = 0;
+			DateTime modifiedDate = DateTime.Now;
+			string url = "https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-" + (Environment.Is64BitOperatingSystem ? "x64" : "x86") + ".exe";
+			try
+			{
+				// Get request
+				WebRequest req = WebRequest.Create(url);
+				req.Method = "HEAD";
+				using (WebResponse resp = req.GetResponse())
+				{
+					// Get download size
+					size = GetDownloadSize(resp);
+					// Get last modified date
+					modifiedDate = GetDownloadDate(resp);
+				}
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(parent, "Could not retrieve .NET 8.0 Desktop runtime size or modified date: " + ex.Message.ToString(), "SADX Mod Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+			return new DownloadItem()
+			{
+				Name = ".NET 8.0 Desktop Runtime",
+				Authors = "Microsoft",
+				Version = "8.0",
+				ReleaseDate = modifiedDate,
+				UploadDate = modifiedDate,
+				DownloadSize = size,
+				FileCount = 1,
+				HomepageUrl = "https://dotnet.microsoft.com/en-us/download/dotnet/8.0",
+				DownloadUrl = url,
+				ReleaseName = "",
+				ReleaseTag = "",
+				Description = "This runtime is required to run the new SA Mod Manager.",
+				Files = new List<Tuple<string, string, long>> { new Tuple<string, string, long>("Download", GetFilenameFromUrl(url), size) },
+				Changelog = "",
+				Type = DownloadItem.DownloadItemType.DotNetRuntime
+			};
+		}
+
 		/// <summary>Retrieves a download for an update for the Steam conversion tools from a direct link (null if not requred).</summary>
 		public static DownloadItem CheckSteamToolUpdates(Form parent)
 		{
