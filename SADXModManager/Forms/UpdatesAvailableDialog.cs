@@ -369,6 +369,12 @@ namespace SADXModManager.Forms
 										}
 										Directory.CreateDirectory(saManagerDataPath);
 										Utils.JsonSerialize(json, saManagerSettingsPath);
+										// Try to clean up
+										try
+										{
+											Directory.Delete(updatePath, true);
+										}
+										catch { }
 										break;
 										// Install Steam tools
 										case DownloadItem.DownloadItemType.SteamTools:
