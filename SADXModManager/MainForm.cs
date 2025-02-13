@@ -3196,6 +3196,7 @@ namespace SADXModManager
 
 		private void listViewSDLDevices_SelectedIndexChanged(object sender, EventArgs e)
 		{
+			listViewControlBindings.SuspendLayout();
 			// No selection
 			if (listViewSDLDevices.SelectedIndices.Count == 0)
 			{
@@ -3302,10 +3303,13 @@ namespace SADXModManager
 					listViewControlBindings.Items.Clear();
 					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Forward (Left Stick Up)", InputControls.Controllers[listViewSDLDevices.SelectedIndices[0]-3].GetBindForAxis(SDL2.SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTY).ToString() }));
 					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Backward (Left Stick Down)", InputControls.Controllers[listViewSDLDevices.SelectedIndices[0]-3].GetBindForAxis(SDL2.SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTX).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Left (Left Stick Left)", InputControls.Controllers[listViewSDLDevices.SelectedIndices[0] - 3].GetBindForAxis(SDL2.SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTX).ToString() }));
+					listViewControlBindings.Items.Add(new ListViewItem(new[] { "Right (Left Stick Right)", InputControls.Controllers[listViewSDLDevices.SelectedIndices[0] - 3].GetBindForAxis(SDL2.SDL.SDL_GameControllerAxis.SDL_CONTROLLER_AXIS_LEFTX).ToString() }));
 					break;
 			}
 			listViewControlBindings.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent); // Control name
 			listViewControlBindings.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent); // Control binding
+			listViewControlBindings.ResumeLayout(true);
 		}
 	}
 }
