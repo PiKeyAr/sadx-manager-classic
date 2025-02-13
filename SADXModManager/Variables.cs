@@ -9,7 +9,7 @@ namespace SADXModManager
 	{
 		// Variables
 		/// <summary>Mod Manager internal version string used for initial installation and when update checks fail</summary>
-		public static uint internalVersion = 115;
+		public static uint internalVersion = 117;
 		/// <summary>When this is true, the program will try to close as soon as possible</summary>
 		public static bool criticalError;
 		// Paths
@@ -32,7 +32,7 @@ namespace SADXModManager
 		/// <summary>Path to the file CHRMODELS_orig.dll</summary>
 		public static string datadllorigpath = "system/CHRMODELS_orig.dll";
 		/// <summary>Path to the file SADXModLoader.dll</summary>
-		public static string loaderdllpath = "mods/SADXModLoader.dll";
+		public static string loaderdllpath = "mods/.modloader/SADXModLoader.dll";
 		/// <summary>Path to d3d8to11 configuration file</summary>
 		public static string d3d8to11ConfigPath;
 
