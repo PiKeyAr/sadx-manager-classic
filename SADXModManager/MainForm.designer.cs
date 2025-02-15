@@ -262,6 +262,7 @@
             this.contextMenuStripResetGameSettings = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.toolStripMenuItemResetOptimal = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItemResetSafe = new System.Windows.Forms.ToolStripMenuItem();
+            this.checkBoxCheckLauncherUpdateStartup = new System.Windows.Forms.CheckBox();
             labelGameScreen = new System.Windows.Forms.Label();
             label1 = new System.Windows.Forms.Label();
             label2 = new System.Windows.Forms.Label();
@@ -2921,6 +2922,7 @@
             // 
             this.groupBoxUpdates.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBoxUpdates.Controls.Add(this.checkBoxCheckLauncherUpdateStartup);
             this.groupBoxUpdates.Controls.Add(this.buttonSwitchToSAManager);
             this.groupBoxUpdates.Controls.Add(this.checkBoxCheckLoaderUpdatesStartup);
             this.groupBoxUpdates.Controls.Add(this.buttonCheckForUpdatesNow);
@@ -2931,7 +2933,7 @@
             this.groupBoxUpdates.Controls.Add(this.checkBoxCheckManagerUpdateStartup);
             this.groupBoxUpdates.Location = new System.Drawing.Point(6, 115);
             this.groupBoxUpdates.Name = "groupBoxUpdates";
-            this.groupBoxUpdates.Size = new System.Drawing.Size(461, 180);
+            this.groupBoxUpdates.Size = new System.Drawing.Size(461, 147);
             this.groupBoxUpdates.TabIndex = 1;
             this.groupBoxUpdates.TabStop = false;
             this.groupBoxUpdates.Text = "Updates";
@@ -2939,24 +2941,22 @@
             // buttonSwitchToSAManager
             // 
             this.buttonSwitchToSAManager.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonSwitchToSAManager.Location = new System.Drawing.Point(237, 43);
+            this.buttonSwitchToSAManager.Location = new System.Drawing.Point(6, 112);
             this.buttonSwitchToSAManager.Name = "buttonSwitchToSAManager";
             this.buttonSwitchToSAManager.Size = new System.Drawing.Size(121, 23);
-            this.buttonSwitchToSAManager.TabIndex = 3;
+            this.buttonSwitchToSAManager.TabIndex = 7;
             this.buttonSwitchToSAManager.Text = "Switch to SA Manager";
             this.toolTip.SetToolTip(this.buttonSwitchToSAManager, "Replace Mod Manager Classic with the modern SA Mod Manager.");
             this.buttonSwitchToSAManager.UseVisualStyleBackColor = true;
-            this.buttonSwitchToSAManager.Visible = true;
-			this.buttonSwitchToSAManager.Click += ButtonSwitchToSAManager_Click;
-			// 
-			// checkBoxCheckLoaderUpdatesStartup
-			// 
-			this.checkBoxCheckLoaderUpdatesStartup.AutoSize = true;
+            // 
+            // checkBoxCheckLoaderUpdatesStartup
+            // 
+            this.checkBoxCheckLoaderUpdatesStartup.AutoSize = true;
             this.checkBoxCheckLoaderUpdatesStartup.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.checkBoxCheckLoaderUpdatesStartup.Location = new System.Drawing.Point(6, 43);
             this.checkBoxCheckLoaderUpdatesStartup.Name = "checkBoxCheckLoaderUpdatesStartup";
             this.checkBoxCheckLoaderUpdatesStartup.Size = new System.Drawing.Size(209, 18);
-            this.checkBoxCheckLoaderUpdatesStartup.TabIndex = 1;
+            this.checkBoxCheckLoaderUpdatesStartup.TabIndex = 2;
             this.checkBoxCheckLoaderUpdatesStartup.Text = "Check for Loader Updates on Startup";
             this.toolTip.SetToolTip(this.checkBoxCheckLoaderUpdatesStartup, "Check for Mod Loader updates every time the Manager starts up.");
             this.checkBoxCheckLoaderUpdatesStartup.UseVisualStyleBackColor = true;
@@ -2964,7 +2964,7 @@
             // buttonCheckForUpdatesNow
             // 
             this.buttonCheckForUpdatesNow.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.buttonCheckForUpdatesNow.Location = new System.Drawing.Point(201, 85);
+            this.buttonCheckForUpdatesNow.Location = new System.Drawing.Point(201, 83);
             this.buttonCheckForUpdatesNow.Name = "buttonCheckForUpdatesNow";
             this.buttonCheckForUpdatesNow.Size = new System.Drawing.Size(75, 23);
             this.buttonCheckForUpdatesNow.TabIndex = 6;
@@ -2975,7 +2975,7 @@
             // labelUpdateFrequency
             // 
             this.labelUpdateFrequency.AutoSize = true;
-            this.labelUpdateFrequency.Location = new System.Drawing.Point(6, 71);
+            this.labelUpdateFrequency.Location = new System.Drawing.Point(6, 69);
             this.labelUpdateFrequency.Name = "labelUpdateFrequency";
             this.labelUpdateFrequency.Size = new System.Drawing.Size(132, 13);
             this.labelUpdateFrequency.TabIndex = 2;
@@ -2995,7 +2995,7 @@
             // 
             // numericUpDownUpdateFrequency
             // 
-            this.numericUpDownUpdateFrequency.Location = new System.Drawing.Point(133, 88);
+            this.numericUpDownUpdateFrequency.Location = new System.Drawing.Point(133, 86);
             this.numericUpDownUpdateFrequency.Maximum = new decimal(new int[] {
             1000,
             0,
@@ -3026,7 +3026,7 @@
             "Days",
             "Hours",
             "Weeks"});
-            this.comboBoxUpdateUnit.Location = new System.Drawing.Point(6, 87);
+            this.comboBoxUpdateUnit.Location = new System.Drawing.Point(6, 85);
             this.comboBoxUpdateUnit.Name = "comboBoxUpdateUnit";
             this.comboBoxUpdateUnit.Size = new System.Drawing.Size(121, 21);
             this.comboBoxUpdateUnit.TabIndex = 4;
@@ -3037,10 +3037,10 @@
             // 
             this.checkBoxCheckManagerUpdateStartup.AutoSize = true;
             this.checkBoxCheckManagerUpdateStartup.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.checkBoxCheckManagerUpdateStartup.Location = new System.Drawing.Point(237, 19);
+            this.checkBoxCheckManagerUpdateStartup.Location = new System.Drawing.Point(225, 19);
             this.checkBoxCheckManagerUpdateStartup.Name = "checkBoxCheckManagerUpdateStartup";
             this.checkBoxCheckManagerUpdateStartup.Size = new System.Drawing.Size(218, 18);
-            this.checkBoxCheckManagerUpdateStartup.TabIndex = 2;
+            this.checkBoxCheckManagerUpdateStartup.TabIndex = 1;
             this.checkBoxCheckManagerUpdateStartup.Text = "Check for Manager Updates on Startup";
             this.toolTip.SetToolTip(this.checkBoxCheckManagerUpdateStartup, "Check for Mod Manager updates every time it starts up.");
             this.checkBoxCheckManagerUpdateStartup.UseVisualStyleBackColor = true;
@@ -3257,6 +3257,18 @@
             this.toolStripMenuItemResetSafe.Text = "Reset to Safe Settings";
             this.toolStripMenuItemResetSafe.ToolTipText = "If the game fails to start, try using this option.";
             this.toolStripMenuItemResetSafe.Click += new System.EventHandler(this.toolStripMenuItemResetSafe_Click);
+            // 
+            // checkBoxCheckLauncherUpdateStartup
+            // 
+            this.checkBoxCheckLauncherUpdateStartup.AutoSize = true;
+            this.checkBoxCheckLauncherUpdateStartup.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            this.checkBoxCheckLauncherUpdateStartup.Location = new System.Drawing.Point(225, 43);
+            this.checkBoxCheckLauncherUpdateStartup.Name = "checkBoxCheckLauncherUpdateStartup";
+            this.checkBoxCheckLauncherUpdateStartup.Size = new System.Drawing.Size(221, 18);
+            this.checkBoxCheckLauncherUpdateStartup.TabIndex = 3;
+            this.checkBoxCheckLauncherUpdateStartup.Text = "Check for Launcher Updates on Startup";
+            this.toolTip.SetToolTip(this.checkBoxCheckLauncherUpdateStartup, "Check for Mod Loader updates every time the Manager starts up.");
+            this.checkBoxCheckLauncherUpdateStartup.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
@@ -3582,5 +3594,6 @@
 		private System.Windows.Forms.ColumnHeader columnHeaderSDLDevice;
 		private System.Windows.Forms.ComboBox comboBoxBackend;
 		private System.Windows.Forms.Label labelBackend;
+		private System.Windows.Forms.CheckBox checkBoxCheckLauncherUpdateStartup;
 	}
 }

@@ -704,6 +704,7 @@ namespace SADXModManager
 			checkBoxCheckLoaderUpdatesStartup.Checked = managerClassicConfig.UpdateCheck;
 			checkBoxCheckUpdateModsStartup.Checked = managerClassicConfig.ModUpdateCheck;
 			checkBoxCheckManagerUpdateStartup.Checked = managerClassicConfig.ManagerUpdateCheck;
+			checkBoxCheckLauncherUpdateStartup.Checked = managerClassicConfig.LauncherUpdateCheck;
 			comboBoxUpdateUnit.SelectedIndex = (int)managerClassicConfig.UpdateUnit;
 			numericUpDownUpdateFrequency.Value = managerClassicConfig.UpdateFrequency;
 			// Load Options/Misc settings
@@ -829,6 +830,8 @@ namespace SADXModManager
 				items |= UpdateChecker.UpdateItems.Loader;
 			if (checkBoxCheckManagerUpdateStartup.Checked)
 				items |= UpdateChecker.UpdateItems.Manager;
+			if (checkBoxCheckLauncherUpdateStartup.Checked)
+				items |= UpdateChecker.UpdateItems.Launcher;
 			if (checkBoxCheckUpdateModsStartup.Checked)
 				items |= UpdateChecker.UpdateItems.Mods;
 			if (uris != null && uris.Count > 0)
@@ -1411,6 +1414,7 @@ namespace SADXModManager
 			managerClassicConfig.UpdateCheck = checkBoxCheckLoaderUpdatesStartup.Checked;
 			managerClassicConfig.ModUpdateCheck = checkBoxCheckUpdateModsStartup.Checked;
 			managerClassicConfig.ManagerUpdateCheck = checkBoxCheckManagerUpdateStartup.Checked;
+			managerClassicConfig.LauncherUpdateCheck = checkBoxCheckLauncherUpdateStartup.Checked;
 			managerClassicConfig.UpdateFrequency = (int)numericUpDownUpdateFrequency.Value;
 			managerClassicConfig.UpdateUnit = (UpdateUnit)comboBoxUpdateUnit.SelectedIndex;
 			// Save Misc settings
@@ -1878,7 +1882,6 @@ namespace SADXModManager
 							items.Add(new DownloadItem(upd));
 				}
 			}
-
 			// Loader update
 			if (UpdateChecker.ItemsToCheck.HasFlag(UpdateChecker.UpdateItems.Loader))
 			{
@@ -1886,13 +1889,16 @@ namespace SADXModManager
 				if (loaderItem != null)
 					items.Add(loaderItem);
 			}
-			if (UpdateChecker.ItemsToCheck.HasFlag(UpdateChecker.UpdateItems.Manager))
+			// Launcher update
+			if (UpdateChecker.ItemsToCheck.HasFlag(UpdateChecker.UpdateItems.Launcher))
 			{
-				// Launcher update
 				DownloadItem launcherItem = CheckLauncherUpdates(this);
 				if (launcherItem != null)
 					items.Add(launcherItem);
-				// Manager update
+			}
+			// Manager update
+			if (UpdateChecker.ItemsToCheck.HasFlag(UpdateChecker.UpdateItems.Manager))
+			{
 				DownloadItem managerItem = CheckManagerUpdates(this);
 				if (managerItem != null)
 					items.Add(managerItem);
