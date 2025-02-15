@@ -409,12 +409,12 @@ namespace SADXModManager
 			sonicDxIniPath = Path.Combine(gameMainPath, "sonicDX.ini");
 			datadllpath = Path.Combine(gameMainPath, "system", "CHRMODELS.dll");
 			datadllorigpath = Path.Combine(gameMainPath, "system", "CHRMODELS_orig.dll");
-			loaderdllpath = Path.Combine(gameMainPath, "mods", "SADXModLoader.dll");
-			codelstpath = Path.Combine(gameMainPath, "mods", "Codes.lst");
-			codexmlpath = Path.Combine(gameMainPath, "mods", "Codes.xml");
-			codedatpath = Path.Combine(gameMainPath, "mods", "Codes.dat");
-			patchdatpath = Path.Combine(gameMainPath, "mods", "Patches.dat");
-			patchesJsonPath = Path.Combine(gameMainPath, "mods", "Patches.json");
+			loaderdllpath = Path.Combine(gameMainPath, "mods", ".modloader", "SADXModLoader.dll");
+			codelstpath = Path.Combine(gameMainPath, "mods", ".modloader", "Codes.lst");
+			codexmlpath = Path.Combine(gameMainPath, "mods", ".modloader", "Codes.xml");
+			codedatpath = Path.Combine(gameMainPath, "mods", ".modloader", "Codes.dat");
+			patchdatpath = Path.Combine(gameMainPath, "mods", ".modloader", "Patches.dat");
+			patchesJsonPath = Path.Combine(gameMainPath, "mods", ".modloader", "Patches.json");
 			toolStripStatusLabelGameFolder.Text = "Game Folder: " + gameMainPath;
 			InitPatches();
 		}
@@ -716,6 +716,30 @@ namespace SADXModManager
 			suppressEvent = false;
 		}
 
+		// Moves Mod Loader files from 'mods' to 'mods/.modloader'
+		private void MoveFileFromModsFolder(string filename, bool critical)
+		{
+			if (File.Exists(Path.Combine(gameMainPath, "mods", filename)))
+			{
+				File.Copy(Path.Combine(gameMainPath, "mods", filename), Path.Combine(gameMainPath, "mods", ".modloader", filename), false);
+				File.Delete(Path.Combine(gameMainPath, "mods", filename));
+			}
+			else if (critical)
+			{
+				switch (MessageBox.Show(this, string.Format("Critical Mod Loader file '{0}' was not found. SADX Mod Manager cannot function without it. Download the Mod Loader?", filename), "SADX Mod Manager", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation))
+				{
+					case DialogResult.Yes:
+						Hide();
+						Form wizard = new InstallationWizard();
+						wizard.ShowDialog();
+						return;
+					case DialogResult.No:
+						Environment.Exit(0);
+						return;
+				}
+			}
+		}
+
 		private void MainForm_Shown(object sender, EventArgs e)
 		{
 			// Check if the old settings were moved
@@ -741,6 +765,26 @@ namespace SADXModManager
 				DeleteOldFiles(this, gameMainPath);
 			else
 				CheckOldFilesCritical(this, gameMainPath);
+			// Check old path
+			if (!File.Exists(loaderdllpath))
+			{
+				Directory.CreateDirectory(Path.Combine(gameMainPath, "mods", ".modloader"));
+				// Critical files
+				MoveFileFromModsFolder("SADXModLoader.dll", true);
+				MoveFileFromModsFolder("Patches.json", true);
+				MoveFileFromModsFolder("Border_Default.png", true);
+				MoveFileFromModsFolder("Codes.lst", true);
+				// Non-critical files
+				MoveFileFromModsFolder("sadxmlver.txt", false);
+				MoveFileFromModsFolder("Codes.xml", false);
+				MoveFileFromModsFolder("Codes.dat", false);
+				MoveFileFromModsFolder("Patches.dat", false);
+				MoveFileFromModsFolder("Border.png", false);
+				MoveFileFromModsFolder("sadxmanagerver.txt", false);
+				MoveFileFromModsFolder("ManagerClassic.json", false);
+				MoveFileFromModsFolder("SADXModLoader.log", false);
+			}
+			// Check Mod Loader installation state
 			if (!File.Exists(datadllpath))
 			{
 				MessageBox.Show(this, "CHRMODELS.dll could not be found.\n\n" +

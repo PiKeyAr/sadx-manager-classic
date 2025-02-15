@@ -302,9 +302,7 @@ namespace SADXModManager.Forms
 									// Install Loader
 									case DownloadItem.DownloadItemType.Loader:
 										// Extract SADXModLoader.dll, border image, codes, game patches
-										Process.Start(new ProcessStartInfo("7z.exe", $"e -aoa -o\"{Path.Combine(Variables.gameMainPath, "mods")}\" \"{filePath}\" *.*") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
-										// Extract extlibs
-										Process.Start(new ProcessStartInfo("7z.exe", $"x -aoa -o\"{Variables.managerAppDataPath}\" \"{filePath}\" extlib") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
+										Process.Start(new ProcessStartInfo("7z.exe", $"x -aoa -o\"{Path.Combine(Variables.gameMainPath, "mods", ".modloader")}\" \"{filePath}\" *.*") { UseShellExecute = false, CreateNoWindow = true }).WaitForExit();
 										// Copy SADXModLoader.dll to system\CHRMODELS.dll if the Loader is installed
 										if (File.Exists(Variables.datadllorigpath))
 										{
@@ -313,7 +311,7 @@ namespace SADXModManager.Forms
 											{
 												try
 												{
-													File.Copy(Path.Combine(Variables.gameMainPath, "mods", "SADXModLoader.dll"), Variables.datadllpath, true);
+													File.Copy(Path.Combine(Variables.gameMainPath, "mods", ".modloader", "SADXModLoader.dll"), Variables.datadllpath, true);
 													mlres = DialogResult.OK;
 												}
 												catch (Exception ex)
