@@ -109,7 +109,7 @@ namespace SADXModManager
 		public bool EnableBassMusic { get; set; } = true;             // SADXLoaderInfo.EnableBassMusic
 
 		[DefaultValue(false)]
-		public bool EnableBassSFX { get; set; } = false;              // SADXLoaderInfo.EnableBassSFX
+		public bool EnableBassSFX { get; set; } = true;              // SADXLoaderInfo.EnableBassSFX
 
 		[DefaultValue(100)]
 		public int SEVolume { get; set; } = 100;                // SADXLoaderInfo.SEVolume
