@@ -261,7 +261,7 @@ namespace SADXModManager
 			string currentTagName = File.Exists(mlverfile) ? File.ReadAllText(mlverfile) : internalVersion.ToString();
 			uint currentID = internalVersion;
 			if (!uint.TryParse(currentTagName, out currentID))
-				currentID = 115;
+				currentID = internalVersion;
 			try
 			{
 				StringBuilder changelog = new StringBuilder();

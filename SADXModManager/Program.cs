@@ -88,7 +88,7 @@ namespace SADXModManager
 						// Delete old Loader/Manager files if they exist
 						Utils.DeleteOldFiles(null, finalpath);
 						// Get path to sadxmanagerver.txt
-						string destAppDataPath = Path.GetFullPath(Directory.Exists(Path.Combine(finalpath, "SAManager")) ? Path.Combine(finalpath, "SAManager") : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SAManager"));
+						string destAppDataPath = Path.Combine(finalpath, "mods", ".modloader");
 						// Copy sadxmanagerver.txt
 						File.Copy(Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "sadxmanagerver.txt"), Path.Combine(destAppDataPath, "sadxmanagerver.txt"), true);
 						// Cleanup
