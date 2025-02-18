@@ -199,7 +199,15 @@ namespace SADXModManager
 			if (File.Exists(appLauncherExe))
 			{
 				string localcrc = "AppLauncher.exe," + Force.Crc32.Crc32Algorithm.Compute(File.ReadAllBytes(appLauncherExe)).ToString("X") + "\r\n";
-				string remotecrc = webClient.DownloadString("https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/AppLauncher/AppLauncher.crc");
+				string remotecrc;
+				try
+				{
+					remotecrc = webClient.DownloadString("https://dcmods.unreliable.network/owncloud/data/PiKeyAr/files/AppLauncher/AppLauncher.crc");
+				}
+				catch
+				{
+					remotecrc = localcrc;
+				}
 				// If CRC matches, exit
 				if (localcrc == remotecrc)
 					return null;
