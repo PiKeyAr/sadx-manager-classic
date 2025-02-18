@@ -330,7 +330,7 @@ namespace SADXModManager.Forms
 									// Install Manager
 									case DownloadItem.DownloadItemType.Manager:
 										// Add sadxmanagerver.txt
-										File.WriteAllText(Path.Combine(Variables.managerAppDataPath, "sadxmanagerver.txt"), item.Version);
+										File.WriteAllText(Path.Combine(updatePath, "sadxmanagerver.txt"), item.Version);
 										// Start the new EXE and close
 										Process.Start(filePath, $"update \"{Variables.managerExePath}\"");
 										Environment.Exit(0);
