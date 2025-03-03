@@ -1129,43 +1129,25 @@ namespace SADXModManager
 							// Codes
 							gameSettings.EnabledCodes = info.EnabledCodes;
 							// Patches
-							gameSettings.EnabledGamePatches = new List<string>();
-							if (info.HRTFSound)
-								gameSettings.EnabledGamePatches.Add("HRTFSound");
-							if (info.CCEF)
-								gameSettings.EnabledGamePatches.Add("KeepCamSettings");
-							if (info.PolyBuff)
-								gameSettings.EnabledGamePatches.Add("FixVertexColorRendering");
-							if (info.MaterialColorFix || !info.DisableMaterialColorFix)
-								gameSettings.EnabledGamePatches.Add("MaterialColorFix");
-							if (info.NodeLimit || !info.DisableInterpolationFix)
-								gameSettings.EnabledGamePatches.Add("NodeLimit");
-							if (info.FovFix)
-								gameSettings.EnabledGamePatches.Add("FOVFix");
-							if (info.SCFix)
-								gameSettings.EnabledGamePatches.Add("SkyChaseResolutionFix");
-							if (info.Chaos2CrashFix)
-								gameSettings.EnabledGamePatches.Add("Chaos2CrashFix");
-							if (info.ChunkSpecFix)
-								gameSettings.EnabledGamePatches.Add("ChunkSpecularFix");
-							if (info.E102PolyFix)
-								gameSettings.EnabledGamePatches.Add("E102NGonFix");
-							if (info.ChaoPanelFix)
-								gameSettings.EnabledGamePatches.Add("ChaoPanelFix");
-							if (info.PixelOffSetFix)
-								gameSettings.EnabledGamePatches.Add("PixelOffSetFix");
-							if (info.LightFix)
-								gameSettings.EnabledGamePatches.Add("LightFix");
-							if (info.KillGbix)
-								gameSettings.EnabledGamePatches.Add("KillGBIX");
-							if (info.DisableCDCheck)
-								gameSettings.EnabledGamePatches.Add("DisableCDCheck");
-							if (info.ExtendedSaveSupport)
-								gameSettings.EnabledGamePatches.Add("ExtendedSaveSupport");
-							if (info.CrashGuard)
-								gameSettings.EnabledGamePatches.Add("CrashGuard");
-							if (info.XInputFix)
-								gameSettings.EnabledGamePatches.Add("XInputFix");
+							gameSettings.Patches = new Dictionary<string, bool>();
+							gameSettings.Patches.Add("HRTFSound", info.HRTFSound);
+							gameSettings.Patches.Add("KeepCamSettings", info.CCEF);
+							gameSettings.Patches.Add("FixVertexColorRendering", info.PolyBuff);
+							gameSettings.Patches.Add("MaterialColorFix", info.MaterialColorFix || !info.DisableMaterialColorFix);
+							gameSettings.Patches.Add("NodeLimit", info.NodeLimit || !info.DisableInterpolationFix);
+							gameSettings.Patches.Add("FOVFix", info.FovFix);
+							gameSettings.Patches.Add("SkyChaseResolutionFix", info.SCFix);
+							gameSettings.Patches.Add("Chaos2CrashFix", info.Chaos2CrashFix);
+							gameSettings.Patches.Add("ChunkSpecularFix", info.ChunkSpecFix);
+							gameSettings.Patches.Add("E102NGonFix", info.E102PolyFix);
+							gameSettings.Patches.Add("ChaoPanelFix", info.ChaoPanelFix);
+							gameSettings.Patches.Add("PixelOffSetFix", info.PixelOffSetFix);
+							gameSettings.Patches.Add("LightFix", info.LightFix);
+							gameSettings.Patches.Add("KillGBIX", info.KillGbix);
+							gameSettings.Patches.Add("DisableCDCheck", info.DisableCDCheck);
+							gameSettings.Patches.Add("ExtendedSaveSupport", info.ExtendedSaveSupport);
+							gameSettings.Patches.Add("CrashGuard", info.CrashGuard);
+							gameSettings.Patches.Add("XInputFix", info.XInputFix);
 							// Delete SADXModLoader.ini
 							File.Delete(Path.Combine(gameMainPath, "mods", "SADXModLoader.ini"));
 							return false;

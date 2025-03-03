@@ -240,118 +240,7 @@ namespace SADXModManager
 		[DefaultValue(0)]
 		public int Rotation { get; set; } = 0;     // SADXLoaderInfo.TestSpawnRotation
 	}
-
-	public class GamePatches
-	{
-		/// <summary>
-		/// Modifies the sound system. Only SF94 knows why.
-		/// </summary>
-		[DefaultValue(true)]
-		public bool HRTFSound { get; set; } = true;        // SADXLoaderInfo.HRTFSound
-
-		/// <summary>
-		/// Fixes the game turning off free cam when dying if it was previously set.
-		/// </summary>
-		[DefaultValue(true)]
-		public bool KeepCamSettings { get; set; } = true;           // SADXLoaderInfo.CCEF
-
-		/// <summary>
-		/// Fixes the game's rendering to properly allow mesh's with vertex colors to be rendered with those vertex colors.
-		/// </summary>
-		[DefaultValue(true)]
-		public bool FixVertexColorRendering { get; set; } = true; //vertex color	// SADXLoaderInfo.PolyBuff
-
-		/// <summary>
-		/// Fixes the material colors so they render properly.
-		/// </summary>
-		[DefaultValue(true)]
-		public bool MaterialColorFix { get; set; } = true;      // SADXLoaderInfo.MaterialColorFix
-
-		/// <summary>
-		/// Increases nodes limits to 254 (originally 111 for characters)
-		/// </summary>
-		[DefaultValue(true)]
-		public bool NodeLimit { get; set; } = true;      // New Feature, doesn't originally exist
-
-		/// <summary>
-		/// Fixes the game's FOV.
-		/// </summary>
-		[DefaultValue(true)]
-		public bool FOVFix { get; set; } = true;     // SADXLoaderInfo.FovFix
-
-		/// <summary>
-		/// Fixes Skychase to properly render.
-		/// </summary>
-		[DefaultValue(true)]
-		public bool SkyChaseResolutionFix { get; set; } = true; // SADXLoaderInfo.SCFix
-
-		/// <summary>
-		/// Fixes a bug that will cause the game to crash when fighting Chaos 2.
-		/// </summary>
-		[DefaultValue(true)]
-		public bool Chaos2CrashFix { get; set; } = true;        // SADXLoaderInfo.Chaos2CrashFix
-
-		/// <summary>
-		/// Fixes specular rendering on Chunk models.
-		/// </summary>
-		[DefaultValue(true)]
-		public bool ChunkSpecularFix { get; set; } = true;         // SADXLoaderInfo.ChunkSpecFix
-
-		/// <summary>
-		/// Fixes rendering on E-102's gun which uses an N-Gon.
-		/// </summary>
-		[DefaultValue(true)]
-		public bool E102NGonFix { get; set; } = true;           // SADXLoaderInfo.E102PolyFix
-
-		/// <summary>
-		/// Fixes Chao Panel rendering.
-		/// </summary>
-		[DefaultValue(true)]
-		public bool ChaoPanelFix { get; set; } = true;          // SADXLoaderInfo.ChaoPanelFix
-
-		/// <summary>
-		/// Fixes a slight pixel offset in the window.
-		/// </summary>
-		[DefaultValue(true)]
-		public bool PixelOffSetFix { get; set; } = true;        // SADXLoaderInfo.PixelOffsetFix
-
-		/// <summary>
-		/// Fixes lights
-		/// </summary>
-		[DefaultValue(true)]
-		public bool LightFix { get; set; } = true;           // SADXLoaderInfo.LightFix
-
-		/// <summary>
-		/// Removes GBIX processing for most textures. UI is excluded.
-		/// </summary>
-		[DefaultValue(true)]
-		public bool KillGBIX { get; set; } = true;            // SADXLoaderInfo.KillGbix
-
-		/// <summary>
-		/// Disables the built in CD Check.
-		/// </summary>
-		[DefaultValue(false)]
-		public bool DisableCDCheck { get; set; } = false;       // SADXLoaderInfo.DisableCDCheck
-
-		/// <summary>
-		/// Extends save support to allow custom names and alternate save directories.
-		/// </summary>
-		[DefaultValue(true)]
-		public bool ExtendedSaveSupport { get; set; } = true;
-
-		/// <summary>
-		/// Prevents common crashes in the game, namely texture related ones.
-		/// </summary>
-		[DefaultValue(true)]
-		public bool CrashGuard { get; set; } = true;
-
-		/// <summary>
-		/// Fixes XInput without the need for using SDL/Better Input.
-		/// </summary>
-		[DefaultValue(false)]
-		public bool XInputFix { get; set; } = false;
-	}
-
+	
 	public class DebugSettings
 	{
 		/// <summary>
@@ -423,7 +312,7 @@ namespace SADXModManager
 		/// <summary>
 		/// Patches for SADX.
 		/// </summary>
-		public GamePatches Patches { get; set; } = new GamePatches();
+		public Dictionary<string, bool> Patches { get; set; } = new Dictionary<string, bool>();
 
 		/// <summary>
 		/// Debug Settings.

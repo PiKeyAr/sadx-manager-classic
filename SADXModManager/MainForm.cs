@@ -2794,80 +2794,37 @@ namespace SADXModManager
 		#endregion
 
 		#region Game Patches
-		/// <summary>Retrieves individual game patch settings in old SA Manager configuration</summary>
-		public bool GetLegacyGamePatchState(GamePatchData patchData)
-		{
-			switch (patchData.Name)
-			{
-				case "HRTFSound":
-					return gameSettings.Patches.HRTFSound;
-				case "KeepCamSettings":
-					return gameSettings.Patches.KeepCamSettings;
-				case "FixVertexColorRendering":
-					return gameSettings.Patches.FixVertexColorRendering;
-				case "MaterialColorFix":
-					return gameSettings.Patches.MaterialColorFix;
-				case "NodeLimit":
-					return gameSettings.Patches.NodeLimit;
-				case "FOVFix":
-					return gameSettings.Patches.FOVFix;
-				case "SkyChaseResolutionFix":
-					return gameSettings.Patches.SkyChaseResolutionFix;
-				case "Chaos2CrashFix":
-					return gameSettings.Patches.Chaos2CrashFix;
-				case "ChunkSpecularFix":
-					return gameSettings.Patches.ChunkSpecularFix;
-				case "E102NGonFix":
-					return gameSettings.Patches.E102NGonFix;
-				case "ChaoPanelFix":
-					return gameSettings.Patches.ChaoPanelFix;
-				case "PixelOffSetFix":
-					return gameSettings.Patches.PixelOffSetFix;
-				case "LightFix":
-					return gameSettings.Patches.LightFix;
-				case "KillGBIX":
-					return gameSettings.Patches.KillGBIX;
-				case "DisableCDCheck":
-					return gameSettings.Patches.DisableCDCheck;
-				case "ExtendedSaveSupport":
-					return gameSettings.Patches.ExtendedSaveSupport;
-				case "CrashGuard":
-					return gameSettings.Patches.CrashGuard;
-				case "XInputFix":
-					return gameSettings.Patches.XInputFix;
-				default:
-					return patchData.IsChecked; // Default value
-			}
-		}
-
 		public void InitPatches()
 		{
 			if (File.Exists(patchesJsonPath))
 			{
-				bool isLegacyGamePatchSettings = gameSettings.EnabledGamePatches == null;
-				if (isLegacyGamePatchSettings)
-					gameSettings.EnabledGamePatches = new List<string>();
 				patchesJson = GamePatchesJson.Deserialize(patchesJsonPath);
 				bool sup = suppressEvent == true;
 				if (!sup)
 					suppressEvent = true;
 				listViewPatches.BeginUpdate();
 				listViewPatches.Items.Clear();
+				// Move from the old patches list
+				if (gameSettings.EnabledGamePatches != null)
+				{
+					foreach (string str in gameSettings.EnabledGamePatches)
+					{
+						if (!gameSettings.Patches.ContainsKey(str))
+							gameSettings.Patches.Add(str, true);
+						else
+							gameSettings.Patches[str] = true;
+					}
+				}
 				foreach (GamePatchData patchData in patchesJson.Patches)
 				{
 					ListViewItem item = new ListViewItem(new[] { patchData.InternalName, patchData.Author, patchData.Category });
-					// If using the new game patch list, just check if the patch name is on the list
-					if (!isLegacyGamePatchSettings)
-						item.Checked = gameSettings.EnabledGamePatches.Contains(patchData.Name);
-					// If not, check the legacy settings
-					else if (GetLegacyGamePatchState(patchData))
-					{
-						item.Checked = true;
-						gameSettings.EnabledGamePatches.Add(patchData.Name);
-					}
+					if (gameSettings.Patches.ContainsKey(patchData.Name))
+						item.Checked = gameSettings.Patches[patchData.Name] == true;
+					else
+						item.Checked = patchData.IsChecked;
 					listViewPatches.Items.Add(item);
 				}
-				gameSettings.Patches = null;
+				gameSettings.EnabledGamePatches = null; // Setting it to null removes it from the JSON
 				listViewPatches.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.ColumnContent); // Patch name
 				listViewPatches.AutoResizeColumn(1, ColumnHeaderAutoResizeStyle.ColumnContent); // Author
 				listViewPatches.AutoResizeColumn(2, ColumnHeaderAutoResizeStyle.ColumnContent); // Category
@@ -2886,10 +2843,10 @@ namespace SADXModManager
 			foreach (ListViewItem item in listViewPatches.Items)
 			{
 				GamePatchData pdata = patchesJson.Patches.Find(a => a.InternalName == item.Text);
-				if (item.Checked && !gameSettings.EnabledGamePatches.Contains(pdata.Name))
-					gameSettings.EnabledGamePatches.Add(pdata.Name);
-				else if (!item.Checked && gameSettings.EnabledGamePatches.Contains(pdata.Name))
-					gameSettings.EnabledGamePatches.Remove(pdata.Name);
+				if (gameSettings.Patches.ContainsKey(pdata.Name))
+					gameSettings.Patches[pdata.Name] = item.Checked;
+				else
+					gameSettings.Patches.Add(pdata.Name, item.Checked);
 			}
 		}
 
