@@ -116,23 +116,27 @@ namespace SADXModManager
 				alreadyRunning = false;
 				DialogResult result = DialogResult.Cancel;
 				int attempt = 0;
-				do
+				string cleanpath = args[1].Replace("\"", "");
+				if (Directory.Exists(cleanpath.Replace("\"", "")))
 				{
-					try
+					do
 					{
-						Thread.Sleep(300);
-						string cleanpath = args[1].Replace("\"", "");
-						Directory.Delete(cleanpath.Replace("\"", ""), true);
+						try
+						{
+							Thread.Sleep(300);
+
+							Directory.Delete(cleanpath.Replace("\"", ""), true);
+						}
+						catch (Exception ex)
+						{
+							attempt++;
+							result = DialogResult.Retry;
+							if (attempt > 10)
+								result = MessageBox.Show(null, string.Format("Unable to clean up the update folder: {0}. Try again?", ex.Message.ToString()), "SADX Mod Manager Update Error", MessageBoxButtons.RetryCancel, MessageBoxIcon.Error);
+						}
 					}
-					catch (Exception ex)
-					{
-						attempt++;
-						result = DialogResult.Retry;
-						if (attempt > 10)
-							result = MessageBox.Show(null, string.Format("Unable to clean up the update folder: {0}. Try again?", ex.Message.ToString()), "SADX Mod Manager Update Error", MessageBoxButtons.RetryCancel, MessageBoxIcon.Error);
-					}
+					while (result == DialogResult.Retry);
 				}
-				while (result == DialogResult.Retry);
 			}
 			
 			if (!alreadyRunning)
