@@ -1300,6 +1300,7 @@ namespace SADXModManager
 				(DisplayMode)(comboBoxScreenMode.SelectedIndex) == DisplayMode.Borderless) ? 1 : 0;
 			sonicDxIni.GameConfig.ClipLevel = comboBoxClipLevel.SelectedIndex;
 			sonicDxIni.GameConfig.FogEmulation = comboBoxFogEmulation.SelectedIndex;
+			sonicDxIni.GameConfig.FrameRate = comboBoxFramerate.SelectedIndex + 1;
 			gameSettings.Graphics.EnableForcedMipmapping = checkBoxForceMipmapping.Checked;
 			gameSettings.Graphics.EnableForcedTextureFilter = checkBoxForceTextureFilter.Checked;
 			gameSettings.Graphics.DisableBorderImage = !checkBoxBorderImage.Checked;
